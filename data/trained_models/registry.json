@@ -1,0 +1,970 @@
+{
+  "categorization": {
+    "a0dd181d0d": {
+      "id": "a0dd181d0d",
+      "name": "transaction_categorizer",
+      "type": "categorization",
+      "features": [
+        "amount",
+        "day_of_week",
+        "day_of_month",
+        "month",
+        "is_weekend",
+        "amount_abs",
+        "is_expense",
+        "is_income",
+        "description"
+      ],
+      "created_at": "2025-03-13T17:12:45.130436",
+      "metrics": {
+        "accuracy": 1.0,
+        "f1_macro": 1.0,
+        "f1_weighted": 1.0
+      },
+      "metadata": {
+        "categories": [
+          "dining",
+          "entertainment",
+          "groceries",
+          "healthcare",
+          "housing",
+          "income",
+          "shopping",
+          "transportation",
+          "utilities"
+        ]
+      },
+      "file_path": "a0dd181d0d.joblib"
+    },
+    "5d2ca1a9ce": {
+      "id": "5d2ca1a9ce",
+      "name": "transaction_categorizer",
+      "type": "categorization",
+      "features": [
+        "amount",
+        "day_of_week",
+        "day_of_month",
+        "month",
+        "is_weekend",
+        "amount_abs",
+        "is_expense",
+        "is_income",
+        "description"
+      ],
+      "created_at": "2025-03-13T17:12:46.219333",
+      "metrics": {
+        "accuracy": 1.0,
+        "f1_macro": 1.0,
+        "f1_weighted": 1.0
+      },
+      "metadata": {
+        "categories": [
+          "dining",
+          "entertainment",
+          "groceries",
+          "healthcare",
+          "housing",
+          "income",
+          "shopping",
+          "transportation",
+          "utilities"
+        ]
+      },
+      "file_path": "5d2ca1a9ce.joblib"
+    },
+    "cbe2af3751": {
+      "id": "cbe2af3751",
+      "name": "transaction_categorizer",
+      "type": "categorization",
+      "features": [
+        "amount",
+        "day_of_week",
+        "day_of_month",
+        "month",
+        "is_weekend",
+        "amount_abs",
+        "is_expense",
+        "is_income",
+        "description"
+      ],
+      "created_at": "2025-03-13T17:15:46.080954",
+      "metrics": {
+        "accuracy": 1.0,
+        "f1_macro": 1.0,
+        "f1_weighted": 1.0
+      },
+      "metadata": {
+        "categories": [
+          "dining",
+          "entertainment",
+          "groceries",
+          "healthcare",
+          "housing",
+          "income",
+          "shopping",
+          "transportation",
+          "utilities"
+        ]
+      },
+      "file_path": "cbe2af3751.joblib"
+    },
+    "293d505215": {
+      "id": "293d505215",
+      "name": "transaction_categorizer",
+      "type": "categorization",
+      "features": [
+        "amount",
+        "day_of_week",
+        "day_of_month",
+        "month",
+        "is_weekend",
+        "amount_abs",
+        "is_expense",
+        "is_income",
+        "description"
+      ],
+      "created_at": "2025-03-13T17:15:47.126573",
+      "metrics": {
+        "accuracy": 1.0,
+        "f1_macro": 1.0,
+        "f1_weighted": 1.0
+      },
+      "metadata": {
+        "categories": [
+          "dining",
+          "entertainment",
+          "groceries",
+          "healthcare",
+          "housing",
+          "income",
+          "shopping",
+          "transportation",
+          "utilities"
+        ]
+      },
+      "file_path": "293d505215.joblib"
+    },
+    "05285104e8": {
+      "id": "05285104e8",
+      "name": "transaction_categorizer",
+      "type": "categorization",
+      "features": [
+        "amount",
+        "day_of_week",
+        "day_of_month",
+        "month",
+        "is_weekend",
+        "amount_abs",
+        "is_expense",
+        "is_income",
+        "description"
+      ],
+      "created_at": "2025-03-13T18:06:04.409298",
+      "metrics": {
+        "accuracy": 1.0,
+        "f1_macro": 1.0,
+        "f1_weighted": 1.0
+      },
+      "metadata": {
+        "categories": [
+          "dining",
+          "entertainment",
+          "groceries",
+          "healthcare",
+          "housing",
+          "income",
+          "shopping",
+          "transportation",
+          "utilities"
+        ]
+      },
+      "file_path": "05285104e8.joblib"
+    },
+    "b0bddca889": {
+      "id": "b0bddca889",
+      "name": "transaction_categorizer",
+      "type": "categorization",
+      "features": [
+        "amount",
+        "day_of_week",
+        "day_of_month",
+        "month",
+        "is_weekend",
+        "amount_abs",
+        "is_expense",
+        "is_income",
+        "description"
+      ],
+      "created_at": "2025-03-13T18:06:05.484615",
+      "metrics": {
+        "accuracy": 1.0,
+        "f1_macro": 1.0,
+        "f1_weighted": 1.0
+      },
+      "metadata": {
+        "categories": [
+          "dining",
+          "entertainment",
+          "groceries",
+          "healthcare",
+          "housing",
+          "income",
+          "shopping",
+          "transportation",
+          "utilities"
+        ]
+      },
+      "file_path": "b0bddca889.joblib"
+    }
+  },
+  "forecasting": {
+    "5d956870c3": {
+      "id": "5d956870c3",
+      "name": "cash_flow_forecaster_ensemble",
+      "type": "forecasting",
+      "features": [
+        "day_of_week",
+        "day_of_month",
+        "month",
+        "quarter",
+        "year",
+        "is_weekend",
+        "is_month_start",
+        "is_month_end",
+        "days_in_month",
+        "lag_1",
+        "lag_2",
+        "lag_3",
+        "lag_7",
+        "lag_14",
+        "lag_30",
+        "rolling_mean_3",
+        "rolling_std_3",
+        "rolling_min_3",
+        "rolling_max_3",
+        "rolling_mean_7",
+        "rolling_std_7",
+        "rolling_min_7",
+        "rolling_max_7",
+        "rolling_mean_14",
+        "rolling_std_14",
+        "rolling_min_14",
+        "rolling_max_14",
+        "rolling_mean_30",
+        "rolling_std_30",
+        "rolling_min_30",
+        "rolling_max_30"
+      ],
+      "created_at": "2025-03-13T17:35:29.569137",
+      "metrics": {
+        "mae": 10.31128610205569,
+        "rmse": 14.62597640343809,
+        "r2": 0.9991246380761797,
+        "individual_models": {
+          "linear": {
+            "mae": 1.080631030924533e-12,
+            "rmse": 1.4325360722559828e-12,
+            "r2": 1.0
+          },
+          "rf": {
+            "mae": 14.318751955963156,
+            "rmse": 21.993584096056047,
+            "r2": 0.9980206165650961
+          },
+          "gbm": {
+            "mae": 18.369761068985717,
+            "rmse": 24.42592815380778,
+            "r2": 0.9975585936730664
+          }
+        }
+      },
+      "metadata": {
+        "forecast_days": 30,
+        "method": "ensemble"
+      },
+      "file_path": "5d956870c3.joblib"
+    },
+    "26e0634033": {
+      "id": "26e0634033",
+      "name": "cash_flow_forecaster_ensemble",
+      "type": "forecasting",
+      "features": [
+        "day_of_week",
+        "day_of_month",
+        "month",
+        "quarter",
+        "year",
+        "is_weekend",
+        "is_month_start",
+        "is_month_end",
+        "days_in_month",
+        "lag_1",
+        "lag_2",
+        "lag_3",
+        "lag_7",
+        "lag_14",
+        "lag_30",
+        "rolling_mean_3",
+        "rolling_std_3",
+        "rolling_min_3",
+        "rolling_max_3",
+        "rolling_mean_7",
+        "rolling_std_7",
+        "rolling_min_7",
+        "rolling_max_7",
+        "rolling_mean_14",
+        "rolling_std_14",
+        "rolling_min_14",
+        "rolling_max_14",
+        "rolling_mean_30",
+        "rolling_std_30",
+        "rolling_min_30",
+        "rolling_max_30"
+      ],
+      "created_at": "2025-03-13T17:35:30.445807",
+      "metrics": {
+        "mae": 10.31128610205569,
+        "rmse": 14.62597640343809,
+        "r2": 0.9991246380761797,
+        "individual_models": {
+          "linear": {
+            "mae": 1.080631030924533e-12,
+            "rmse": 1.4325360722559828e-12,
+            "r2": 1.0
+          },
+          "rf": {
+            "mae": 14.318751955963156,
+            "rmse": 21.993584096056047,
+            "r2": 0.9980206165650961
+          },
+          "gbm": {
+            "mae": 18.369761068985717,
+            "rmse": 24.42592815380778,
+            "r2": 0.9975585936730664
+          }
+        }
+      },
+      "metadata": {
+        "forecast_days": 30,
+        "method": "ensemble"
+      },
+      "file_path": "26e0634033.joblib"
+    },
+    "b05e03c165": {
+      "id": "b05e03c165",
+      "name": "cash_flow_forecaster_ensemble",
+      "type": "forecasting",
+      "features": [
+        "day_of_week",
+        "day_of_month",
+        "month",
+        "quarter",
+        "year",
+        "is_weekend",
+        "is_month_start",
+        "is_month_end",
+        "days_in_month",
+        "lag_1",
+        "lag_2",
+        "lag_3",
+        "lag_7",
+        "lag_14",
+        "lag_30",
+        "rolling_mean_3",
+        "rolling_std_3",
+        "rolling_min_3",
+        "rolling_max_3",
+        "rolling_mean_7",
+        "rolling_std_7",
+        "rolling_min_7",
+        "rolling_max_7",
+        "rolling_mean_14",
+        "rolling_std_14",
+        "rolling_min_14",
+        "rolling_max_14",
+        "rolling_mean_30",
+        "rolling_std_30",
+        "rolling_min_30",
+        "rolling_max_30"
+      ],
+      "created_at": "2025-03-13T17:36:42.033571",
+      "metrics": {
+        "mae": 9.260987240635814,
+        "rmse": 12.092070671037552,
+        "r2": 0.9994078748694439,
+        "individual_models": {
+          "linear": {
+            "mae": 1.9044583760645407e-12,
+            "rmse": 2.2469863448105356e-12,
+            "r2": 1.0
+          },
+          "rf": {
+            "mae": 11.950062171846652,
+            "rmse": 17.118193933468103,
+            "r2": 0.9988133352971723
+          },
+          "gbm": {
+            "mae": 17.483027914635677,
+            "rmse": 22.30120503277821,
+            "r2": 0.9979859567096884
+          }
+        }
+      },
+      "metadata": {
+        "forecast_days": 30,
+        "method": "ensemble"
+      },
+      "file_path": "b05e03c165.joblib"
+    },
+    "fc3d97ae6b": {
+      "id": "fc3d97ae6b",
+      "name": "cash_flow_forecaster_ensemble",
+      "type": "forecasting",
+      "features": [
+        "day_of_week",
+        "day_of_month",
+        "month",
+        "quarter",
+        "year",
+        "is_weekend",
+        "is_month_start",
+        "is_month_end",
+        "days_in_month",
+        "lag_1",
+        "lag_2",
+        "lag_3",
+        "lag_7",
+        "lag_14",
+        "lag_30",
+        "rolling_mean_3",
+        "rolling_std_3",
+        "rolling_min_3",
+        "rolling_max_3",
+        "rolling_mean_7",
+        "rolling_std_7",
+        "rolling_min_7",
+        "rolling_max_7",
+        "rolling_mean_14",
+        "rolling_std_14",
+        "rolling_min_14",
+        "rolling_max_14",
+        "rolling_mean_30",
+        "rolling_std_30",
+        "rolling_min_30",
+        "rolling_max_30"
+      ],
+      "created_at": "2025-03-13T17:36:42.901221",
+      "metrics": {
+        "mae": 9.260987240635814,
+        "rmse": 12.092070671037552,
+        "r2": 0.9994078748694439,
+        "individual_models": {
+          "linear": {
+            "mae": 1.9044583760645407e-12,
+            "rmse": 2.2469863448105356e-12,
+            "r2": 1.0
+          },
+          "rf": {
+            "mae": 11.950062171846652,
+            "rmse": 17.118193933468103,
+            "r2": 0.9988133352971723
+          },
+          "gbm": {
+            "mae": 17.483027914635677,
+            "rmse": 22.30120503277821,
+            "r2": 0.9979859567096884
+          }
+        }
+      },
+      "metadata": {
+        "forecast_days": 30,
+        "method": "ensemble"
+      },
+      "file_path": "fc3d97ae6b.joblib"
+    },
+    "9015700611": {
+      "id": "9015700611",
+      "name": "cash_flow_forecaster_ensemble",
+      "type": "forecasting",
+      "features": [
+        "day_of_week",
+        "day_of_month",
+        "month",
+        "quarter",
+        "year",
+        "is_weekend",
+        "is_month_start",
+        "is_month_end",
+        "days_in_month",
+        "lag_1",
+        "lag_2",
+        "lag_3",
+        "lag_7",
+        "lag_14",
+        "lag_30",
+        "rolling_mean_3",
+        "rolling_std_3",
+        "rolling_min_3",
+        "rolling_max_3",
+        "rolling_mean_7",
+        "rolling_std_7",
+        "rolling_min_7",
+        "rolling_max_7",
+        "rolling_mean_14",
+        "rolling_std_14",
+        "rolling_min_14",
+        "rolling_max_14",
+        "rolling_mean_30",
+        "rolling_std_30",
+        "rolling_min_30",
+        "rolling_max_30"
+      ],
+      "created_at": "2025-03-13T17:39:43.372163",
+      "metrics": {
+        "mae": 9.469869177276133,
+        "rmse": 12.441165758453373,
+        "r2": 0.9993724784932352,
+        "individual_models": {
+          "linear": {
+            "mae": 1.387070786098529e-12,
+            "rmse": 1.684438586683315e-12,
+            "r2": 1.0
+          },
+          "rf": {
+            "mae": 12.360331217864218,
+            "rmse": 17.880989175380112,
+            "r2": 0.9987037476923678
+          },
+          "gbm": {
+            "mae": 18.288052452005978,
+            "rmse": 22.561478792714983,
+            "r2": 0.9979363236545277
+          }
+        }
+      },
+      "metadata": {
+        "forecast_days": 30,
+        "method": "ensemble"
+      },
+      "file_path": "9015700611.joblib"
+    },
+    "3133848155": {
+      "id": "3133848155",
+      "name": "cash_flow_forecaster_ensemble",
+      "type": "forecasting",
+      "features": [
+        "day_of_week",
+        "day_of_month",
+        "month",
+        "quarter",
+        "year",
+        "is_weekend",
+        "is_month_start",
+        "is_month_end",
+        "days_in_month",
+        "lag_1",
+        "lag_2",
+        "lag_3",
+        "lag_7",
+        "lag_14",
+        "lag_30",
+        "rolling_mean_3",
+        "rolling_std_3",
+        "rolling_min_3",
+        "rolling_max_3",
+        "rolling_mean_7",
+        "rolling_std_7",
+        "rolling_min_7",
+        "rolling_max_7",
+        "rolling_mean_14",
+        "rolling_std_14",
+        "rolling_min_14",
+        "rolling_max_14",
+        "rolling_mean_30",
+        "rolling_std_30",
+        "rolling_min_30",
+        "rolling_max_30"
+      ],
+      "created_at": "2025-03-13T17:39:44.242680",
+      "metrics": {
+        "mae": 9.469869177276133,
+        "rmse": 12.441165758453373,
+        "r2": 0.9993724784932352,
+        "individual_models": {
+          "linear": {
+            "mae": 1.387070786098529e-12,
+            "rmse": 1.684438586683315e-12,
+            "r2": 1.0
+          },
+          "rf": {
+            "mae": 12.360331217864218,
+            "rmse": 17.880989175380112,
+            "r2": 0.9987037476923678
+          },
+          "gbm": {
+            "mae": 18.288052452005978,
+            "rmse": 22.561478792714983,
+            "r2": 0.9979363236545277
+          }
+        }
+      },
+      "metadata": {
+        "forecast_days": 30,
+        "method": "ensemble"
+      },
+      "file_path": "3133848155.joblib"
+    },
+    "32d62755bd": {
+      "id": "32d62755bd",
+      "name": "cash_flow_forecaster_ensemble",
+      "type": "forecasting",
+      "features": [
+        "day_of_week",
+        "day_of_month",
+        "month",
+        "quarter",
+        "year",
+        "is_weekend",
+        "is_month_start",
+        "is_month_end",
+        "days_in_month",
+        "lag_1",
+        "lag_2",
+        "lag_3",
+        "lag_7",
+        "lag_14",
+        "lag_30",
+        "rolling_mean_3",
+        "rolling_std_3",
+        "rolling_min_3",
+        "rolling_max_3",
+        "rolling_mean_7",
+        "rolling_std_7",
+        "rolling_min_7",
+        "rolling_max_7",
+        "rolling_mean_14",
+        "rolling_std_14",
+        "rolling_min_14",
+        "rolling_max_14",
+        "rolling_mean_30",
+        "rolling_std_30",
+        "rolling_min_30",
+        "rolling_max_30"
+      ],
+      "created_at": "2025-03-13T18:05:12.723875",
+      "metrics": {
+        "mae": 10.177099902835575,
+        "rmse": 12.840771755420228,
+        "r2": 0.9993138663013224,
+        "individual_models": {
+          "linear": {
+            "mae": 1.877237891546026e-12,
+            "rmse": 2.181168552330869e-12,
+            "r2": 1.0
+          },
+          "rf": {
+            "mae": 13.99014209168392,
+            "rmse": 18.332212027923838,
+            "r2": 0.9986015200637843
+          },
+          "gbm": {
+            "mae": 17.284885912719403,
+            "rmse": 22.340935319472997,
+            "r2": 0.9979230348988267
+          }
+        }
+      },
+      "metadata": {
+        "forecast_days": 30,
+        "method": "ensemble"
+      },
+      "file_path": "32d62755bd.joblib"
+    },
+    "001d7431ed": {
+      "id": "001d7431ed",
+      "name": "cash_flow_forecaster_ensemble",
+      "type": "forecasting",
+      "features": [
+        "day_of_week",
+        "day_of_month",
+        "month",
+        "quarter",
+        "year",
+        "is_weekend",
+        "is_month_start",
+        "is_month_end",
+        "days_in_month",
+        "lag_1",
+        "lag_2",
+        "lag_3",
+        "lag_7",
+        "lag_14",
+        "lag_30",
+        "rolling_mean_3",
+        "rolling_std_3",
+        "rolling_min_3",
+        "rolling_max_3",
+        "rolling_mean_7",
+        "rolling_std_7",
+        "rolling_min_7",
+        "rolling_max_7",
+        "rolling_mean_14",
+        "rolling_std_14",
+        "rolling_min_14",
+        "rolling_max_14",
+        "rolling_mean_30",
+        "rolling_std_30",
+        "rolling_min_30",
+        "rolling_max_30"
+      ],
+      "created_at": "2025-03-13T18:05:13.591921",
+      "metrics": {
+        "mae": 10.177099902835575,
+        "rmse": 12.840771755420228,
+        "r2": 0.9993138663013224,
+        "individual_models": {
+          "linear": {
+            "mae": 1.877237891546026e-12,
+            "rmse": 2.181168552330869e-12,
+            "r2": 1.0
+          },
+          "rf": {
+            "mae": 13.99014209168392,
+            "rmse": 18.332212027923838,
+            "r2": 0.9986015200637843
+          },
+          "gbm": {
+            "mae": 17.284885912719403,
+            "rmse": 22.340935319472997,
+            "r2": 0.9979230348988267
+          }
+        }
+      },
+      "metadata": {
+        "forecast_days": 30,
+        "method": "ensemble"
+      },
+      "file_path": "001d7431ed.joblib"
+    }
+  },
+  "budgeting": {
+    "743b5244ad": {
+      "id": "743b5244ad",
+      "name": "budget_recommender",
+      "type": "budgeting",
+      "features": [
+        "category",
+        "amount",
+        "date"
+      ],
+      "created_at": "2025-03-13T17:57:49.190633",
+      "metrics": {},
+      "metadata": {
+        "category_clusters": {
+          "debt_payment": "savings",
+          "dining": "essentials",
+          "entertainment": "essentials",
+          "groceries": "essentials",
+          "healthcare": "savings",
+          "housing": "discretionary",
+          "investment": "savings",
+          "savings": "savings",
+          "shopping": "savings",
+          "subscription": "savings",
+          "transportation": "essentials",
+          "travel": "savings",
+          "utilities": "savings"
+        },
+        "income_based_allocation": {
+          "essentials": 0.5,
+          "discretionary": 0.3,
+          "savings": 0.2
+        }
+      },
+      "file_path": "743b5244ad.joblib"
+    },
+    "4c314cb8f3": {
+      "id": "4c314cb8f3",
+      "name": "budget_recommender",
+      "type": "budgeting",
+      "features": [
+        "category",
+        "amount",
+        "date"
+      ],
+      "created_at": "2025-03-13T17:57:49.205106",
+      "metrics": {},
+      "metadata": {
+        "category_clusters": {
+          "debt_payment": "savings",
+          "dining": "essentials",
+          "entertainment": "essentials",
+          "groceries": "essentials",
+          "healthcare": "savings",
+          "housing": "discretionary",
+          "investment": "savings",
+          "savings": "savings",
+          "shopping": "savings",
+          "subscription": "savings",
+          "transportation": "essentials",
+          "travel": "savings",
+          "utilities": "savings"
+        },
+        "income_based_allocation": {
+          "essentials": 0.5,
+          "discretionary": 0.3,
+          "savings": 0.2
+        }
+      },
+      "file_path": "4c314cb8f3.joblib"
+    },
+    "aef5e17807": {
+      "id": "aef5e17807",
+      "name": "budget_recommender",
+      "type": "budgeting",
+      "features": [
+        "category",
+        "amount",
+        "date"
+      ],
+      "created_at": "2025-03-13T18:04:24.563921",
+      "metrics": {},
+      "metadata": {
+        "category_clusters": {
+          "debt_payment": "savings",
+          "dining": "essentials",
+          "entertainment": "essentials",
+          "groceries": "essentials",
+          "healthcare": "savings",
+          "housing": "discretionary",
+          "investment": "savings",
+          "savings": "savings",
+          "shopping": "savings",
+          "subscription": "savings",
+          "transportation": "essentials",
+          "travel": "savings",
+          "utilities": "savings"
+        },
+        "income_based_allocation": {
+          "essentials": 0.5,
+          "discretionary": 0.3,
+          "savings": 0.2
+        }
+      },
+      "file_path": "aef5e17807.joblib"
+    },
+    "dbea606cfc": {
+      "id": "dbea606cfc",
+      "name": "budget_recommender",
+      "type": "budgeting",
+      "features": [
+        "category",
+        "amount",
+        "date"
+      ],
+      "created_at": "2025-03-13T18:04:24.578526",
+      "metrics": {},
+      "metadata": {
+        "category_clusters": {
+          "debt_payment": "savings",
+          "dining": "essentials",
+          "entertainment": "essentials",
+          "groceries": "essentials",
+          "healthcare": "savings",
+          "housing": "discretionary",
+          "investment": "savings",
+          "savings": "savings",
+          "shopping": "savings",
+          "subscription": "savings",
+          "transportation": "essentials",
+          "travel": "savings",
+          "utilities": "savings"
+        },
+        "income_based_allocation": {
+          "essentials": 0.5,
+          "discretionary": 0.3,
+          "savings": 0.2
+        }
+      },
+      "file_path": "dbea606cfc.joblib"
+    }
+  },
+  "trend_analysis": {
+    "6198e223c3": {
+      "id": "6198e223c3",
+      "name": "trend_analyzer",
+      "type": "trend_analysis",
+      "features": [
+        "date",
+        "amount",
+        "category"
+      ],
+      "created_at": "2025-03-13T18:21:11.315379",
+      "metrics": {},
+      "metadata": {
+        "period": "6m",
+        "days": 180
+      },
+      "file_path": "6198e223c3.joblib"
+    },
+    "fd3c66593e": {
+      "id": "fd3c66593e",
+      "name": "trend_analyzer",
+      "type": "trend_analysis",
+      "features": [
+        "date",
+        "amount",
+        "category"
+      ],
+      "created_at": "2025-03-13T18:21:11.367826",
+      "metrics": {},
+      "metadata": {
+        "period": "3m",
+        "days": 90
+      },
+      "file_path": "fd3c66593e.joblib"
+    }
+  },
+  "anomaly_detection": {
+    "18fde47c95": {
+      "id": "18fde47c95",
+      "name": "anomaly_detector",
+      "type": "anomaly_detection",
+      "features": [
+        "amount_abs",
+        "day_of_week",
+        "day_of_month",
+        "month",
+        "is_weekend",
+        "is_expense",
+        "is_income"
+      ],
+      "created_at": "2025-03-13T18:29:26.570389",
+      "metrics": {},
+      "metadata": {
+        "has_category_models": true
+      },
+      "file_path": "18fde47c95.joblib"
+    },
+    "2c592bb683": {
+      "id": "2c592bb683",
+      "name": "anomaly_detector",
+      "type": "anomaly_detection",
+      "features": [
+        "amount_abs",
+        "day_of_week",
+        "day_of_month",
+        "month",
+        "is_weekend",
+        "is_expense",
+        "is_income"
+      ],
+      "created_at": "2025-03-13T18:29:27.827826",
+      "metrics": {},
+      "metadata": {
+        "has_category_models": true
+      },
+      "file_path": "2c592bb683.joblib"
+    }
+  }
+}
