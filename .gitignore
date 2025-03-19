@@ -1,0 +1,90 @@
+# Byte-compiled / compiled Python files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution and packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Virtual environments
+venv/
+env/
+.env/
+.venv/
+
+# PyCharm specific files
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Cache files
+*.cache
+*.log
+*.gz
+*.zip
+*.tar.gz
+
+# Debug and profiling outputs
+*.out
+*.err
+*.prof
+*.lprof
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Custom logs and debug files
+*.log
+*.tmp
+
+# Matplotlib temporary data
+.matplotlib/
+
+# Scikit-learn specific cache files
+.joblib
+
+# Spacy Models - if downloaded directly into the project folder
+*.model
+
+# User-defined folders
+data/
+temp/
+output/
+
+# Pandas / Jupyter generated CSV and Excel
+*.csv
+*.xls
+*.xlsx
+
+# Other ignored files
+*.bak
+*.swp
+*.swo
+*.orig
+*.~undo-tree~

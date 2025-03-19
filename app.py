@@ -1,3 +1,5 @@
+import traceback
+
 from flask import Flask, request, jsonify
 import os
 import logging
@@ -326,7 +328,7 @@ def fin_query():
             "accounts": [...],
             "budgets": [...],
             "goals": [...]
-        }
+        },
     }
     """
     try:
@@ -360,43 +362,53 @@ def fin_query():
 
 
 @app.route("/fin/learn", methods=["POST"])
-def fin_learn():
+def learn_from_feedback():
     """
-    Process a learning dataset to improve Fin's capabilities.
+    Learn from user feedback to improve Fin's capabilities.
 
     Expected input:
     {
-        "dataset": [
-            {
-                "id": "conversation_123",
-                "messages": [
-                    {"role": "user", "content": "question"},
-                    {"role": "assistant", "content": "answer"},
-                    ...
-                ],
-                "tools_used": [...],
-                "led_to_action": true/false
-            },
-            ...
-        ]
+        "dataset": {
+            "helpful_conversations": [
+                {
+                    "id": 123,
+                    "messages": [...],
+                    "user_id": "user_123"
+                },
+                ...
+            ],
+            "unhelpful_conversations": [...],
+            "tool_usage": {
+                "forecast_cash_flow": {
+                    "total": 15,
+                    "success": 12,
+                    "contexts": ["What if I spend $5000 on marketing?", ...],
+                    "parameters": [{"amount": 5000, "category": "marketing"}, ...]
+                },
+                ...
+            }
+        }
     }
     """
     try:
         data = request.json
-        dataset = data.get("dataset", [])
+        dataset = data.get("dataset", {})
 
-        if not dataset:
-            return jsonify({"error": "Empty dataset provided"}), 400
+        if not dataset or not any(dataset.values()):
+            return (
+                jsonify({"status": "error", "message": "Empty dataset provided"}),
+                400,
+            )
 
-        logger.info(f"Processing learning dataset with {len(dataset)} conversations")
-
-        result = fin_learning_service.process_learning_dataset(dataset)
+        learning_service = FinLearningService()
+        result = learning_service.process_learning_dataset(dataset)
 
         return jsonify(result), 200
 
     except Exception as e:
-        logger.error(f"Error processing learning dataset: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        logger.error(f"Error in learning process: {str(e)}")
+        traceback.print_exc()
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 
 if __name__ == "__main__":
