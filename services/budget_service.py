@@ -80,6 +80,11 @@ class BudgetService:
                 df, recommendations, monthly_income
             )
 
+            human_readable_insights = self.generate_human_readable_insights(
+                insights, monthly_income
+            )
+            insights["readable_insights"] = human_readable_insights
+
             return {
                 "monthly_income": monthly_income,
                 "recommended_budget": {
@@ -459,6 +464,11 @@ class BudgetService:
             ],
         }
 
+        human_readable_insights = self.generate_human_readable_insights(
+            insights, monthly_income
+        )
+        insights["readable_insights"] = human_readable_insights
+
         return {
             "monthly_income": monthly_income,
             "recommended_budget": {
@@ -572,3 +582,95 @@ class BudgetService:
             }
         except Exception as e:
             return {"success": False, "error": str(e)}
+
+    def generate_human_readable_insights(self, insights, monthly_income):
+        """Generate human-readable insights based on technical insights data"""
+        readable_insights = []
+
+        # Budget rule comparison insights
+        if "rule_comparison" in insights:
+            rule_data = insights["rule_comparison"]
+            current = rule_data["current_allocation"]
+            ideal = rule_data["ideal_allocation"]
+
+            # Check if essential spending is too high
+            if (
+                current["essentials"] > ideal["essentials"] + 10
+            ):  # More than 10% over ideal
+                readable_insights.append(
+                    {
+                        "title": "Essential Spending Alert",
+                        "description": f"Your essential spending is {current['essentials']}% of your income, which is higher than the recommended {ideal['essentials']}%. Consider finding ways to reduce your fixed costs.",
+                    }
+                )
+
+            # Check if savings are too low
+            if current["savings"] < ideal["savings"] - 5:  # More than 5% under ideal
+                readable_insights.append(
+                    {
+                        "title": "Savings Opportunity",
+                        "description": f"You're currently saving {current['savings']}% of your income, which is less than the recommended {ideal['savings']}%. Try to increase your savings to build financial security.",
+                    }
+                )
+            elif current["savings"] >= ideal["savings"]:
+                readable_insights.append(
+                    {
+                        "title": "Great Savings Habit",
+                        "description": f"You're saving {current['savings']}% of your income, which meets or exceeds the recommended {ideal['savings']}%. Keep up the good work!",
+                    }
+                )
+
+        # Budget status insights
+        if "category_status" in insights:
+            # Find categories that are most over budget
+            over_budget_categories = []
+            for category, status in insights["category_status"].items():
+                if (
+                    status["status"] == "over_budget" and status["difference"] < -50
+                ):  # Over by at least $50
+                    over_budget_categories.append((category, abs(status["difference"])))
+
+            if over_budget_categories:
+                # Sort by the amount over budget (largest first)
+                over_budget_categories.sort(key=lambda x: x[1], reverse=True)
+                top_two = over_budget_categories[:2]
+
+                over_budget_text = ", ".join(
+                    [f"{category} (${amount:.2f} over)" for category, amount in top_two]
+                )
+                readable_insights.append(
+                    {
+                        "title": "Budget Alert",
+                        "description": f"You're significantly over budget in: {over_budget_text}. Consider adjusting your spending or your budget in these categories.",
+                    }
+                )
+
+        # Top spending insights
+        if (
+            "top_spending_categories" in insights
+            and len(insights["top_spending_categories"]) > 0
+        ):
+            top_categories = insights["top_spending_categories"][:3]
+            top_spending_text = ", ".join(
+                [
+                    f"{item['category']} (${item['amount']:.2f})"
+                    for item in top_categories
+                ]
+            )
+
+            readable_insights.append(
+                {
+                    "title": "Top Spending Areas",
+                    "description": f"Your highest spending categories are {top_spending_text}. Focus on these areas for the biggest impact on your budget.",
+                }
+            )
+
+        # Add a general budgeting principle insight
+        readable_insights.append(
+            {
+                "title": "50/30/20 Rule",
+                "description": "This budget follows the 50/30/20 rule: 50% of income for needs, 30% for wants, and 20% for savings or debt repayment.",
+            }
+        )
+
+        return readable_insights

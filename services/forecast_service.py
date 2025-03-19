@@ -102,7 +102,8 @@ class ForecastService:
             # Fall back to simple forecasting method
             return self._simple_forecast(df, current_balance, forecast_days)
 
-    def _calculate_confidence(self, forecast_df):
+    @staticmethod
+    def _calculate_confidence(forecast_df):
         """Calculate a confidence score for the forecast"""
         # This is a simple heuristic - in a real system we'd use proper
         # statistical methods to calculate prediction intervals
@@ -127,7 +128,8 @@ class ForecastService:
         else:
             return "high"
 
-    def _simple_forecast(self, df, current_balance, forecast_days):
+    @staticmethod
+    def _simple_forecast(df, current_balance, forecast_days):
         """
         Simple rule-based forecasting as a fallback
 
@@ -315,3 +317,242 @@ class ForecastService:
             }
         except Exception as e:
             return {"success": False, "error": str(e)}
+
+    def forecast_cash_flow_scenario(
+        self, user_id, transactions, forecast_days, adjustments
+    ):
+        """
+        Generate a cash flow forecast with scenario-based adjustments
+
+        Parameters:
+        - user_id: User identifier
+        - transactions: List of transaction objects with date, amount, category
+        - forecast_days: Number of days to forecast
+        - adjustments: Dictionary of adjustments to apply to the forecast
+            - category_adjustments: Dictionary of category_id -> adjustment_amount
+            - income_adjustment: Overall income adjustment amount
+            - expense_adjustment: Overall expense adjustment amount
+            - recurring_transactions: List of new recurring transactions to add
+
+        Returns:
+        - Dictionary with forecast data and insights
+        """
+        try:
+            # First, get the base forecast
+            base_forecast = self.forecast_cash_flow(
+                user_id, transactions, forecast_days
+            )
+
+            # Convert forecast to our structure for scenarios if needed
+            if "projected_amount" in base_forecast["forecast"][0]:
+                # Convert from projected_amount/projected_balance to income/expenses/balance
+                for day in base_forecast["forecast"]:
+                    day["income"] = max(0, day.get("projected_amount", 0))
+                    day["expenses"] = abs(min(0, day.get("projected_amount", 0)))
+                    day["balance"] = day.get("projected_balance", 0)
+                    day["net_flow"] = day.get("projected_amount", 0)
+
+            # Apply category-specific adjustments
+            if adjustments.get("category_adjustments"):
+                category_map = {}
+                for transaction in transactions:
+                    category = transaction.get("category", "uncategorized")
+                    if category not in category_map:
+                        category_map[category] = {"income": 0, "expense": 0, "count": 0}
+
+                    amount = transaction.get("amount", 0)
+                    if amount >= 0:
+                        category_map[category]["income"] += amount
+                    else:
+                        category_map[category]["expense"] += abs(amount)
+
+                    category_map[category]["count"] += 1
+
+                # Now apply the adjustments to the forecast
+                for category_id, adjustment in adjustments[
+                    "category_adjustments"
+                ].items():
+                    if not adjustment or float(adjustment) == 0:
+                        continue
+
+                    # Find the category name
+                    category_name = None
+                    for transaction in transactions:
+                        if transaction.get("category_id") == int(category_id):
+                            category_name = transaction.get("category")
+                            break
+
+                    if not category_name:
+                        continue
+
+                    # Distribute the adjustment across the forecast days
+                    if category_name in category_map:
+                        # If this is an expense category, make the adjustment negative
+                        is_expense = (
+                            category_map[category_name]["expense"]
+                            > category_map[category_name]["income"]
+                        )
+                        adjustment_amount = float(adjustment)
+                        if is_expense:
+                            adjustment_amount = -abs(adjustment_amount)
+
+                        # Apply to each day based on historical patterns
+                        daily_adjustment = adjustment_amount / forecast_days
+                        for day in base_forecast["forecast"]:
+                            if is_expense:
+                                day["expenses"] += abs(daily_adjustment)
+                            else:
+                                day["income"] += daily_adjustment
+
+                            day["net_flow"] = day["income"] - day["expenses"]
+
+            # Apply overall income adjustment
+            if (
+                adjustments.get("income_adjustment")
+                and float(adjustments["income_adjustment"]) != 0
+            ):
+                income_adj = float(adjustments["income_adjustment"]) / forecast_days
+                for day in base_forecast["forecast"]:
+                    day["income"] += income_adj
+                    day["net_flow"] = day["income"] - day["expenses"]
+
+            # Apply overall expense adjustment
+            if (
+                adjustments.get("expense_adjustment")
+                and float(adjustments["expense_adjustment"]) != 0
+            ):
+                expense_adj = float(adjustments["expense_adjustment"]) / forecast_days
+                for day in base_forecast["forecast"]:
+                    day["expenses"] += expense_adj
+                    day["net_flow"] = day["income"] - day["expenses"]
+
+            # Apply recurring transactions
+            if adjustments.get("recurring_transactions"):
+                for transaction in adjustments["recurring_transactions"]:
+                    if (
+                        not transaction.get("amount")
+                        or float(transaction["amount"]) == 0
+                    ):
+                        continue
+
+                    amount = float(transaction["amount"])
+                    frequency = transaction.get("frequency", "monthly")
+
+                    # Determine which days to apply the transaction
+                    applicable_days = []
+                    if frequency == "daily":
+                        # Apply to every day
+                        applicable_days = list(range(forecast_days))
+                    elif frequency == "weekly":
+                        # Apply every 7 days
+                        applicable_days = list(range(7, forecast_days, 7))
+                    elif frequency == "monthly":
+                        # Apply on the same day of the month
+                        current_day = datetime.now().day
+                        for i in range(forecast_days):
+                            day_date = datetime.now() + timedelta(days=i)
+                            if day_date.day == current_day:
+                                applicable_days.append(i)
+
+                    # Apply the transaction to the applicable days
+                    for day_index in applicable_days:
+                        if day_index >= len(base_forecast["forecast"]):
+                            continue
+
+                        if amount >= 0:
+                            base_forecast["forecast"][day_index]["income"] += amount
+                        else:
+                            base_forecast["forecast"][day_index]["expenses"] += abs(
+                                amount
+                            )
+
+                        base_forecast["forecast"][day_index]["net_flow"] = (
+                            base_forecast["forecast"][day_index]["income"]
+                            - base_forecast["forecast"][day_index]["expenses"]
+                        )
+
+            # Recalculate running balance
+            starting_balance = base_forecast.get("insights", {}).get(
+                "current_balance", 0
+            )
+            current_balance = starting_balance
+            base_forecast["starting_balance"] = starting_balance
+
+            for day in base_forecast["forecast"]:
+                current_balance += day["net_flow"]
+                day["balance"] = current_balance
+
+            # Update insights based on the new forecast
+            original_insights = base_forecast.get("insights", {})
+            scenario_insights = []
+
+            # Compare ending balance with original forecast
+            original_ending = original_insights.get(
+                "projected_balance", starting_balance
+            )
+            scenario_ending = base_forecast["forecast"][-1]["balance"]
+            difference = scenario_ending - original_ending
+
+            # Add scenario-specific insights
+            if abs(difference) > 0:
+                direction = "higher" if difference > 0 else "lower"
+                scenario_insights.append(
+                    {
+                        "title": f"Scenario Impact: {direction.capitalize()} Ending Balance",
+                        "description": f"This scenario results in a {direction} ending balance of ${abs(difference):.2f} compared to the base forecast.",
+                    }
+                )
+
+            # Add insights about cash flow stability
+            negative_days = sum(
+                1 for day in base_forecast["forecast"] if day["balance"] < 0
+            )
+            if negative_days > 0:
+                scenario_insights.append(
+                    {
+                        "title": "Cash Flow Warning",
+                        "description": f"This scenario results in {negative_days} days of negative cash flow. Consider adjusting your plan.",
+                    }
+                )
+
+            # Add more detailed insights about income and expense changes
+            total_income = sum(day["income"] for day in base_forecast["forecast"])
+            total_expenses = sum(day["expenses"] for day in base_forecast["forecast"])
+
+            if (
+                adjustments.get("income_adjustment")
+                and float(adjustments["income_adjustment"]) != 0
+            ):
+                scenario_insights.append(
+                    {
+                        "title": "Income Adjustment Impact",
+                        "description": f"The income adjustment of ${float(adjustments['income_adjustment']):.2f} changes your monthly income projection.",
+                    }
+                )
+
+            if (
+                adjustments.get("expense_adjustment")
+                and float(adjustments["expense_adjustment"]) != 0
+            ):
+                scenario_insights.append(
+                    {
+                        "title": "Expense Adjustment Impact",
+                        "description": f"The expense adjustment of ${float(adjustments['expense_adjustment']):.2f} changes your monthly expense projection.",
+                    }
+                )
+
+            # Create return format with both forecast data and insights
+            result = {
+                "forecast": base_forecast["forecast"],
+                "starting_balance": starting_balance,
+                "insights": scenario_insights,
+            }
+
+            return result
+
+        except Exception as e:
+            import traceback
+
+            print(f"Error generating scenario forecast: {str(e)}")
+            print(traceback.format_exc())
+            return {"error": str(e)}
