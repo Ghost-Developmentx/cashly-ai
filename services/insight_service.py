@@ -25,17 +25,7 @@ class InsightService:
             print(f"No existing trend analysis model found: {str(e)}")
 
     def analyze_trends(self, user_id, transactions, period="3m"):
-        """
-        Analyze transaction trends and patterns
-
-        Args:
-            user_id: User ID
-            transactions: List of transaction dictionaries
-            period: Analysis period ('1m', '3m', '6m', '1y')
-
-        Returns:
-            dict: Trend analysis results
-        """
+        """Analyze transaction trends and patterns"""
         # Convert to DataFrame
         df = pd.DataFrame(transactions)
 
@@ -55,6 +45,17 @@ class InsightService:
 
             # Add user ID to results
             analysis_results["user_id"] = user_id
+
+            # Normalize date formats in the results before returning
+            if "forecast" in analysis_results:
+                for item in analysis_results["forecast"]:
+                    if "date" in item and isinstance(item["date"], (pd.Timestamp, datetime)):
+                        item["date"] = item["date"].strftime("%Y-%m-%d")
+
+            if "insights" in analysis_results:
+                for insight in analysis_results["insights"]:
+                    if "period" in insight and isinstance(insight["period"], (pd.Timestamp, datetime)):
+                        insight["period"] = insight["period"].strftime("%Y-%m-%d")
 
             return analysis_results
         except Exception as e:

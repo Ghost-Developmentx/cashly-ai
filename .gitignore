@@ -60,7 +60,6 @@ env/
 Thumbs.db
 
 # Custom logs and debug files
-*.log
 *.tmp
 
 # Matplotlib temporary data
@@ -72,15 +71,43 @@ Thumbs.db
 # Spacy Models - if downloaded directly into the project folder
 *.model
 
-# User-defined folders
-data/
-temp/
-output/
+# ML related files
+*.joblib
+*.pkl
+*.h5
+*.pt
+*.pth
+*.onnx
+*.tflite
+*.pb
 
-# Pandas / Jupyter generated CSV and Excel
+# Data files
+data/training_data/
+data/trained_models/
 *.csv
 *.xls
 *.xlsx
+*.json
+!models/intents_data.json
+!prompts/*.json
+!data/trained_models/registry.json
+
+# Environment variables
+.env
+
+# API Keys and credentials
+*.key
+*_key.txt
+credentials.json
+secret.json
+
+# Temp directories
+temp/
+output/
+tmp/
+
+# Generated output
+prompts/fin_system_prompt.txt
 
 # Other ignored files
 *.bak
@@ -88,3 +115,10 @@ output/
 *.swo
 *.orig
 *.~undo-tree~
+
+# OS-specific
+desktop.ini
+
+# VSCode
+.vscode/
+*.code-workspace
