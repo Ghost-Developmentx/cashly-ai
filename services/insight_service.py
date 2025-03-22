@@ -1,6 +1,5 @@
 import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
+from datetime import datetime
 from models.trend_analysis import TrendAnalyzer
 from util.model_registry import ModelRegistry
 
@@ -57,6 +56,39 @@ class InsightService:
                     if "period" in insight and isinstance(insight["period"], (pd.Timestamp, datetime)):
                         insight["period"] = insight["period"].strftime("%Y-%m-%d")
 
+                    # Handle any nested date objects in insight details
+                    if "details" in insight and isinstance(insight["details"], dict):
+                        for key, value in insight["details"].items():
+                            if isinstance(value, (pd.Timestamp, datetime)):
+                                insight["details"][key] = value.strftime("%Y-%m-%d")
+
+            # Handle monthly_trends section
+            if "monthly_trends" in analysis_results:
+                for i, trend in enumerate(analysis_results["monthly_trends"]):
+                    if "month" in trend and isinstance(trend["month"], (pd.Timestamp, datetime)):
+                        analysis_results["monthly_trends"][i]["month"] = trend["month"].strftime("%Y-%m-%d")
+
+            # Handle day_of_week_spending section (if it exists)
+            if "day_of_week_spending" in analysis_results and isinstance(analysis_results["day_of_week_spending"],
+                                                                         dict):
+                for key, value in list(analysis_results["day_of_week_spending"].items()):
+                    if isinstance(key, (pd.Timestamp, datetime)):
+                        # Create a new entry with the string date and delete the old one
+                        analysis_results["day_of_week_spending"][key.strftime("%Y-%m-%d")] = value
+                        del analysis_results["day_of_week_spending"][key]
+
+            # Handle category_breakdown section (if it exists)
+            if "category_breakdown" in analysis_results and isinstance(analysis_results["category_breakdown"], dict):
+                for category, data in analysis_results["category_breakdown"].items():
+                    if isinstance(data, dict):
+                        for date_key, amount in list(data.items()):
+                            if isinstance(date_key, (pd.Timestamp, datetime)):
+                                data[date_key.strftime("%Y-%m-%d")] = amount
+                                del data[date_key]
+
+            # Recursively convert any timestamp objects that might be nested deeper
+            analysis_results = self._normalize_timestamps_recursive(analysis_results)
+
             return analysis_results
         except Exception as e:
             print(f"Error analyzing trends: {str(e)}")
@@ -98,3 +130,22 @@ class InsightService:
             }
         except Exception as e:
             return {"success": False, "error": str(e)}
+
+    def _normalize_timestamps_recursive(self, obj):
+        """Recursively convert all timestamp objects to strings in a nested structure"""
+        if isinstance(obj, dict):
+            for key, value in list(obj.items()):
+                if isinstance(key, (pd.Timestamp, datetime)):
+                    # Handle timestamp keys
+                    obj[key.strftime("%Y-%m-%d")] = self._normalize_timestamps_recursive(value)
+                    del obj[key]
+                else:
+                    # Process value
+                    obj[key] = self._normalize_timestamps_recursive(value)
+            return obj
+        elif isinstance(obj, list):
+            return [self._normalize_timestamps_recursive(item) for item in obj]
+        elif isinstance(obj, (pd.Timestamp, datetime)):
+            return obj.strftime("%Y-%m-%d")
+        else:
+            return obj

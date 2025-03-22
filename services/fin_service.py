@@ -1,11 +1,10 @@
 import os
-import json
 import logging
 import anthropic
 import datetime
-import re
-import numpy as np
-from typing import Dict, List, Any, Optional, Union
+from typing import Dict, List, Any
+
+import pandas as pd
 
 from services.forecast_service import ForecastService
 from services.categorize_service import CategorizationService
@@ -58,13 +57,12 @@ class FinService:
         messages = self._build_messages(query, conversation_history)
 
         try:
-            # Call Claude with the prompt and tools
             response = self.client.messages.create(
                 model="claude-3-opus-20240229",
                 max_tokens=2000,
                 system=system_prompt,
                 messages=messages,
-                tools=self._get_tools(),
+                extra_body={"tools": self._get_tools()},
             )
 
             # Process the response to extract text and any tool calls
@@ -162,57 +160,81 @@ class FinService:
         # Calculate income and expenses if there are transactions
         if transactions:
             # Get transactions from the last 3 months
-            today = datetime.datetime.now().date()
-            three_months_ago = today - datetime.timedelta(days=90)
+            try:
+                today = datetime.datetime.now().date()
+                three_months_ago = today - datetime.timedelta(days=90)
 
-            recent_transactions = [
-                t
-                for t in transactions
-                if datetime.datetime.strptime(t["date"], "%Y-%m-%d").date()
-                >= three_months_ago
-            ]
+                # Ensure dates are properly parsed
+                recent_transactions = []
+                for t in transactions:
+                    try:
+                        transaction_date = t["date"]
+                        # Handle potential datetime objects
+                        if isinstance(
+                            transaction_date, (datetime.datetime, pd.Timestamp)
+                        ):
+                            transaction_date = transaction_date.strftime("%Y-%m-%d")
 
-            # Calculate monthly income and expenses
-            if recent_transactions:
-                monthly_income = (
-                    sum(t["amount"] for t in recent_transactions if t["amount"] > 0) / 3
-                )
-                monthly_expenses = (
-                    sum(
-                        abs(t["amount"]) for t in recent_transactions if t["amount"] < 0
+                        # Parse the date string
+                        date_obj = datetime.datetime.strptime(
+                            transaction_date, "%Y-%m-%d"
+                        ).date()
+                        if date_obj >= three_months_ago:
+                            recent_transactions.append(t)
+                    except (ValueError, TypeError) as e:
+                        logger.warning(f"Error processing transaction date: {e}")
+                        continue
+
+                # Calculate monthly income and expenses
+                if recent_transactions:
+                    monthly_income = (
+                        sum(t["amount"] for t in recent_transactions if t["amount"] > 0)
+                        / 3
                     )
-                    / 3
-                )
+                    monthly_expenses = (
+                        sum(
+                            abs(t["amount"])
+                            for t in recent_transactions
+                            if t["amount"] < 0
+                        )
+                        / 3
+                    )
 
-                context["monthly_income"] = f"${monthly_income:.2f}"
-                context["monthly_expenses"] = f"${monthly_expenses:.2f}"
+                    context["monthly_income"] = f"${monthly_income:.2f}"
+                    context["monthly_expenses"] = f"${monthly_expenses:.2f}"
 
-                # Get top spending categories
-                category_spend = {}
-                for t in recent_transactions:
-                    if t["amount"] < 0:
-                        category = t.get("category", "Uncategorized")
-                        category_spend[category] = category_spend.get(
-                            category, 0
-                        ) + abs(t["amount"])
+                    # Get top spending categories
+                    category_spend = {}
+                    for t in recent_transactions:
+                        if t["amount"] < 0:
+                            category = t.get("category", "Uncategorized")
+                            category_spend[category] = category_spend.get(
+                                category, 0
+                            ) + abs(t["amount"])
 
-                top_categories = sorted(
-                    category_spend.items(), key=lambda x: x[1], reverse=True
-                )
-                context["top_categories"] = (
-                    [c[0] for c in top_categories[:3]]
-                    if top_categories
-                    else ["unknown"]
-                )
+                    top_categories = sorted(
+                        category_spend.items(), key=lambda x: x[1], reverse=True
+                    )
+                    context["top_categories"] = (
+                        [c[0] for c in top_categories[:3]]
+                        if top_categories
+                        else ["unknown"]
+                    )
 
-                # Detect recurring expenses (simplified)
-                recurring_count = sum(
-                    1 for t in recent_transactions if t.get("recurring", False)
-                )
-                context["recurring_expenses"] = (
-                    f"${recurring_count} recurring items detected"
-                )
-            else:
+                    # Detect recurring expenses (simplified)
+                    recurring_count = sum(
+                        1 for t in recent_transactions if t.get("recurring", False)
+                    )
+                    context["recurring_expenses"] = (
+                        f"${recurring_count} recurring items detected"
+                    )
+                else:
+                    context["monthly_income"] = "unknown"
+                    context["monthly_expenses"] = "unknown"
+                    context["top_categories"] = ["unknown"]
+                    context["recurring_expenses"] = "unknown"
+            except Exception as e:
+                logger.error(f"Error extracting financial context: {str(e)}")
                 context["monthly_income"] = "unknown"
                 context["monthly_expenses"] = "unknown"
                 context["top_categories"] = ["unknown"]
@@ -325,30 +347,40 @@ class FinService:
 
         return tools
 
-    def _process_response(
-        self,
-        response,
-        user_id: str,
-        transactions: List[Dict[str, Any]],
-        user_context: Dict[str, Any],
-    ) -> Dict[str, Any]:
+    def _process_response(self, response, user_id, transactions, user_context):
         """Process Claude's response, handling any tool calls and formatting the final response"""
-        result = {"response_text": response.content[0].text, "actions": []}
+        # Get the text content
+        content = response.content[0].text if hasattr(response, "content") else ""
+
+        # Remove thinking tags if present
+        if "<thinking>" in content and "</thinking>" in content:
+            thinking_start = content.find("<thinking>")
+            thinking_end = content.find("</thinking>") + len("</thinking>")
+            thinking_content = content[thinking_start:thinking_end]
+            content = content.replace(thinking_content, "").strip()
+
+        result = {"response_text": content, "actions": []}
 
         # Check if there are any tool calls
-        if hasattr(response, "tool_calls") and response.tool_calls:
+        if (
+            hasattr(response, "content")
+            and hasattr(response.content[0], "tool_calls")
+            and response.content[0].tool_calls
+        ):
             tool_results = []
 
-            for tool_call in response.tool_calls:
-                tool_name = tool_call["name"]
-                tool_args = tool_call["input"]
+            for tool_call in response.content[0].tool_calls:
+                tool_name = tool_call.name
+                tool_args = tool_call.input
 
                 # Execute the appropriate tool call
                 tool_result = self._execute_tool_call(
                     tool_name, tool_args, user_id, transactions, user_context
                 )
 
-                tool_results.append({"tool": tool_name, "result": tool_result})
+                tool_results.append(
+                    {"tool": tool_name, "result": tool_result, "parameters": tool_args}
+                )
 
                 # Add any UI actions needed
                 if tool_name == "forecast_cash_flow":
@@ -362,6 +394,10 @@ class FinService:
                 elif tool_name == "generate_budget":
                     result["actions"].append(
                         {"type": "show_budget", "data": tool_result}
+                    )
+                elif tool_name == "calculate_category_spending":
+                    result["actions"].append(
+                        {"type": "show_categories", "data": tool_result}
                     )
 
             # Add tool results to the response
@@ -379,6 +415,9 @@ class FinService:
     ) -> Dict[str, Any]:
         """Execute a specific tool call with the provided arguments"""
         try:
+            # Normalize all dates in transactions
+            normalized_transactions = self._normalize_transaction_dates(transactions)
+
             if tool_name == "forecast_cash_flow":
                 days = tool_args.get("days", 30)
                 adjustments = tool_args.get("adjustments", {})
@@ -387,25 +426,29 @@ class FinService:
                 if adjustments:
                     return self.forecast_service.forecast_cash_flow_scenario(
                         user_id=user_id,
-                        transactions=transactions,
+                        transactions=normalized_transactions,
                         forecast_days=days,
                         adjustments=adjustments,
                     )
                 else:
                     return self.forecast_service.forecast_cash_flow(
-                        user_id=user_id, transactions=transactions, forecast_days=days
+                        user_id=user_id,
+                        transactions=normalized_transactions,
+                        forecast_days=days,
                     )
 
             elif tool_name == "analyze_trends":
                 period = tool_args.get("period", "3m")
                 return self.insight_service.analyze_trends(
-                    user_id=user_id, transactions=transactions, period=period
+                    user_id=user_id, transactions=normalized_transactions, period=period
                 )
 
             elif tool_name == "detect_anomalies":
                 threshold = tool_args.get("threshold")
                 return self.anomaly_service.detect_anomalies(
-                    user_id=user_id, transactions=transactions, threshold=threshold
+                    user_id=user_id,
+                    transactions=normalized_transactions,
+                    threshold=threshold,
                 )
 
             elif tool_name == "generate_budget":
@@ -416,12 +459,16 @@ class FinService:
                     today = datetime.datetime.now().date()
                     one_month_ago = today - datetime.timedelta(days=30)
 
-                    recent_transactions = [
-                        t
-                        for t in transactions
-                        if datetime.datetime.strptime(t["date"], "%Y-%m-%d").date()
-                        >= one_month_ago
-                    ]
+                    recent_transactions = []
+                    for t in normalized_transactions:
+                        try:
+                            date_obj = datetime.datetime.strptime(
+                                t["date"], "%Y-%m-%d"
+                            ).date()
+                            if date_obj >= one_month_ago:
+                                recent_transactions.append(t)
+                        except (ValueError, TypeError):
+                            continue
 
                     monthly_income = sum(
                         t["amount"] for t in recent_transactions if t["amount"] > 0
@@ -429,7 +476,7 @@ class FinService:
 
                 return self.budget_service.generate_budget(
                     user_id=user_id,
-                    transactions=transactions,
+                    transactions=normalized_transactions,
                     monthly_income=monthly_income,
                 )
 
@@ -456,13 +503,16 @@ class FinService:
                     end_date = today
 
                 # Filter transactions by date and category
-                filtered_txns = [
-                    t
-                    for t in transactions
-                    if start_date
-                    <= datetime.datetime.strptime(t["date"], "%Y-%m-%d").date()
-                    <= end_date
-                ]
+                filtered_txns = []
+                for t in normalized_transactions:
+                    try:
+                        date_obj = datetime.datetime.strptime(
+                            t["date"], "%Y-%m-%d"
+                        ).date()
+                        if start_date <= date_obj <= end_date:
+                            filtered_txns.append(t)
+                    except (ValueError, TypeError):
+                        continue
 
                 if categories:
                     # Case-insensitive category matching
@@ -501,3 +551,54 @@ class FinService:
         except Exception as e:
             logger.error(f"Error executing tool {tool_name}: {str(e)}")
             return {"error": str(e)}
+
+    @staticmethod
+    def _normalize_transaction_dates(transactions):
+        """Ensure all transaction dates are in YYYY-MM-DD format"""
+        normalized = []
+
+        for t in transactions:
+            # Create a copy to avoid modifying the original
+            t_copy = dict(t)
+
+            try:
+                if "date" not in t_copy:
+                    continue
+
+                # Convert to string if it's not already
+                date_str = str(t_copy["date"])
+
+                # CASE 1: Handle pandas Timestamp objects
+                if isinstance(t_copy["date"], pd.Timestamp):
+                    date_str = t_copy["date"].strftime("%Y-%m-%d")
+
+                # CASE 2: Handle datetime objects
+                elif isinstance(t_copy["date"], datetime.datetime):
+                    date_str = t_copy["date"].strftime("%Y-%m-%d")
+
+                # CASE 3: Handle string with UTC timezone
+                elif " UTC" in date_str:
+                    date_str = date_str.split(" UTC")[0]
+
+                # CASE 4: Handle string with time component
+                if " 00:00:00" in date_str:
+                    date_str = date_str.split(" 00:00:00")[0]
+
+                # CASE 5: Further clean any remaining time information
+                if " " in date_str:
+                    date_str = date_str.split(" ")[0]
+
+                # Validate the resulting date format
+                datetime.datetime.strptime(date_str, "%Y-%m-%d")
+
+                # Update the transaction with cleaned date
+                t_copy["date"] = date_str
+                normalized.append(t_copy)
+            except (KeyError, ValueError, TypeError) as e:
+                # Skip transactions with invalid dates
+                logger.warning(
+                    f"Skipping transaction with invalid date: {t.get('date', 'No date')} - Error: {str(e)}"
+                )
+                continue
+
+        return normalized

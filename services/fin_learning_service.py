@@ -47,7 +47,7 @@ class FinLearningService:
 
         # Load Named Entity Recognition model from HuggingFace
         try:
-            model_name = "flair/ner-english-ontonotes-large"
+            model_name = "dslim/bert-base-NER"
             self.ner_tokenizer = AutoTokenizer.from_pretrained(model_name)
             self.ner_model = AutoModelForTokenClassification.from_pretrained(model_name)
             self.ner_pipeline = pipeline(

@@ -1,9 +1,12 @@
 import traceback
+import json
+from datetime import datetime
 
 from flask import Flask, request, jsonify
 import os
 import logging
 from flask_cors import CORS
+import pandas as pd
 from services.categorize_service import CategorizationService
 from services.forecast_service import ForecastService
 from services.budget_service import BudgetService
@@ -30,6 +33,16 @@ anomaly_service = AnomalyService()
 fin_service = FinService()
 fin_learning_service = FinLearningService()
 
+
+# Custom JSON encoder for datetime objects
+class DateTimeEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, (datetime, pd.Timestamp)):
+            return obj.strftime("%Y-%m-%d")
+        return super(DateTimeEncoder, self).default(obj)
+
+
+app.json_encoder = DateTimeEncoder
 
 # Directory For Saving Trained Models
 MODEL_DIR = "models"
@@ -75,7 +88,7 @@ def categorize_transaction():
             f"Categorization result: {result['category']} (confidence: {result['confidence']:.2f})"
         )
 
-        return jsonify(result), 200
+        return jsonify(json.loads(json.dumps(result, cls=DateTimeEncoder))), 200
 
     except Exception as e:
         logger.error(f"Error categorizing transaction: {str(e)}")
@@ -119,7 +132,7 @@ def forecast_cash_flow():
             f"Forecast completed with {len(result.get('forecast', []))} days predicted"
         )
 
-        return jsonify(result), 200
+        return jsonify(json.loads(json.dumps(result, cls=DateTimeEncoder))), 200
 
     except Exception as e:
         logger.error(f"Error forecasting cash flow: {str(e)}")
@@ -163,7 +176,7 @@ def generate_budget():
             f"Budget recommendations generated for {len(result.get('recommended_budget', {}).get('by_category', {}))} categories"
         )
 
-        return jsonify(result), 200
+        return jsonify(json.loads(json.dumps(result, cls=DateTimeEncoder))), 200
 
     except Exception as e:
         logger.error(f"Error generating budget recommendations: {str(e)}")
@@ -205,7 +218,7 @@ def analyze_trends():
             f"Trend analysis completed with {len(result.get('insights', []))} insights generated"
         )
 
-        return jsonify(result), 200
+        return jsonify(json.loads(json.dumps(result, cls=DateTimeEncoder))), 200
 
     except Exception as e:
         logger.error(f"Error analyzing trends: {str(e)}")
@@ -247,14 +260,11 @@ def detect_anomalies():
             f"Anomaly detection completed with {len(result.get('anomalies', []))} anomalies found"
         )
 
-        return jsonify(result), 200
+        return jsonify(json.loads(json.dumps(result, cls=DateTimeEncoder))), 200
 
     except Exception as e:
         logger.error(f"Error detecting anomalies: {str(e)}")
         return jsonify({"error": str(e)}), 500
-
-
-# app.py - add this endpoint
 
 
 @app.route("/forecast/cash_flow/scenario", methods=["POST"])
@@ -303,7 +313,7 @@ def forecast_cash_flow_scenario():
 
         logger.info(f"Scenario forecast completed")
 
-        return jsonify(result), 200
+        return jsonify(json.loads(json.dumps(result, cls=DateTimeEncoder))), 200
 
     except Exception as e:
         logger.error(f"Error generating scenario forecast: {str(e)}")
@@ -354,7 +364,7 @@ def fin_query():
 
         logger.info(f"Fin response generated successfully")
 
-        return jsonify(result), 200
+        return jsonify(json.loads(json.dumps(result, cls=DateTimeEncoder))), 200
 
     except Exception as e:
         logger.error(f"Error processing Fin query: {str(e)}")
@@ -403,7 +413,7 @@ def learn_from_feedback():
         learning_service = FinLearningService()
         result = learning_service.process_learning_dataset(dataset)
 
-        return jsonify(result), 200
+        return jsonify(json.loads(json.dumps(result, cls=DateTimeEncoder))), 200
 
     except Exception as e:
         logger.error(f"Error in learning process: {str(e)}")
