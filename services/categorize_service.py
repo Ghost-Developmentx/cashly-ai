@@ -81,7 +81,8 @@ class CategorizationService:
             # Fallback to rule-based approach
             return self._rule_based_categorization(transaction)
 
-    def _rule_based_categorization(self, transaction):
+    @staticmethod
+    def _rule_based_categorization(transaction):
         """
         Fallback rule-based categorization when ML model is unavailable
 

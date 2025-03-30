@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
+
+from huggingface_hub import model_info
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler

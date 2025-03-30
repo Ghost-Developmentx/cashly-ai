@@ -1,5 +1,9 @@
+import json
 import os
 import logging
+import re
+import traceback
+
 import anthropic
 import datetime
 from typing import Dict, List, Any
@@ -57,6 +61,10 @@ class FinService:
         messages = self._build_messages(query, conversation_history)
 
         try:
+            logger.info(f"Calling Claude API with system: {system_prompt[:100]}...")
+            logger.info(f"Messages: {messages}")
+
+            # Initial API call
             response = self.client.messages.create(
                 model="claude-3-opus-20240229",
                 max_tokens=2000,
@@ -67,12 +75,15 @@ class FinService:
 
             # Process the response to extract text and any tool calls
             processed_response = self._process_response(
-                response, user_id, transactions, user_context
+                response, user_id, transactions, user_context, system_prompt, messages
             )
+
+            logger.info(f"Sending response: {processed_response}")
             return processed_response
 
         except Exception as e:
             logger.error(f"Error calling Claude API: {str(e)}")
+            logger.error(traceback.format_exc())
             return {
                 "response_text": "I'm sorry, I encountered an error while processing your question. Please try again.",
                 "error": str(e),
@@ -94,6 +105,10 @@ class FinService:
         # Basic system prompt with Fin's personality and capabilities
         system_prompt = f"""
         You are Fin, an AI-powered financial assistant for the Cashly app. Today is {current_date}.
+        
+        IMPORTANT: When calculating time periods or date ranges, ALWAYS use {current_date} as the current date. 
+        For example, "last 30 days" means from {(datetime.datetime.now() - datetime.timedelta(days=30)).strftime("%Y-%m-%d")} 
+        to {current_date}.
 
         Your role is to help users understand their finances, answer questions about their spending,
         income, budgets, and provide forecasts and financial advice.
@@ -114,6 +129,31 @@ class FinService:
         5. For budget-related questions, use the budget tools
         6. When asked about trends or patterns, use the analyze_trends tool
         7. When the user asks about unusual spending or transactions, use the detect_anomalies tool
+
+        IMPORTANT INSTRUCTIONS FOR TOOL USAGE:
+        When you use tools to answer questions, you MUST:
+        - ALWAYS provide a natural language response after receiving tool results
+        - Format your response in a friendly, conversational way
+        - Include specific numbers and insights from the tool output
+        - NEVER return an empty response after using a tool
+
+        For specific tools:
+        - For forecast_cash_flow: Mention both the current balance and the projected future balance, and explain the trend
+        - For calculate_category_spending: List the top categories with their specific amounts
+        - For analyze_trends: Highlight the key patterns and changes in spending behavior
+        - For detect_anomalies: Explain unusual transactions in plain language
+        - For generate_budget: Summarize the budget recommendations and how they relate to current spending
+
+        EXAMPLE RESPONSE AFTER USING forecast_cash_flow:
+        "Based on your transaction history, your current balance is $5,234.56. In 30 days, your projected balance will be $6,789.12. This positive trend indicates you're saving more than you're spending, which is great for your financial health!"
+
+        EXAMPLE RESPONSE AFTER USING calculate_category_spending:
+        "Looking at your spending this month, your top categories are:
+        1. Housing: $1,200.00
+        2. Dining: $450.75 
+        3. Transportation: $325.50
+
+        Dining expenses make up about 22% of your total spending this month."
 
         IMPORTANT: Do not make up information. If you don't have enough data or the right tool to answer a question,
         tell the user you can't answer that question with the available data.
@@ -347,60 +387,262 @@ class FinService:
 
         return tools
 
-    def _process_response(self, response, user_id, transactions, user_context):
+    def _process_response(
+        self, response, user_id, transactions, user_context, system_prompt, messages
+    ):
         """Process Claude's response, handling any tool calls and formatting the final response"""
-        # Get the text content
-        content = response.content[0].text if hasattr(response, "content") else ""
+        # Log the raw response for debugging
+        logger.info(f"Raw Claude response: {response}")
 
-        # Remove thinking tags if present
-        if "<thinking>" in content and "</thinking>" in content:
-            thinking_start = content.find("<thinking>")
-            thinking_end = content.find("</thinking>") + len("</thinking>")
-            thinking_content = content[thinking_start:thinking_end]
-            content = content.replace(thinking_content, "").strip()
+        # Initialize response structures
+        result = {"response_text": "", "actions": []}
+        tool_results = []
 
-        result = {"response_text": content, "actions": []}
+        # Process each content block
+        has_tool_use = False
 
-        # Check if there are any tool calls
-        if (
-            hasattr(response, "content")
-            and hasattr(response.content[0], "tool_calls")
-            and response.content[0].tool_calls
-        ):
-            tool_results = []
+        if hasattr(response, "content"):
+            for content_block in response.content:
+                # Handle text blocks
+                if hasattr(content_block, "type") and content_block.type == "text":
+                    text = content_block.text or ""
 
-            for tool_call in response.content[0].tool_calls:
-                tool_name = tool_call.name
-                tool_args = tool_call.input
+                    # Remove thinking tags
+                    if "<thinking>" in text and "</thinking>" in text:
+                        thinking_start = text.find("<thinking>")
+                        thinking_end = text.find("</thinking>") + len("</thinking>")
+                        thinking_content = text[thinking_start:thinking_end]
+                        text = text.replace(thinking_content, "").strip()
 
-                # Execute the appropriate tool call
-                tool_result = self._execute_tool_call(
-                    tool_name, tool_args, user_id, transactions, user_context
+                    # Add text to response
+                    if text:
+                        result["response_text"] += text
+
+                # Handle tool use blocks
+                elif (
+                    hasattr(content_block, "type") and content_block.type == "tool_use"
+                ):
+                    has_tool_use = True
+                    tool_name = content_block.name
+                    tool_input = content_block.input
+                    tool_id = content_block.id
+
+                    # Log the tool call
+                    logger.info(
+                        f"Claude is calling tool: {tool_name} with input: {tool_input}"
+                    )
+
+                    # Execute the tool call
+                    tool_result = self._execute_tool_call(
+                        tool_name, tool_input, user_id, transactions, user_context
+                    )
+
+                    # Store the result for later use
+                    tool_results.append(
+                        {
+                            "tool": tool_name,
+                            "result": tool_result,
+                            "parameters": tool_input,
+                            "id": tool_id,
+                        }
+                    )
+
+                    # Add UI actions based on tool type
+                    if tool_name == "calculate_category_spending":
+                        result["actions"].append(
+                            {"type": "show_categories", "data": tool_result}
+                        )
+                    elif tool_name == "forecast_cash_flow":
+                        result["actions"].append(
+                            {"type": "show_forecast", "data": tool_result}
+                        )
+                    elif tool_name == "analyze_trends":
+                        result["actions"].append(
+                            {"type": "show_trends", "data": tool_result}
+                        )
+                    elif tool_name == "generate_budget":
+                        result["actions"].append(
+                            {"type": "show_budget", "data": tool_result}
+                        )
+                    elif tool_name == "detect_anomalies":
+                        result["actions"].append(
+                            {"type": "show_anomalies", "data": tool_result}
+                        )
+
+        # If Claude used tools, make a follow-up API call with the tool results
+        if has_tool_use:
+            # Create follow-up messages
+            tool_messages = messages.copy()
+
+            # Add the assistant's message with tool use blocks
+            tool_messages.append(
+                {"role": "assistant", "content": [block for block in response.content]}
+            )
+
+            tool_result_blocks = []
+            for tool_call in tool_results:
+                tool_result_blocks.append(
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": tool_call["id"],
+                        "content": json.dumps(tool_call["result"]),
+                    }
                 )
 
-                tool_results.append(
-                    {"tool": tool_name, "result": tool_result, "parameters": tool_args}
+            # Add user message with tool results
+            tool_messages.append({"role": "user", "content": tool_result_blocks})
+
+            try:
+                # Make the follow-up call to Claude with the tool results included
+                logger.info(f"Making follow-up call to Claude with tool results")
+                follow_up_response = self.client.messages.create(
+                    model="claude-3-opus-20240229",
+                    max_tokens=2000,
+                    system=system_prompt,
+                    messages=tool_messages,
                 )
 
-                # Add any UI actions needed
-                if tool_name == "forecast_cash_flow":
-                    result["actions"].append(
-                        {"type": "show_forecast", "data": tool_result}
-                    )
-                elif tool_name == "analyze_trends":
-                    result["actions"].append(
-                        {"type": "show_trends", "data": tool_result}
-                    )
-                elif tool_name == "generate_budget":
-                    result["actions"].append(
-                        {"type": "show_budget", "data": tool_result}
-                    )
-                elif tool_name == "calculate_category_spending":
-                    result["actions"].append(
-                        {"type": "show_categories", "data": tool_result}
+                logger.info(f"Raw follow-up response: {follow_up_response}")
+
+                # Extract the final text response
+                final_text = ""
+                if hasattr(follow_up_response, "content"):
+                    for content_block in follow_up_response.content:
+                        if (
+                            hasattr(content_block, "type")
+                            and content_block.type == "text"
+                        ):
+                            text = content_block.text or ""
+
+                            # Remove thinking tags
+                            if "<thinking>" in text and "</thinking>" in text:
+                                thinking_start = text.find("<thinking>")
+                                thinking_end = text.find("</thinking>") + len(
+                                    "</thinking>"
+                                )
+                                thinking_content = text[thinking_start:thinking_end]
+                                text = text.replace(thinking_content, "").strip()
+
+                            # Remove search quality reflection tags
+                            if (
+                                "<search_quality_reflection>" in text
+                                and "</search_quality_reflection>" in text
+                            ):
+                                reflection_start = text.find(
+                                    "<search_quality_reflection>"
+                                )
+                                reflection_end = text.find(
+                                    "</search_quality_reflection>"
+                                ) + len("</search_quality_reflection>")
+                                reflection_content = text[
+                                    reflection_start:reflection_end
+                                ]
+                                text = text.replace(reflection_content, "").strip()
+
+                            # Remove search quality score tags
+                            if (
+                                "<search_quality_score>" in text
+                                and "</search_quality_score>" in text
+                            ):
+                                score_start = text.find("<search_quality_score>")
+                                score_end = text.find("</search_quality_score>") + len(
+                                    "</search_quality_score>"
+                                )
+                                score_content = text[score_start:score_end]
+                                text = text.replace(score_content, "").strip()
+
+                            # Remove result tags
+                            if "<result>" in text and "</result>" in text:
+                                # Extract only the content inside the result tags, as this is the actual response
+                                result_start = text.find("<result>") + len("<result>")
+                                result_end = text.find("</result>")
+                                text = text[result_start:result_end].strip()
+
+                            # Remove any other XML-like tags we might encounter
+                            text = re.sub(r"<[^>]+>", "", text)
+
+                            final_text += text
+
+                # Use the follow-up response text
+                if final_text:
+                    result["response_text"] = final_text
+            except Exception as e:
+                logger.error(f"Error making follow-up call to Claude: {str(e)}")
+                logger.error(traceback.format_exc())
+                # In case of error, we'll fall back to our generated response
+
+        # If we still don't have a response text, generate fallbacks based on tool results
+        if has_tool_use and not result["response_text"]:
+            # For category spending results, build a nice response
+            if (
+                tool_results
+                and tool_results[0]["tool"] == "calculate_category_spending"
+            ):
+                try:
+                    category_data = tool_results[0]["result"]
+                    if "category_breakdown" in category_data:
+                        # Sort categories by spending amount (descending)
+                        sorted_categories = sorted(
+                            category_data["category_breakdown"].items(),
+                            key=lambda x: x[1],
+                            reverse=True,
+                        )
+
+                        # Build response
+                        response_text = "Based on your transactions this month, your top spending categories are:\n\n"
+
+                        # Add top 5 categories
+                        for i, (category, amount) in enumerate(
+                            sorted_categories[:5], 1
+                        ):
+                            response_text += (
+                                f"{i}. {category.title()}: ${abs(amount):.2f}\n"
+                            )
+
+                        result["response_text"] = response_text
+                except Exception as e:
+                    logger.error(f"Error building category response: {str(e)}")
+                    result["response_text"] = (
+                        "I analyzed your spending categories, but encountered an error formatting the results."
                     )
 
-            # Add tool results to the response
+            # For forecast cash flow results
+            elif tool_results and tool_results[0]["tool"] == "forecast_cash_flow":
+                try:
+                    forecast_data = tool_results[0]["result"]
+                    if "insights" in forecast_data:
+                        insights = forecast_data["insights"]
+                        current_balance = float(insights.get("current_balance", 0))
+                        projected_balance = float(insights.get("projected_balance", 0))
+                        days = tool_results[0]["parameters"].get("days", 30)
+                        trend = insights.get("cash_flow_trend", "")
+
+                        response_text = f"Based on your transaction history, your current balance is ${current_balance:,.2f}. "
+                        response_text += f"In {days} days, your projected balance will be ${projected_balance:,.2f}. "
+
+                        if trend == "positive":
+                            response_text += "This positive trend indicates you're saving more than you're spending, which is great for your financial health!"
+                        elif trend == "negative":
+                            response_text += "This negative trend indicates you're spending more than you're earning. You might want to review your budget."
+                        else:
+                            response_text += "I'll continue monitoring your cash flow to help you stay on track with your financial goals."
+
+                        result["response_text"] = response_text
+                except Exception as e:
+                    logger.error(f"Error building forecast response: {str(e)}")
+                    result["response_text"] = (
+                        "I've calculated your future balance, but encountered an error formatting the results."
+                    )
+
+            # Add fallbacks for other tools here as needed
+            elif tool_results:
+                tool_name = tool_results[0]["tool"]
+                result["response_text"] = (
+                    f"I've analyzed your financial data using the {tool_name} tool. Please check the visualizations for detailed information."
+                )
+
+        # Add tool results to the response
+        if tool_results:
             result["tool_results"] = tool_results
 
         return result
@@ -558,47 +800,23 @@ class FinService:
         normalized = []
 
         for t in transactions:
-            # Create a copy to avoid modifying the original
             t_copy = dict(t)
-
             try:
                 if "date" not in t_copy:
                     continue
 
-                # Convert to string if it's not already
-                date_str = str(t_copy["date"])
+                # Simply extract the first 10 characters (YYYY-MM-DD)
+                # from any date string or use strftime for datetime objects
+                date_val = t_copy["date"]
+                if isinstance(date_val, str):
+                    # Extract YYYY-MM-DD format (first 10 characters)
+                    t_copy["date"] = date_val[:10]
+                elif hasattr(date_val, "strftime"):
+                    t_copy["date"] = date_val.strftime("%Y-%m-%d")
 
-                # CASE 1: Handle pandas Timestamp objects
-                if isinstance(t_copy["date"], pd.Timestamp):
-                    date_str = t_copy["date"].strftime("%Y-%m-%d")
-
-                # CASE 2: Handle datetime objects
-                elif isinstance(t_copy["date"], datetime.datetime):
-                    date_str = t_copy["date"].strftime("%Y-%m-%d")
-
-                # CASE 3: Handle string with UTC timezone
-                elif " UTC" in date_str:
-                    date_str = date_str.split(" UTC")[0]
-
-                # CASE 4: Handle string with time component
-                if " 00:00:00" in date_str:
-                    date_str = date_str.split(" 00:00:00")[0]
-
-                # CASE 5: Further clean any remaining time information
-                if " " in date_str:
-                    date_str = date_str.split(" ")[0]
-
-                # Validate the resulting date format
-                datetime.datetime.strptime(date_str, "%Y-%m-%d")
-
-                # Update the transaction with cleaned date
-                t_copy["date"] = date_str
                 normalized.append(t_copy)
-            except (KeyError, ValueError, TypeError) as e:
-                # Skip transactions with invalid dates
-                logger.warning(
-                    f"Skipping transaction with invalid date: {t.get('date', 'No date')} - Error: {str(e)}"
-                )
+            except Exception as e:
+                logger.warning(f"Skipping transaction with invalid date: {str(e)}")
                 continue
 
         return normalized

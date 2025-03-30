@@ -12,3 +12,4 @@ statsmodels~=0.14.4
 anthropic==0.18.0
 spacy~=3.8.4
 transformers~=4.49.0
+huggingface-hub~=0.29.3

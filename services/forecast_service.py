@@ -56,6 +56,16 @@ class ForecastService:
         # Calculate current balance
         current_balance = df["amount"].sum()
 
+        # Calculate historical expense patterns
+        historical_income = df[df["amount"] > 0]["amount"].sum()
+        historical_expenses = abs(df[df["amount"] < 0]["amount"].sum())
+        expense_ratio = 0.7  # Default fallback ratio (70% of income goes to expenses)
+
+        if historical_income > 0:
+            expense_ratio = min(
+                0.9, historical_expenses / historical_income
+            )  # Cap at 90%
+
         # If forecaster model doesn't exist, train a new one
         if self.forecaster.model is None:
             try:
@@ -70,18 +80,41 @@ class ForecastService:
             forecast_df = self.forecaster.forecast(df, forecast_days=forecast_days)
 
             # Format forecast for response
-            forecast = [
-                {
+            forecast = []
+            for date, amount, balance in zip(
+                forecast_df["date"],
+                forecast_df["amount"],
+                forecast_df["cumulative_balance"],
+            ):
+                # Determine if the projected amount is income or expense
+                income = max(0, amount)
+                raw_expenses = abs(min(0, amount))
+
+                # If this is a positive day, but we have no expenses, estimate them
+                # based on historical patterns
+                if income > 0 and raw_expenses == 0:
+                    # Calculate estimated expenses based on the historical ratio
+                    estimated_expenses = income * expense_ratio
+
+                    # Make sure we don't estimate expenses higher than income (for positive net days)
+                    if amount > 0:
+                        # Cap expenses to ensure positive net flow is preserved
+                        estimated_expenses = min(estimated_expenses, income - amount)
+                else:
+                    estimated_expenses = raw_expenses
+
+                # Create forecast entry with standardized fields
+                forecast_entry = {
                     "date": date.strftime("%Y-%m-%d"),
+                    "income": round(income, 2),
+                    "expenses": round(estimated_expenses, 2),
+                    "balance": round(balance, 2),
+                    "net_flow": round(income - estimated_expenses, 2),
+                    # Keep original fields for backward compatibility
                     "projected_amount": round(amount, 2),
                     "projected_balance": round(balance, 2),
                 }
-                for date, amount, balance in zip(
-                    forecast_df["date"],
-                    forecast_df["amount"],
-                    forecast_df["cumulative_balance"],
-                )
-            ]
+                forecast.append(forecast_entry)
 
             # Calculate insights
             avg_daily_amount = forecast_df["amount"].mean()
@@ -170,16 +203,26 @@ class ForecastService:
         cumulative_forecast = cumulative_forecast[1:]
 
         # Format forecast for response
-        forecast = [
-            {
+        forecast = []
+        for date, amount, balance in zip(
+            forecast_dates, forecast_values, cumulative_forecast
+        ):
+            # Determine if the projected amount is income or expense
+            income = max(0, amount)
+            expenses = abs(min(0, amount))
+
+            # Create forecast entry with standardized fields
+            forecast_entry = {
                 "date": date.strftime("%Y-%m-%d"),
+                "income": round(income, 2),
+                "expenses": round(expenses, 2),
+                "balance": round(balance, 2),
+                "net_flow": round(amount, 2),
+                # Keep original fields for backward compatibility
                 "projected_amount": round(amount, 2),
                 "projected_balance": round(balance, 2),
             }
-            for date, amount, balance in zip(
-                forecast_dates, forecast_values, cumulative_forecast
-            )
-        ]
+            forecast.append(forecast_entry)
 
         # Calculate insights
         insights = {
@@ -347,10 +390,17 @@ class ForecastService:
             if "projected_amount" in base_forecast["forecast"][0]:
                 # Convert from projected_amount/projected_balance to income/expenses/balance
                 for day in base_forecast["forecast"]:
-                    day["income"] = max(0, day.get("projected_amount", 0))
-                    day["expenses"] = abs(min(0, day.get("projected_amount", 0)))
-                    day["balance"] = day.get("projected_balance", 0)
-                    day["net_flow"] = day.get("projected_amount", 0)
+                    # Ensure standard fields are present
+                    day["income"] = day.get(
+                        "income", max(0, day.get("projected_amount", 0))
+                    )
+                    day["expenses"] = day.get(
+                        "expenses", abs(min(0, day.get("projected_amount", 0)))
+                    )
+                    day["balance"] = day.get("balance", day.get("projected_balance", 0))
+                    day["net_flow"] = day.get(
+                        "net_flow", day.get("projected_amount", 0)
+                    )
 
             # Apply category-specific adjustments
             if adjustments.get("category_adjustments"):
