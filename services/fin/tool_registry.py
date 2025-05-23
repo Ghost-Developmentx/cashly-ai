@@ -15,6 +15,14 @@ from services.fin.account_helpers import (
     initiate_plaid_connection,
     disconnect_account,
 )
+from services.fin.transaction_helpers import (
+    get_transactions,
+    create_transaction,
+    update_transaction,
+    delete_transaction,
+    categorize_transactions,
+)
+
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +49,11 @@ class ToolRegistry:
             "get_account_details": self._get_account_details,
             "initiate_plaid_connection": self._initiate_plaid_connection,
             "disconnect_account": self._disconnect_account,
+            "get_transactions": self._get_transactions,
+            "create_transaction": self._create_transaction,
+            "update_transaction": self._update_transaction,
+            "delete_transaction": self._delete_transaction,
+            "categorize_transactions": self._categorize_transactions,
         }
 
     @property
@@ -161,3 +174,24 @@ class ToolRegistry:
     @staticmethod
     def _disconnect_account(args, *, user_id, txns, user_context):
         return disconnect_account(user_id, args.get("account_id"))
+
+    @staticmethod
+    def _get_transactions(args, *, user_id, txns, user_context):
+        return get_transactions(user_id, user_context, txns, **args)
+
+    @staticmethod
+    def _create_transaction(args, *, user_id, txns, user_context):
+        return create_transaction(user_id, user_context, **args)
+
+    @staticmethod
+    def _update_transaction(args, *, user_id, txns, user_context):
+        transaction_id = args.pop("transaction_id", None)
+        return update_transaction(user_id, transaction_id, **args)
+
+    @staticmethod
+    def _delete_transaction(args, *, user_id, txns, user_context):
+        return delete_transaction(user_id, args.get("transaction_id"))
+
+    @staticmethod
+    def _categorize_transactions(args, *, user_id, txns, user_context):
+        return categorize_transactions(user_id, txns, args.get("category_mappings"))
