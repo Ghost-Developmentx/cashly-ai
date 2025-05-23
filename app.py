@@ -12,7 +12,7 @@ from services.forecast_service import ForecastService
 from services.budget_service import BudgetService
 from services.insight_service import InsightService
 from services.anomaly_service import AnomalyService
-from services.fin_service import FinService
+from services.fin.fin_service import FinService
 from services.fin_learning_service import FinLearningService
 
 # Configure logging

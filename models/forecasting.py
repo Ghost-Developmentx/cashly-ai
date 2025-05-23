@@ -387,7 +387,7 @@ class CashFlowForecaster:
         # Initialize forecast dataframe
         forecast_df = pd.DataFrame({"date": forecast_dates})
 
-        # Add features to forecast dataframe
+        # Add features to the forecast dataframe
         forecast_df["day_of_week"] = forecast_df["date"].dt.dayofweek
         forecast_df["day_of_month"] = forecast_df["date"].dt.day
         forecast_df["month"] = forecast_df["date"].dt.month
@@ -402,7 +402,7 @@ class CashFlowForecaster:
         forecast_df["is_month_end"] = forecast_df["date"].dt.is_month_end.astype(int)
         forecast_df["days_in_month"] = forecast_df["date"].dt.days_in_month
 
-        # Generate forecasts differently based on method
+        # Generate forecasts differently based on the method
         if (
             isinstance(self.model, tuple)
             and len(self.model) == 2
