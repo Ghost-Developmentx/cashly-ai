@@ -120,6 +120,20 @@ class FinService:
         - Monthly expenses (avg. last 3 months): {financial_context.get('monthly_expenses', 'unknown')}
         - Top spending categories: {', '.join(financial_context.get('top_categories', ['unknown']))}
         - Recurring expenses detected: {financial_context.get('recurring_expenses', 'unknown')}
+        
+        ACCOUNT MANAGEMENT CAPABILITIES:
+        When users ask about bank accounts, connections, or linking accounts, you should:
+        1. Use the get_user_accounts tool to check their current account status
+        2. If they have no accounts and want to connect one, use the initiate_plaid_connection tool
+        3. If they want to disconnect an account, use the disconnect_account tool
+        4. If they want account balances or details, use the get_account_details tool
+
+        IMPORTANT INSTRUCTIONS FOR ACCOUNT QUERIES:
+        - If user asks "how many accounts do I have" or similar, use get_user_accounts tool
+        - If they have 0 accounts, proactively offer to help them connect a bank account
+        - If they say yes to connecting, use initiate_plaid_connection tool
+        - Always be helpful and guide them through the process
+        - Explain what Plaid is and that it's secure when initiating connections
 
         When answering:
         1. Be concise, friendly, and helpful
@@ -152,6 +166,13 @@ class FinService:
         1. Housing: $1,200.00
         2. Dining: $450.75 
         3. Transportation: $325.50
+        
+        EXAMPLE RESPONSES FOR ACCOUNTS QUESTIONS::
+        User: "How many bank accounts do I have connected?"
+        You should: Use get_user_accounts tool, then respond based on results
+
+        User: "I want to connect my bank account"
+        You should: Use initiate_plaid_connection tool and guide them through the process
 
         Dining expenses make up about 22% of your total spending this month."
 
@@ -381,6 +402,55 @@ class FinService:
                         },
                     },
                     "required": ["categories"],
+                },
+            },
+            {
+                "name": "get_user_accounts",
+                "description": "Get information about the user's connected bank accounts",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {},
+                },
+            },
+            {
+                "name": "get_account_details",
+                "description": "Get detailed information about a specific account",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "account_id": {
+                            "type": "string",
+                            "description": "The account ID to get details for",
+                        }
+                    },
+                    "required": ["account_id"],
+                },
+            },
+            {
+                "name": "initiate_plaid_connection",
+                "description": "Start the process to connect a new bank account via Plaid",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "institution_preference": {
+                            "type": "string",
+                            "description": "Optional preference for bank type (e.g., 'major_bank', 'credit_union', 'any')",
+                        }
+                    },
+                },
+            },
+            {
+                "name": "disconnect_account",
+                "description": "Disconnect a bank account from the user's profile",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "account_id": {
+                            "type": "string",
+                            "description": "The account ID to disconnect",
+                        }
+                    },
+                    "required": ["account_id"],
                 },
             },
         ]
@@ -693,6 +763,21 @@ class FinService:
                     threshold=threshold,
                 )
 
+            elif tool_name == "get_user_accounts":
+                return self._get_user_accounts(user_id, user_context)
+
+            elif tool_name == "get_account_details":
+                account_id = tool_args.get("account_id")
+                return self._get_account_details(user_id, account_id, user_context)
+
+            elif tool_name == "initiate_plaid_connection":
+                institution_preference = tool_args.get("institution_preference")
+                return self._initiate_plaid_connection(user_id, institution_preference)
+
+            elif tool_name == "disconnect_account":
+                account_id = tool_args.get("account_id")
+                return self._disconnect_account(user_id, account_id)
+
             elif tool_name == "generate_budget":
                 # Calculate monthly income if not provided
                 monthly_income = tool_args.get("monthly_income")
@@ -793,6 +878,65 @@ class FinService:
         except Exception as e:
             logger.error(f"Error executing tool {tool_name}: {str(e)}")
             return {"error": str(e)}
+
+    @staticmethod
+    def _get_user_accounts(
+        user_id: str, user_context: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Get information about user's connected accounts"""
+        accounts = user_context.get("accounts", [])
+
+        return {
+            "account_count": len(accounts),
+            "accounts": accounts,
+            "total_balance": sum(acc.get("balance", 0) for acc in accounts),
+            "has_accounts": len(accounts) > 0,
+        }
+
+    @staticmethod
+    def _get_account_details(
+        user_id: str, account_id: str, user_context: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Get detailed information about a specific account"""
+        accounts = user_context.get("accounts", [])
+        account = next(
+            (acc for acc in accounts if str(acc.get("id")) == str(account_id)), None
+        )
+
+        if not account:
+            return {"error": f"Account with ID {account_id} not found"}
+
+        return {
+            "account": account,
+            "balance": account.get("balance", 0),
+            "name": account.get("name", "Unknown Account"),
+            "type": account.get("account_type", "Unknown"),
+            "institution": account.get("institution", "Unknown Bank"),
+        }
+
+    @staticmethod
+    def _initiate_plaid_connection(
+        user_id: str, institution_preference: str = None
+    ) -> Dict[str, Any]:
+        """Initiate the Plaid connection process"""
+        return {
+            "action": "initiate_plaid_connection",
+            "user_id": user_id,
+            "institution_preference": institution_preference,
+            "message": "I'll help you connect your bank account securely through Plaid. This will allow me to provide better financial insights and track your spending automatically.",
+            "next_step": "plaid_link_token",
+        }
+
+    @staticmethod
+    def _disconnect_account(user_id: str, account_id: str) -> Dict[str, Any]:
+        """Disconnect a bank account"""
+        return {
+            "action": "disconnect_account",
+            "account_id": account_id,
+            "user_id": user_id,
+            "message": f"I'll disconnect account {account_id} for you. This will remove access to transaction data from this account.",
+            "requires_confirmation": True,
+        }
 
     @staticmethod
     def _normalize_transaction_dates(transactions):

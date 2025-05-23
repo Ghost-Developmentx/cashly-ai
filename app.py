@@ -371,6 +371,87 @@ def fin_query():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route("/fin/accounts/status", methods=["POST"])
+def get_account_status():
+    """
+    Get user account status for Fin queries
+
+    Expected input:
+    {
+        "user_id": "user_123",
+        "user_context": {
+            "accounts": [...],
+            "budgets": [...],
+            ...
+        }
+    }
+    """
+    try:
+        data = request.json
+        user_id = data.get("user_id")
+        user_context = data.get("user_context", {})
+
+        if not user_id:
+            return jsonify({"error": "Missing required parameters"}), 400
+
+        accounts = user_context.get("accounts", [])
+
+        result = {
+            "account_count": len(accounts),
+            "accounts": accounts,
+            "total_balance": sum(acc.get("balance", 0) for acc in accounts),
+            "has_accounts": len(accounts) > 0,
+            "plaid_connected": any(acc.get("plaid_account_id") for acc in accounts),
+        }
+
+        return jsonify(result), 200
+
+    except Exception as e:
+        logger.error(f"Error getting account status: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/fin/accounts/initiate_connection", methods=["POST"])
+def initiate_account_connection():
+    """
+    Initiate a Plaid connection process from Fin
+
+    Expected input:
+    {
+        "user_id": "user_123",
+        "institution_preference": "major_bank" (optional)
+    }
+    """
+    try:
+        data = request.json
+        user_id = data.get("user_id")
+        institution_preference = data.get("institution_preference")
+
+        if not user_id:
+            return jsonify({"error": "Missing user_id"}), 400
+
+        result = {
+            "action": "initiate_plaid_connection",
+            "user_id": user_id,
+            "institution_preference": institution_preference,
+            "message": "I'll help you connect your bank account securely through Plaid.",
+            "next_step": "plaid_link_token",
+            "instructions": [
+                "Click the 'Connect Bank Account' button below",
+                "Select your bank from the list",
+                "Enter your online banking credentials",
+                "Select which accounts to connect",
+                "Complete the verification process",
+            ],
+        }
+
+        return jsonify(result), 200
+
+    except Exception as e:
+        logger.error(f"Error initiating account connection: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/fin/learn", methods=["POST"])
 def learn_from_feedback():
     """
