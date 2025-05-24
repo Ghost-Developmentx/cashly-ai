@@ -29,6 +29,13 @@ from services.fin.invoice_helpers import (
     send_invoice_reminder,
     mark_invoice_paid,
 )
+from services.fin.stripe_connect_helpers import (
+    setup_stripe_connect,
+    check_stripe_connect_status,
+    create_stripe_connect_dashboard_link,
+    get_stripe_connect_earnings,
+    disconnect_stripe_connect,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -66,6 +73,11 @@ class ToolRegistry:
             "get_invoices": self._get_invoices,
             "send_invoice_reminder": self._send_invoice_reminder,
             "mark_invoice_paid": self._mark_invoice_paid,
+            "setup_stripe_connect": self._setup_stripe_connect,
+            "check_stripe_connect_status": self._check_stripe_connect_status,
+            "create_stripe_connect_dashboard_link": self._create_stripe_connect_dashboard_link,
+            "get_stripe_connect_earnings": self._get_stripe_connect_earnings,
+            "disconnect_stripe_connect": self._disconnect_stripe_connect,
         }
 
     @property
@@ -228,3 +240,30 @@ class ToolRegistry:
     @staticmethod
     def _mark_invoice_paid(args, *, user_id, _txns, _user_context):
         return mark_invoice_paid(user_id, args.get("invoice_id"))
+
+    @staticmethod
+    def _setup_stripe_connect(args, *, user_id, txns, user_context):
+        return setup_stripe_connect(
+            user_id,
+            user_context,
+            country=args.get("country", "US"),
+            business_type=args.get("business_type", "individual"),
+        )
+
+    @staticmethod
+    def _check_stripe_connect_status(args, *, user_id, txns, user_context):
+        return check_stripe_connect_status(user_id, user_context)
+
+    @staticmethod
+    def _create_stripe_connect_dashboard_link(args, *, user_id, txns, user_context):
+        return create_stripe_connect_dashboard_link(user_id, user_context)
+
+    @staticmethod
+    def _get_stripe_connect_earnings(args, *, user_id, txns, user_context):
+        return get_stripe_connect_earnings(
+            user_id, user_context, period=args.get("period", "month")
+        )
+
+    @staticmethod
+    def _disconnect_stripe_connect(args, *, user_id, _txns, user_context):
+        return disconnect_stripe_connect(user_id, user_context)

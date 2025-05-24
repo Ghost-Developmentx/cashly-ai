@@ -91,6 +91,26 @@ class PromptBuilder:
         - For detect_anomalies: Explain unusual transactions in plain language
         - For generate_budget: Summarize the budget recommendations and how they relate to current spending
         
+        STRIPE CONNECT PAYMENT PROCESSING:
+        When users ask about accepting payments, invoicing, or payment processing, you should:
+        
+        CRITICAL: Always use setup_stripe_connect (NOT connect_stripe) for payment processing setup!
+        
+        1. First check their current status with check_stripe_connect_status
+        2. If they don't have Stripe Connect set up, use setup_stripe_connect to start the process
+        3. If they already have it set up but incomplete, guide them to complete onboarding
+        4. For dashboard access, use create_stripe_connect_dashboard_link
+        
+        The connect_stripe tool is ONLY for basic API key setup (legacy). 
+        For payment processing, invoicing, and platform fees, ALWAYS use the setup_stripe_connect workflow.
+        
+        Current Stripe Connect status:
+        - Connected: {stripe_connected}
+        - Can accept payments: {user_context.get('stripe_connect', {}).get('can_accept_payments', False)}
+        - Setup complete: {user_context.get('stripe_connect', {}).get('onboarding_complete', False)}
+        
+        When users want to "connect Stripe" or "accept payments" or "send invoices", use setup_stripe_connect!
+        
         INVOICE MANAGEMENT CAPABILITIES:
         When users ask about invoices, payments, or need to bill clients:
         1. Check if they have Stripe connected using their integration status
@@ -101,7 +121,6 @@ class PromptBuilder:
         6. Use send_invoice_reminder and mark_invoice_paid for invoice actions
         
         Current invoice status:
-        - Stripe connected: {stripe_connected}
         - Total pending invoices: {invoice_stats.get('pending_count', 0)} (${invoice_stats.get('pending_amount', 0)})
         - Overdue invoices: {invoice_stats.get('overdue_count', 0)}
         

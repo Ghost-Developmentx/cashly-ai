@@ -2,6 +2,56 @@ from typing import Any
 
 TOOL_SCHEMAS: list[dict[str, Any]] = [
     {
+        "name": "setup_stripe_connect",
+        "description": "Set up Stripe Connect to accept payments and manage invoices with platform fees",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "country": {
+                    "type": "string",
+                    "description": "Country code for the business (default: US)",
+                    "default": "US",
+                },
+                "business_type": {
+                    "type": "string",
+                    "enum": [
+                        "individual",
+                        "company",
+                        "non_profit",
+                        "government_entity",
+                    ],
+                    "description": "Type of business entity",
+                    "default": "individual",
+                },
+            },
+        },
+    },
+    {
+        "name": "check_stripe_connect_status",
+        "description": "Check the current status of the user's Stripe Connect account",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "create_stripe_connect_dashboard_link",
+        "description": "Create a link to the Stripe Express dashboard for payment management",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "get_stripe_connect_earnings",
+        "description": "Get earnings and platform fee information from Stripe Connect",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "period": {
+                    "type": "string",
+                    "enum": ["week", "month", "quarter", "year"],
+                    "description": "Time period for earnings report",
+                    "default": "month",
+                }
+            },
+        },
+    },
+    {
         "name": "forecast_cash_flow",
         "description": "Create a cash flow forecast based on historical transactions and optional adjustments",
         "input_schema": {
