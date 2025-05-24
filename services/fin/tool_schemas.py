@@ -197,6 +197,85 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
         },
     },
     {
+        "name": "connect_stripe",
+        "description": "Connect a Stripe account to send invoices and track payments",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "api_key": {
+                    "type": "string",
+                    "description": "Stripe API key (will be encrypted)",
+                }
+            },
+            "required": ["api_key"],
+        },
+    },
+    {
+        "name": "create_invoice",
+        "description": "Create a new invoice for a client",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "client_name": {"type": "string", "description": "Client's name"},
+                "client_email": {
+                    "type": "string",
+                    "description": "Client's email address",
+                },
+                "amount": {"type": "number", "description": "Invoice amount"},
+                "description": {
+                    "type": "string",
+                    "description": "Description of services/products",
+                },
+                "due_date": {"type": "string", "description": "Due date (YYYY-MM-DD)"},
+            },
+            "required": ["client_name", "client_email", "amount"],
+        },
+    },
+    {
+        "name": "get_invoices",
+        "description": "Retrieve invoices with optional filters",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string",
+                    "enum": ["draft", "pending", "paid", "overdue", "cancelled"],
+                    "description": "Filter by invoice status",
+                },
+                "days": {
+                    "type": "integer",
+                    "description": "Number of days to look back",
+                },
+                "client_name": {
+                    "type": "string",
+                    "description": "Filter by client name",
+                },
+            },
+        },
+    },
+    {
+        "name": "send_invoice_reminder",
+        "description": "Send a payment reminder for an invoice",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "invoice_id": {"type": "string", "description": "ID of the invoice"}
+            },
+            "required": ["invoice_id"],
+        },
+    },
+    {
+        "name": "mark_invoice_paid",
+        "description": "Mark an invoice as paid",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "invoice_id": {"type": "string", "description": "ID of the invoice"}
+            },
+            "required": ["invoice_id"],
+        },
+    },
+    {
         "name": "detect_anomalies",
         "description": "Detect unusual or anomalous transactions",
         "input_schema": {

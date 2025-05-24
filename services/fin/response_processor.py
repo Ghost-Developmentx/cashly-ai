@@ -63,6 +63,8 @@ class ResponseProcessor:
 
             elif block.type == "tool_use":
                 has_tool_use = True
+                logger.info(f"🔧 Tool use detected: {block.name}")
+
                 tool_result = self.tool_executor(
                     block.name,
                     block.input,
@@ -70,6 +72,11 @@ class ResponseProcessor:
                     transactions=transactions,
                     user_context=user_context,
                 )
+
+                logger.info(
+                    f"🔧 Tool result keys: {tool_result.keys() if isinstance(tool_result, dict) else 'Not a dict'}"
+                )
+
                 tool_results.append(
                     {
                         "tool": block.name,
@@ -78,12 +85,44 @@ class ResponseProcessor:
                     }
                 )
 
-                result["actions"].append(
-                    {
-                        "type": f"show_{block.name.replace('calculate_', '').replace('_', '')}",
+                # Map tool names to action types properly
+                action_type_mapping = {
+                    "get_transactions": "show_transactions",
+                    "get_user_accounts": "show_accounts",
+                    "forecast_cash_flow": "show_forecast",
+                    "analyze_trends": "show_trends",
+                    "generate_budget": "show_budget",
+                    "calculate_category_spending": "show_categories",
+                    "detect_anomalies": "show_anomalies",
+                    "create_transaction": "create_transaction",
+                    "update_transaction": "update_transaction",
+                    "delete_transaction": "delete_transaction",
+                    "initiate_plaid_connection": "initiate_plaid_connection",
+                    "connect_stripe": "connect_stripe",
+                    "create_invoice": "create_invoice",
+                    "get_invoices": "show_invoices",
+                    "send_invoice_reminder": "send_invoice_reminder",
+                    "mark_invoice_paid": "mark_invoice_paid",
+                }
+
+                # Add the action with the appropriate type
+                if block.name in action_type_mapping:
+                    action = {
+                        "type": action_type_mapping[block.name],
                         "data": tool_result,
                     }
-                )
+                    result["actions"].append(action)
+                    logger.info(
+                        f"🎯 Added action: type={action['type']}, has_data={bool(action.get('data'))}"
+                    )
+                else:
+                    logger.warning(f"❌ Unmapped tool: {block.name}")
+                    result["actions"].append(
+                        {
+                            "type": f"show_{block.name}",
+                            "data": tool_result,
+                        }
+                    )
 
         if has_tool_use:
             # Follow-up messages to Claude
@@ -118,6 +157,11 @@ class ResponseProcessor:
                             result["response_text"] = self._clean_text(block.text or "")
             except Exception as e:
                 logger.error(f"Follow-up Claude call failed: {e}")
+
+        logger.info(
+            f"📤 Final response: actions_count={len(result['actions'])}, has_text={bool(result['response_text'])}"
+        )
+        logger.info(f"📤 Action types: {[a['type'] for a in result['actions']]}")
 
         result["tool_results"] = tool_results
         result["response_text"] = result["response_text"].strip()

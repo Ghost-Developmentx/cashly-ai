@@ -324,22 +324,6 @@ def forecast_cash_flow_scenario():
 def fin_query():
     """
     Process a natural language query for the financial assistant.
-
-    Expected input:
-    {
-        "user_id": "user_123",
-        "query": "How much did I spend on restaurants last month?",
-        "transactions": [...],
-        "conversation_history": [
-            {"role": "user", "content": "previous question"},
-            {"role": "assistant", "content": "previous answer"}
-        ],
-        "user_context": {
-            "accounts": [...],
-            "budgets": [...],
-            "goals": [...]
-        },
-    }
     """
     try:
         data = request.json
@@ -352,7 +336,11 @@ def fin_query():
         if not user_id or not query:
             return jsonify({"error": "Missing required parameters"}), 400
 
-        logger.info(f"Fin query from user {user_id}: {query}")
+        logger.info(f"📥 Fin query from user {user_id}: {query}")
+        logger.info(
+            f"📥 User context accounts: {len(user_context.get('accounts', []))}"
+        )
+        logger.info(f"📥 Transactions provided: {len(transactions)}")
 
         result = fin_service.process_query(
             user_id=user_id,
@@ -362,12 +350,57 @@ def fin_query():
             user_context=user_context,
         )
 
-        logger.info(f"Fin response generated successfully")
+        logger.info(f"📤 Fin response generated successfully")
+        logger.info(f"📤 Response keys: {list(result.keys())}")
+        logger.info(f"📤 Actions count: {len(result.get('actions', []))}")
+        logger.info(f"📤 Tool results count: {len(result.get('tool_results', []))}")
+
+        # Log detailed action information
+        if result.get("actions"):
+            for i, action in enumerate(result["actions"]):
+                logger.info(
+                    f"📤 Action {i}: type={action.get('type')}, has_data={bool(action.get('data'))}"
+                )
+                if action.get("data") and isinstance(action["data"], dict):
+                    logger.info(
+                        f"📤 Action {i} data keys: {list(action['data'].keys())}"
+                    )
+                    # Special logging for transactions and accounts
+                    if action.get(
+                        "type"
+                    ) == "show_transactions" and "transactions" in action.get(
+                        "data", {}
+                    ):
+                        logger.info(
+                            f"📤 Action {i} transaction count: {len(action['data']['transactions'])}"
+                        )
+                    elif action.get(
+                        "type"
+                    ) == "show_accounts" and "accounts" in action.get("data", {}):
+                        logger.info(
+                            f"📤 Action {i} account count: {len(action['data']['accounts'])}"
+                        )
+        else:
+            logger.warning("⚠️ No actions in the response!")
+
+        # Log if tool_results exist but no actions
+        if result.get("tool_results") and not result.get("actions"):
+            logger.error("❌ Tool results present but no actions generated!")
+            for i, tool_result in enumerate(result["tool_results"]):
+                logger.info(f"🔧 Tool result {i}: tool={tool_result.get('tool')}")
+
+        # Ensure we're returning the complete result
+        logger.info(
+            f"📤 Final response has response_text: {bool(result.get('response_text'))}"
+        )
+        logger.info(f"📤 Final response has actions: {bool(result.get('actions'))}")
 
         return jsonify(json.loads(json.dumps(result, cls=DateTimeEncoder))), 200
 
     except Exception as e:
-        logger.error(f"Error processing Fin query: {str(e)}")
+        logger.error(f"❌ Error processing Fin query: {str(e)}")
+        logger.error(f"❌ Full traceback:")
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 

@@ -22,6 +22,13 @@ from services.fin.transaction_helpers import (
     delete_transaction,
     categorize_transactions,
 )
+from services.fin.invoice_helpers import (
+    connect_stripe_account,
+    create_invoice,
+    get_invoices,
+    send_invoice_reminder,
+    mark_invoice_paid,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -54,6 +61,11 @@ class ToolRegistry:
             "update_transaction": self._update_transaction,
             "delete_transaction": self._delete_transaction,
             "categorize_transactions": self._categorize_transactions,
+            "connect_stripe": self._connect_stripe,
+            "create_invoice": self._create_invoice,
+            "get_invoices": self._get_invoices,
+            "send_invoice_reminder": self._send_invoice_reminder,
+            "mark_invoice_paid": self._mark_invoice_paid,
         }
 
     @property
@@ -81,7 +93,7 @@ class ToolRegistry:
     # Tool Handlers (delegating to services)
     # ---------------------------------------------------------------------
 
-    def _forecast_cash_flow(self, args, *, user_id, txns, user_context):
+    def _forecast_cash_flow(self, args, *, user_id, txns, _user_context):
         days = args.get("days", 30)
         adjustments = args.get("adjustments", {})
         if adjustments:
@@ -95,24 +107,25 @@ class ToolRegistry:
             user_id=user_id, transactions=txns, forecast_days=days
         )
 
-    def _analyze_trends(self, args, *, user_id, txns, user_context):
+    def _analyze_trends(self, args, *, user_id, txns, _user_context):
         return self.insight_service.analyze_trends(
             user_id=user_id, transactions=txns, period=args.get("period", "3m")
         )
 
-    def _detect_anomalies(self, args, *, user_id, txns, user_context):
+    def _detect_anomalies(self, args, *, user_id, txns, _user_context):
         return self.anomaly_service.detect_anomalies(
             user_id=user_id, transactions=txns, threshold=args.get("threshold")
         )
 
-    def _generate_budget(self, args, *, user_id, txns, user_context):
+    def _generate_budget(self, args, *, user_id, txns, _user_context):
         return self.budget_service.generate_budget(
             user_id=user_id,
             transactions=txns,
             monthly_income=args.get("monthly_income"),
         )
 
-    def _calculate_category_spending(self, args, *, user_id, txns, user_context):
+    @staticmethod
+    def _calculate_category_spending(args, *, _user_id, txns, _user_context):
         from datetime import datetime, timedelta
 
         categories = args.get("categories", [])
@@ -160,19 +173,19 @@ class ToolRegistry:
         }
 
     @staticmethod
-    def _get_user_accounts(args, *, user_id, txns, user_context):
+    def _get_user_accounts(_args, *, user_id, _txns, user_context):
         return get_user_accounts(user_id, user_context)
 
     @staticmethod
-    def _get_account_details(args, *, user_id, txns, user_context):
+    def _get_account_details(args, *, user_id, _txns, user_context):
         return get_account_details(user_id, args.get("account_id"), user_context)
 
     @staticmethod
-    def _initiate_plaid_connection(args, *, user_id, txns, user_context):
+    def _initiate_plaid_connection(args, *, user_id, _txns, _user_context):
         return initiate_plaid_connection(user_id, args.get("institution_preference"))
 
     @staticmethod
-    def _disconnect_account(args, *, user_id, txns, user_context):
+    def _disconnect_account(args, *, user_id, _txns, _user_context):
         return disconnect_account(user_id, args.get("account_id"))
 
     @staticmethod
@@ -180,18 +193,38 @@ class ToolRegistry:
         return get_transactions(user_id, user_context, txns, **args)
 
     @staticmethod
-    def _create_transaction(args, *, user_id, txns, user_context):
+    def _create_transaction(args, *, user_id, _txns, user_context):
         return create_transaction(user_id, user_context, **args)
 
     @staticmethod
-    def _update_transaction(args, *, user_id, txns, user_context):
+    def _update_transaction(args, *, user_id, _txns, _user_context):
         transaction_id = args.pop("transaction_id", None)
         return update_transaction(user_id, transaction_id, **args)
 
     @staticmethod
-    def _delete_transaction(args, *, user_id, txns, user_context):
+    def _delete_transaction(args, *, user_id, _txns, _user_context):
         return delete_transaction(user_id, args.get("transaction_id"))
 
     @staticmethod
-    def _categorize_transactions(args, *, user_id, txns, user_context):
+    def _categorize_transactions(args, *, user_id, txns, _user_context):
         return categorize_transactions(user_id, txns, args.get("category_mappings"))
+
+    @staticmethod
+    def _connect_stripe(args, *, user_id, _txns, _user_context):
+        return connect_stripe_account(user_id, args.get("api_key"))
+
+    @staticmethod
+    def _create_invoice(args, *, user_id, _txns, _user_context):
+        return create_invoice(user_id, args)
+
+    @staticmethod
+    def _get_invoices(args, *, user_id, _txns, _user_context):
+        return get_invoices(user_id, **args)
+
+    @staticmethod
+    def _send_invoice_reminder(args, *, user_id, _txns, _user_context):
+        return send_invoice_reminder(user_id, args.get("invoice_id"))
+
+    @staticmethod
+    def _mark_invoice_paid(args, *, user_id, _txns, _user_context):
+        return mark_invoice_paid(user_id, args.get("invoice_id"))

@@ -51,7 +51,7 @@ class FinService:
         # Extract prompt context
         financial_context = self._extract_context(normalized_txns, user_context)
         system_prompt = self.prompt_builder.build_system_prompt(
-            user_id, financial_context
+            user_id, financial_context, user_context
         )
         messages = self.prompt_builder.build_messages(query, conversation_history)
 
