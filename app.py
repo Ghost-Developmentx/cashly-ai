@@ -1,3 +1,4 @@
+import asyncio
 import traceback
 import json
 from datetime import datetime
@@ -12,8 +13,8 @@ from services.forecast_service import ForecastService
 from services.budget_service import BudgetService
 from services.insight_service import InsightService
 from services.anomaly_service import AnomalyService
-from services.fin.fin_service import FinService
 from services.fin_learning_service import FinLearningService
+from services.openai_assistants import OpenAIIntegrationService
 
 # Configure logging
 logging.basicConfig(
@@ -30,7 +31,6 @@ forecast_service = ForecastService()
 budget_service = BudgetService()
 insight_service = InsightService()
 anomaly_service = AnomalyService()
-fin_service = FinService()
 fin_learning_service = FinLearningService()
 
 
@@ -44,7 +44,7 @@ class DateTimeEncoder(json.JSONEncoder):
 
 app.json_encoder = DateTimeEncoder
 
-# Directory For Saving Trained Models
+# Directory For Saving-Trained Models
 MODEL_DIR = "models"
 os.makedirs(MODEL_DIR, exist_ok=True)
 
@@ -320,10 +320,10 @@ def forecast_cash_flow_scenario():
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/fin/query", methods=["POST"])
-def fin_query():
+@app.route("/fin/conversations/query", methods=["POST"])
+def fin_query_v2():
     """
-    Process a natural language query for the financial assistant.
+    Process a natural language query using OpenAI Assistants with intent classification.
     """
     try:
         data = request.json
@@ -336,71 +336,114 @@ def fin_query():
         if not user_id or not query:
             return jsonify({"error": "Missing required parameters"}), 400
 
-        logger.info(f"📥 Fin query from user {user_id}: {query}")
+        logger.info(f"📥 OpenAI Fin query from user {user_id}: {query}")
         logger.info(
-            f"📥 User context accounts: {len(user_context.get('accounts', []))}"
+            f"📥 User context: {len(user_context.get('accounts', []))} accounts"
         )
-        logger.info(f"📥 Transactions provided: {len(transactions)}")
+        logger.info(f"📥 Transactions: {len(transactions)}")
 
-        result = fin_service.process_query(
-            user_id=user_id,
-            query=query,
-            transactions=transactions,
-            conversation_history=conversation_history,
-            user_context=user_context,
-        )
+        # Create the integration service
+        service = OpenAIIntegrationService()
 
-        logger.info(f"📤 Fin response generated successfully")
-        logger.info(f"📤 Response keys: {list(result.keys())}")
-        logger.info(f"📤 Actions count: {len(result.get('actions', []))}")
-        logger.info(f"📤 Tool results count: {len(result.get('tool_results', []))}")
+        # Process the query asynchronously
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            result = loop.run_until_complete(
+                service.process_financial_query(
+                    query=query,
+                    user_id=user_id,
+                    user_context=user_context,
+                    conversation_history=conversation_history,
+                )
+            )
+        finally:
+            loop.close()
 
-        # Log detailed action information
+        logger.info(f"📤 OpenAI response generated successfully")
+        logger.info(f"📤 Intent: {result['classification']['intent']}")
+        logger.info(f"📤 Assistant: {result['classification']['assistant_used']}")
+        logger.info(f"📤 Actions: {len(result.get('actions', []))}")
+
+        # Log detailed action information for debugging
         if result.get("actions"):
             for i, action in enumerate(result["actions"]):
-                logger.info(
-                    f"📤 Action {i}: type={action.get('type')}, has_data={bool(action.get('data'))}"
-                )
-                if action.get("data") and isinstance(action["data"], dict):
-                    logger.info(
-                        f"📤 Action {i} data keys: {list(action['data'].keys())}"
-                    )
-                    # Special logging for transactions and accounts
-                    if action.get(
-                        "type"
-                    ) == "show_transactions" and "transactions" in action.get(
-                        "data", {}
-                    ):
-                        logger.info(
-                            f"📤 Action {i} transaction count: {len(action['data']['transactions'])}"
-                        )
-                    elif action.get(
-                        "type"
-                    ) == "show_accounts" and "accounts" in action.get("data", {}):
-                        logger.info(
-                            f"📤 Action {i} account count: {len(action['data']['accounts'])}"
-                        )
-        else:
-            logger.warning("⚠️ No actions in the response!")
-
-        # Log if tool_results exist but no actions
-        if result.get("tool_results") and not result.get("actions"):
-            logger.error("❌ Tool results present but no actions generated!")
-            for i, tool_result in enumerate(result["tool_results"]):
-                logger.info(f"🔧 Tool result {i}: tool={tool_result.get('tool')}")
-
-        # Ensure we're returning the complete result
-        logger.info(
-            f"📤 Final response has response_text: {bool(result.get('response_text'))}"
-        )
-        logger.info(f"📤 Final response has actions: {bool(result.get('actions'))}")
+                logger.info(f"📤 Action {i}: {action.get('type')}")
 
         return jsonify(json.loads(json.dumps(result, cls=DateTimeEncoder))), 200
 
     except Exception as e:
-        logger.error(f"❌ Error processing Fin query: {str(e)}")
+        logger.error(f"❌ Error processing OpenAI Fin query: {str(e)}")
         logger.error(f"❌ Full traceback:")
         traceback.print_exc()
+
+        # Return a user-friendly error response
+        return (
+            jsonify(
+                {
+                    "message": "I apologize, but I encountered an error processing your request. Please try again.",
+                    "actions": [],
+                    "classification": {"intent": "general", "confidence": 0.0},
+                    "success": False,
+                    "error": str(e),
+                }
+            ),
+            500,
+        )
+
+
+@app.route("/fin/health", methods=["GET"])
+def fin_health_check():
+    """Health check for the OpenAI Assistants system."""
+    try:
+        service = OpenAIIntegrationService()
+        health = service.health_check()
+
+        return (
+            jsonify(
+                {
+                    "status": health["status"],
+                    "components": health["components"],
+                    "available_assistants": health["available_assistants"],
+                    "missing_assistants": health["missing_assistants"],
+                    "timestamp": datetime.now().isoformat(),
+                }
+            ),
+            200,
+        )
+
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return (
+            jsonify(
+                {
+                    "status": "unhealthy",
+                    "error": str(e),
+                    "timestamp": datetime.now().isoformat(),
+                }
+            ),
+            500,
+        )
+
+
+@app.route("/fin/analytics", methods=["POST"])
+def fin_analytics():
+    """Get analytics for recent queries and assistant usage."""
+    try:
+        data = request.json
+        user_id = data.get("user_id")
+        recent_queries = data.get("recent_queries", [])
+
+        if not user_id:
+            return jsonify({"error": "Missing user_id"}), 400
+
+        service = OpenAIIntegrationService()
+        analytics = service.get_analytics(user_id, recent_queries)
+
+        return jsonify(analytics), 200
+
+    except Exception as e:
+        logger.error(f"Error getting analytics: {e}")
         return jsonify({"error": str(e)}), 500
 
 

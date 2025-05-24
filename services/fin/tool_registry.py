@@ -185,19 +185,19 @@ class ToolRegistry:
         }
 
     @staticmethod
-    def _get_user_accounts(_args, *, user_id, _txns, user_context):
+    def _get_user_accounts(_args, *, user_id, txns, user_context):
         return get_user_accounts(user_id, user_context)
 
     @staticmethod
-    def _get_account_details(args, *, user_id, _txns, user_context):
+    def _get_account_details(args, *, user_id, txns, user_context):
         return get_account_details(user_id, args.get("account_id"), user_context)
 
     @staticmethod
-    def _initiate_plaid_connection(args, *, user_id, _txns, _user_context):
+    def _initiate_plaid_connection(args, *, user_id, txns, user_context):
         return initiate_plaid_connection(user_id, args.get("institution_preference"))
 
     @staticmethod
-    def _disconnect_account(args, *, user_id, _txns, _user_context):
+    def _disconnect_account(args, *, user_id, txns, user_context):
         return disconnect_account(user_id, args.get("account_id"))
 
     @staticmethod
@@ -205,40 +205,40 @@ class ToolRegistry:
         return get_transactions(user_id, user_context, txns, **args)
 
     @staticmethod
-    def _create_transaction(args, *, user_id, _txns, user_context):
+    def _create_transaction(args, *, user_id, txns, user_context):
         return create_transaction(user_id, user_context, **args)
 
     @staticmethod
-    def _update_transaction(args, *, user_id, _txns, _user_context):
+    def _update_transaction(args, *, user_id, txns, user_context):
         transaction_id = args.pop("transaction_id", None)
         return update_transaction(user_id, transaction_id, **args)
 
     @staticmethod
-    def _delete_transaction(args, *, user_id, _txns, _user_context):
+    def _delete_transaction(args, *, user_id, txns, user_context):
         return delete_transaction(user_id, args.get("transaction_id"))
 
     @staticmethod
-    def _categorize_transactions(args, *, user_id, txns, _user_context):
+    def _categorize_transactions(args, *, user_id, txns, user_context):
         return categorize_transactions(user_id, txns, args.get("category_mappings"))
 
     @staticmethod
-    def _connect_stripe(args, *, user_id, _txns, _user_context):
+    def _connect_stripe(args, *, user_id, txns, user_context):
         return connect_stripe_account(user_id, args.get("api_key"))
 
     @staticmethod
-    def _create_invoice(args, *, user_id, _txns, _user_context):
+    def _create_invoice(args, *, user_id, txns, user_context):
         return create_invoice(user_id, args)
 
     @staticmethod
-    def _get_invoices(args, *, user_id, _txns, _user_context):
+    def _get_invoices(args, *, user_id, txns, user_context):
         return get_invoices(user_id, **args)
 
     @staticmethod
-    def _send_invoice_reminder(args, *, user_id, _txns, _user_context):
+    def _send_invoice_reminder(args, *, user_id, txns, user_context):
         return send_invoice_reminder(user_id, args.get("invoice_id"))
 
     @staticmethod
-    def _mark_invoice_paid(args, *, user_id, _txns, _user_context):
+    def _mark_invoice_paid(args, *, user_id, txns, user_context):
         return mark_invoice_paid(user_id, args.get("invoice_id"))
 
     @staticmethod
@@ -265,5 +265,5 @@ class ToolRegistry:
         )
 
     @staticmethod
-    def _disconnect_stripe_connect(args, *, user_id, _txns, user_context):
+    def _disconnect_stripe_connect(args, *, user_id, txns, user_context):
         return disconnect_stripe_connect(user_id, user_context)

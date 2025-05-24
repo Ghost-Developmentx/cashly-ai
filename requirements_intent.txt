@@ -1,0 +1,12 @@
+torch>=1.9.0
+transformers>=4.20.0
+scikit-learn>=1.1.0
+joblib>=1.1.0
+pandas>=1.4.0
+numpy>=1.21.0
+
+# Existing dependencies (ensure compatibility)
+anthropic
+flask
+flask-cors
+python-dotenv

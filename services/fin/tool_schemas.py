@@ -247,20 +247,6 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
         },
     },
     {
-        "name": "connect_stripe",
-        "description": "Connect a Stripe account to send invoices and track payments",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "api_key": {
-                    "type": "string",
-                    "description": "Stripe API key (will be encrypted)",
-                }
-            },
-            "required": ["api_key"],
-        },
-    },
-    {
         "name": "create_invoice",
         "description": "Create a new invoice for a client",
         "input_schema": {
