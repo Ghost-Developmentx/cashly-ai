@@ -24,6 +24,8 @@ class IntentService:
             "transactions": "transaction_assistant",
             "accounts": "account_assistant",
             "invoices": "invoice_assistant",
+            "bank_connection": "bank_connection_assistant",
+            "payment_processing": "payment_processing_assistant",
             "forecasting": "forecasting_assistant",
             "budgets": "budget_assistant",
             "insights": "insights_assistant",
@@ -151,7 +153,13 @@ class IntentService:
 
         intent_keywords = {
             "transactions": ["transaction", "spending", "expense", "income"],
-            "accounts": ["account", "balance", "bank", "connect"],
+            "accounts": [
+                "account",
+                "balance",
+                "bank",
+            ],
+            "bank_connection": ["connect bank", "link bank", "account"],
+            "payment_processing": ["process", "pay", "payment", "connect stripe"],
             "invoices": ["invoice", "payment", "bill", "client"],
             "forecasting": ["forecast", "predict", "future"],
             "budgets": ["budget", "limit", "plan"],

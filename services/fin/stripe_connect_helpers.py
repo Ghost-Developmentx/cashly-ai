@@ -12,28 +12,70 @@ def setup_stripe_connect(
 ) -> Dict[str, Any]:
     """
     Initiate Stripe Connect setup for the user.
-
-    Args:
-        user_id: User identifier
-        user_context: User profile data
-        country: Country code for the business
-        business_type: Type of business entity
-
-    Returns:
-        Dictionary with setup action or error
+    Now handles incomplete/rejected accounts better.
     """
     try:
-        # Check if user already has Stripe Connect
         stripe_status = user_context.get("stripe_connect", {})
 
-        if stripe_status.get("connected"):
+        # ✅ If already fully connected and working, show status
+        if stripe_status.get("connected") and stripe_status.get("can_accept_payments"):
             return {
-                "message": "You already have Stripe Connect set up! You can manage your payments through the Stripe dashboard.",
+                "message": "Your Stripe Connect account is already set up and working! You can manage your payments through the Stripe dashboard.",
                 "already_connected": True,
                 "status": stripe_status.get("status"),
-                "can_accept_payments": stripe_status.get("can_accept_payments", False),
+                "can_accept_payments": True,
             }
 
+        # 🔧 NEW: Handle incomplete or rejected accounts
+        if stripe_status.get("connected"):
+            status = stripe_status.get("status", "unknown")
+
+            if status == "rejected":
+                return {
+                    "action": "resume_stripe_connect_after_rejection",
+                    "user_id": user_id,
+                    "message": "I see your previous Stripe Connect setup encountered issues. I can help you create a fresh account or troubleshoot the existing one.",
+                    "options": [
+                        {
+                            "action": "create_new_stripe_account",
+                            "text": "Start Fresh with New Account",
+                            "description": "Create a completely new Stripe Connect account",
+                        },
+                        {
+                            "action": "resume_existing_stripe_account",
+                            "text": "Fix Existing Account",
+                            "description": "Continue with the existing account and resolve requirements",
+                        },
+                        {
+                            "action": "open_stripe_dashboard",
+                            "text": "Open Stripe Dashboard",
+                            "description": "Go directly to Stripe to manage your account",
+                        },
+                    ],
+                    "current_status": stripe_status,
+                }
+
+            elif not stripe_status.get("onboarding_complete"):
+                return {
+                    "action": "resume_stripe_connect_onboarding",
+                    "user_id": user_id,
+                    "message": "You have a Stripe Connect account that needs to be completed. Let me help you finish the setup process.",
+                    "options": [
+                        {
+                            "action": "continue_onboarding",
+                            "text": "Continue Setup",
+                            "description": "Resume where you left off",
+                        },
+                        {
+                            "action": "start_over",
+                            "text": "Start Over",
+                            "description": "Create a new account from scratch",
+                        },
+                    ],
+                    "current_status": stripe_status,
+                }
+
+        # 🆕 Fresh setup for new users
         return {
             "action": "setup_stripe_connect",
             "user_id": user_id,
@@ -121,13 +163,7 @@ def create_stripe_connect_dashboard_link(
 ) -> Dict[str, Any]:
     """
     Create a link to the Stripe Express dashboard.
-
-    Args:
-        user_id: User identifier
-        user_context: User profile data
-
-    Returns:
-        Dictionary with dashboard link action or error
+    Now works even for incomplete accounts.
     """
     try:
         stripe_status = user_context.get("stripe_connect", {})
@@ -137,20 +173,33 @@ def create_stripe_connect_dashboard_link(
                 "error": "You need to set up Stripe Connect first before accessing the dashboard."
             }
 
-        if not stripe_status.get("can_accept_payments"):
-            return {
-                "error": "Your Stripe Connect account isn't ready yet. Please complete the onboarding process first."
-            }
-
+        # 🔧 NEW: Allow dashboard access even for incomplete accounts
+        # This lets users see requirements and fix issues
         return {
             "action": "create_stripe_connect_dashboard_link",
             "user_id": user_id,
-            "message": "I'll open your Stripe dashboard where you can manage your payments, view transactions, and update your account settings.",
+            "message": "I'll open your Stripe dashboard where you can manage your account, complete any requirements, and view your payment status.",
+            "note": "The dashboard will show any pending requirements that need to be completed.",
         }
 
     except Exception as e:
         logger.error(f"Error creating dashboard link: {e}")
         return {"error": f"Error creating dashboard link: {str(e)}"}
+
+
+def restart_stripe_connect_setup(
+    user_id: str, user_context: Dict[str, Any]
+) -> Dict[str, Any]:
+    """
+    NEW FUNCTION: Restart Stripe Connect setup from scratch.
+    """
+    return {
+        "action": "restart_stripe_connect",
+        "user_id": user_id,
+        "message": "I'll help you start the Stripe Connect setup process from the beginning. This will create a fresh account.",
+        "warning": "This will disconnect any existing Stripe Connect account and start over.",
+        "requires_confirmation": True,
+    }
 
 
 def get_stripe_connect_earnings(

@@ -406,4 +406,38 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
             "required": ["account_id"],
         },
     },
+    {
+        "name": "restart_stripe_connect_setup",
+        "description": "Restart Stripe Connect setup from scratch, disconnecting any existing incomplete account",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "force": {
+                    "type": "boolean",
+                    "description": "Force restart even if account exists",
+                    "default": False,
+                }
+            },
+        },
+    },
+    {
+        "name": "resume_stripe_connect_onboarding",
+        "description": "Resume an incomplete Stripe Connect onboarding process",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["continue", "restart"],
+                    "description": "Whether to continue existing setup or restart",
+                    "default": "continue",
+                }
+            },
+        },
+    },
+    {
+        "name": "get_stripe_connect_requirements",
+        "description": "Get detailed information about what's needed to complete Stripe Connect setup",
+        "input_schema": {"type": "object", "properties": {}},
+    },
 ]

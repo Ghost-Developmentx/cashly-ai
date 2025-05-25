@@ -21,12 +21,13 @@ class OpenAIIntegrationService:
             "budgets": AssistantType.BUDGET,
             "insights": AssistantType.INSIGHTS,
             "general": AssistantType.TRANSACTION,  # Default fallback
-            "connection": AssistantType.CONNECTION,
+            "bank_connection": AssistantType.BANK_CONNECTION,
+            "payment_processing": AssistantType.PAYMENT_PROCESSING,
         }
 
         # Define cross-assistant routing patterns
         self.routing_patterns = {
-            AssistantType.CONNECTION: {
+            AssistantType.BANK_CONNECTION: {
                 "account_balance": AssistantType.ACCOUNT,
                 "total_balance": AssistantType.ACCOUNT,
                 "account_details": AssistantType.ACCOUNT,
@@ -104,7 +105,9 @@ class OpenAIIntegrationService:
 
             # Step 2: Determine which assistant to use
             initial_assistant = self._get_assistant_for_intent(
-                initial_intent, routing_result
+                initial_intent,
+                routing_result,
+                query,  # ← Pass the query for keyword checking
             )
 
             logger.info(f"🤖 Initial assistant: {initial_assistant.value}")
@@ -243,40 +246,39 @@ class OpenAIIntegrationService:
     ) -> bool:
         """Determine if we should re-route to a different assistant."""
 
-        # If we got function calls and a good response, don't re-route
+        # ✅ If we got function calls and a good response, DON'T re-route
         if len(response.function_calls) > 0 and response.success:
+            logger.info(
+                "✅ Assistant executed functions successfully - no re-routing needed"
+            )
             return False
 
-        # Check if the response contains routing suggestions
+        # ✅ If the response is substantial (not just a generic message), DON'T re-route
+        if len(response.content) > 150 and response.success:
+            logger.info(
+                "✅ Assistant provided substantial response - no re-routing needed"
+            )
+            return False
+
+        # ❌ Only re-route if the assistant explicitly mentions other assistants
         routing_phrases = [
-            "refer to",
+            "transaction assistant",
+            "account assistant",
+            "invoice assistant",
+            "refer to the",
             "ask the",
             "contact the",
-            "check with the",
-            "please use",
-            "try the",
-            "for this, you'll need",
         ]
 
         response_lower = response.content.lower()
 
         for phrase in routing_phrases:
             if phrase in response_lower:
+                logger.info(f"🔄 Re-routing triggered by phrase: '{phrase}'")
                 return True
 
-        # Check if the response is too generic for a specific question
-        if len(response.function_calls) == 0 and len(response.content) < 100:
-            return True
-
-        # Check specific patterns based on the current assistant
-        if current_assistant in self.routing_patterns:
-            patterns = self.routing_patterns[current_assistant]
-            query_lower = query.lower()
-
-            for pattern_key in patterns.keys():
-                if pattern_key in query_lower:
-                    return True
-
+        # ❌ Don't re-route based on query patterns - let the assistant handle it
+        logger.info("✅ No re-routing needed - assistant should handle this query")
         return False
 
     def _determine_correct_assistant(
@@ -290,7 +292,8 @@ class OpenAIIntegrationService:
         assistant_mentions = {
             "transaction": AssistantType.TRANSACTION,
             "account": AssistantType.ACCOUNT,
-            "connection": AssistantType.CONNECTION,
+            "bank_connection": AssistantType.BANK_CONNECTION,
+            "payment_processing": AssistantType.PAYMENT_PROCESSING,
             "invoice": AssistantType.INVOICE,
             "forecasting": AssistantType.FORECASTING,
             "budget": AssistantType.BUDGET,
@@ -316,72 +319,107 @@ class OpenAIIntegrationService:
         return self.intent_to_assistant.get(new_intent, AssistantType.TRANSACTION)
 
     def _get_assistant_for_intent(
-        self, intent: str, routing_result: Dict
+        self, intent: str, routing_result: Dict, query: str
     ) -> AssistantType:
-        """Determine which assistant to use based on intent and routing strategy."""
+        """Determine which assistant to use based on intent and query content."""
+
+        # Define keywords for different assistant types
+        assistant_keywords = {
+            "bank_connection": [
+                "connect",
+                "link",
+                "add",
+                "integrate",
+                "setup",
+                "plaid",
+                "new account",
+                "another account",
+                "connect bank",
+                "add bank",
+                "link account",
+                "integrate account",
+            ],
+            "payment_processing": [
+                "payment",
+                "process payment",
+                "pay",
+                "stripe",
+                "charge",
+                "send money",
+                "transfer",
+                "payment method",
+                "credit card",
+                "debit card",
+            ],
+        }
+
+        query_lower = query.lower()
+
+        # If it's accounts intent, check for special keywords
+        if intent == "accounts":
+            # Check bank connection keywords
+            for keyword in assistant_keywords["bank_connection"]:
+                if keyword in query_lower:
+                    logger.info(
+                        f"🔗 Routing to Bank Connection Assistant due to keyword: '{keyword}'"
+                    )
+                    return AssistantType.BANK_CONNECTION
+
+            # Check payment processing keywords
+            for keyword in assistant_keywords["payment_processing"]:
+                if keyword in query_lower:
+                    logger.info(
+                        f"💳 Routing to Payment Processing Assistant due to keyword: '{keyword}'"
+                    )
+                    return AssistantType.PAYMENT_PROCESSING
+
+            # If no special keywords found, use Account Assistant
+            return AssistantType.ACCOUNT
+
+        # Handle direct routing strategies
         strategy = routing_result["routing"]["strategy"]
-
-        # For high confidence, use the mapped assistant
-        if strategy == "direct_route":
+        if strategy in ["direct_route", "route_with_fallback"]:
             return self.intent_to_assistant.get(intent, AssistantType.TRANSACTION)
 
-        # For medium confidence with fallback, still use primary but with caution
-        elif strategy == "route_with_fallback":
-            return self.intent_to_assistant.get(intent, AssistantType.TRANSACTION)
-
-        # For low confidence, use a more general approach
-        elif strategy in ["general_with_context", "general_fallback"]:
+        # Default fallback for general queries
+        if strategy in ["general_with_context", "general_fallback"]:
             return AssistantType.TRANSACTION
 
-        # Default fallback
         return AssistantType.TRANSACTION
 
     def _process_function_calls_to_actions(
         self, function_calls: List[Dict]
     ) -> List[Dict[str, Any]]:
-        """Convert function calls to frontend actions."""
+        """Convert function calls to frontend actions - simplified version."""
+
+        # Simple mapping: function name -> action type
+        ACTION_MAPPING = {
+            "get_user_accounts": "show_accounts",
+            "get_transactions": "show_transactions",
+            "create_transaction": "transaction_created",
+            "update_transaction": "transaction_updated",
+            "delete_transaction": "transaction_deleted",
+            "get_invoices": "show_invoices",
+            "create_invoice": "invoice_created",
+            "initiate_plaid_connection": "initiate_plaid_connection",
+            "setup_stripe_connect": "setup_stripe_connect",
+            "forecast_cash_flow": "show_forecast",
+            "generate_budget": "show_budget",
+            "analyze_trends": "show_trends",
+            "detect_anomalies": "show_anomalies",
+            "categorize_transactions": "transactions_categorized",
+        }
+
         actions = []
 
         for func_call in function_calls:
             function_name = func_call.get("function")
             result = func_call.get("result", {})
 
-            logger.info(f"🔧 Processing function call: {function_name}")
-            logger.info(
-                f"🔧 Result keys: {list(result.keys()) if isinstance(result, dict) else 'not dict'}"
-            )
+            logger.info(f"🔧 Processing: {function_name}")
 
-            # Map function names to action types
-            action_mapping = {
-                "get_transactions": "show_transactions",
-                "get_user_accounts": "show_accounts",
-                "create_invoice": "invoice_created",
-                "get_invoices": "show_invoices",
-                "initiate_plaid_connection": "initiate_plaid_connection",
-                "setup_stripe_connect": "setup_stripe_connect",
-                "forecast_cash_flow": "show_forecast",
-                "generate_budget": "show_budget",
-                "analyze_trends": "show_trends",
-                "detect_anomalies": "show_anomalies",
-                "create_transaction": "transaction_created",
-                "update_transaction": "transaction_updated",
-                "delete_transaction": "transaction_deleted",
-            }
-
-            action_type = action_mapping.get(function_name, f"show_{function_name}")
-
-            # Handle special cases
-            if result.get("action"):
-                # This is an action result (like from Plaid or Stripe)
-                actions.append(
-                    {
-                        "type": result["action"],
-                        "data": result,
-                        "function_called": function_name,
-                    }
-                )
-            elif result.get("error"):
-                # Error result
+            # Handle errors
+            if result.get("error"):
                 actions.append(
                     {
                         "type": "error",
@@ -389,17 +427,23 @@ class OpenAIIntegrationService:
                         "function_called": function_name,
                     }
                 )
-            else:
-                # Regular data result
-                actions.append(
-                    {
-                        "type": action_type,
-                        "data": result,
-                        "function_called": function_name,
-                    }
-                )
+                continue
 
-        logger.info(f"🔧 Generated actions: {[a['type'] for a in actions]}")
+            # Get action type from mapping
+            action_type = ACTION_MAPPING.get(function_name, f"show_{function_name}")
+
+            # Create the action
+            actions.append(
+                {
+                    "type": action_type,
+                    "data": result,
+                    "function_called": function_name,
+                }
+            )
+
+            logger.info(f"🔧 Created action: {action_type}")
+
+        logger.info(f"🔧 Total actions: {[a['type'] for a in actions]}")
         return actions
 
     def clear_conversation(self, user_id: str):

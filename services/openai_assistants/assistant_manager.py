@@ -14,7 +14,8 @@ logger = logging.getLogger(__name__)
 class AssistantType(Enum):
     TRANSACTION = "transaction"
     ACCOUNT = "account"
-    CONNECTION = "connection"
+    BANK_CONNECTION = "bank_connection"
+    PAYMENT_PROCESSING = "payment_processing"
     INVOICE = "invoice"
     FORECASTING = "forecasting"
     BUDGET = "budget"
@@ -47,7 +48,10 @@ class AssistantManager:
         self.assistant_ids = {
             AssistantType.TRANSACTION: os.getenv("TRANSACTION_ASSISTANT_ID"),
             AssistantType.ACCOUNT: os.getenv("ACCOUNT_ASSISTANT_ID"),
-            AssistantType.CONNECTION: os.getenv("CONNECTION_ASSISTANT_ID"),
+            AssistantType.BANK_CONNECTION: os.getenv("BANK_CONNECTION_ASSISTANT_ID"),
+            AssistantType.PAYMENT_PROCESSING: os.getenv(
+                "PAYMENT_PROCESSING_ASSISTANT_ID"
+            ),
             AssistantType.INVOICE: os.getenv("INVOICE_ASSISTANT_ID"),
             AssistantType.FORECASTING: os.getenv("FORECASTING_ASSISTANT_ID"),
             AssistantType.BUDGET: os.getenv("BUDGET_ASSISTANT_ID"),

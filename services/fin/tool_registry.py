@@ -78,6 +78,9 @@ class ToolRegistry:
             "create_stripe_connect_dashboard_link": self._create_stripe_connect_dashboard_link,
             "get_stripe_connect_earnings": self._get_stripe_connect_earnings,
             "disconnect_stripe_connect": self._disconnect_stripe_connect,
+            "restart_stripe_connect_setup": self._restart_stripe_connect_setup,
+            "resume_stripe_connect_onboarding": self._resume_stripe_connect_onboarding,
+            "get_stripe_connect_requirements": self._get_stripe_connect_requirements,
         }
 
     @property
@@ -267,3 +270,48 @@ class ToolRegistry:
     @staticmethod
     def _disconnect_stripe_connect(args, *, user_id, txns, user_context):
         return disconnect_stripe_connect(user_id, user_context)
+
+    @staticmethod
+    def _restart_stripe_connect_setup(args, *, user_id, txns, user_context):
+        from services.fin.stripe_connect_helpers import restart_stripe_connect_setup
+
+        return restart_stripe_connect_setup(user_id, user_context)
+
+    def _resume_stripe_connect_onboarding(self, args, *, user_id, txns, user_context):
+        action = args.get("action", "continue")
+
+        if action == "restart":
+            return self._restart_stripe_connect_setup(
+                args, user_id=user_id, txns=txns, user_context=user_context
+            )
+        else:
+            # Resume existing onboarding
+            from services.fin.stripe_connect_helpers import (
+                create_stripe_connect_dashboard_link,
+            )
+
+            return create_stripe_connect_dashboard_link(user_id, user_context)
+
+    @staticmethod
+    def _get_stripe_connect_requirements(args, *, user_id, txns, user_context):
+        stripe_status = user_context.get("stripe_connect", {})
+
+        if not stripe_status.get("connected"):
+            return {
+                "message": "You don't have a Stripe Connect account yet. Let's set one up!",
+                "action": "setup_stripe_connect",
+            }
+
+        requirements = stripe_status.get("requirements", {})
+
+        return {
+            "current_status": stripe_status.get("status"),
+            "requirements": requirements,
+            "message": f"Your Stripe Connect account status is: {stripe_status.get('status')}",
+            "next_steps": [
+                "Complete any pending requirements in the Stripe dashboard",
+                "Verify your business information",
+                "Submit required documents if needed",
+            ],
+            "can_accept_payments": stripe_status.get("can_accept_payments", False),
+        }
