@@ -333,6 +333,21 @@ def fin_query_v2():
         conversation_history = data.get("conversation_history", [])
         user_context = data.get("user_context", {})
 
+        # ADD DEBUGGING HERE
+        logger.info(f"📥 Raw request data keys: {list(data.keys())}")
+        logger.info(f"📥 Request data size: {len(str(data))} characters")
+        logger.info(f"📥 Transactions in request: {len(transactions)}")
+        logger.info(
+            f"📥 User context accounts: {len(user_context.get('accounts', []))}"
+        )
+
+        # Log first transaction if available
+        if transactions:
+            logger.info(f"📥 First transaction received: {transactions[0]}")
+        else:
+            logger.info(f"📥 No transactions in request data")
+            logger.info(f"📥 Full request data: {data}")
+
         if not user_id or not query:
             return jsonify({"error": "Missing required parameters"}), 400
 
@@ -344,6 +359,11 @@ def fin_query_v2():
 
         # Create the integration service
         service = OpenAIIntegrationService()
+
+        # ADD TRANSACTIONS TO USER_CONTEXT - THIS IS THE FIX!
+        if user_context and transactions:
+            user_context["transactions"] = transactions
+            logger.info(f"📥 Added {len(transactions)} transactions to user_context")
 
         # Process the query asynchronously
         loop = asyncio.new_event_loop()

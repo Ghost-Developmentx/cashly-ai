@@ -21,33 +21,29 @@ class OpenAIIntegrationService:
             "budgets": AssistantType.BUDGET,
             "insights": AssistantType.INSIGHTS,
             "general": AssistantType.TRANSACTION,  # Default fallback
-            "connection": AssistantType.CONNECTION,  # Add the missing connection intent
+            "connection": AssistantType.CONNECTION,
         }
 
         # Define cross-assistant routing patterns
         self.routing_patterns = {
-            # If Connection Assistant gets account balance questions
             AssistantType.CONNECTION: {
                 "account_balance": AssistantType.ACCOUNT,
                 "total_balance": AssistantType.ACCOUNT,
                 "account_details": AssistantType.ACCOUNT,
                 "how_much_money": AssistantType.ACCOUNT,
             },
-            # If Account Assistant gets transaction questions
             AssistantType.ACCOUNT: {
                 "transactions": AssistantType.TRANSACTION,
                 "spending": AssistantType.TRANSACTION,
                 "expenses": AssistantType.TRANSACTION,
                 "recent_activity": AssistantType.TRANSACTION,
             },
-            # If Transaction Assistant gets forecasting questions
             AssistantType.TRANSACTION: {
                 "forecast": AssistantType.FORECASTING,
                 "predict": AssistantType.FORECASTING,
                 "cash_flow": AssistantType.FORECASTING,
                 "future": AssistantType.FORECASTING,
             },
-            # Add more cross-routing patterns as needed
         }
 
         self._setup_tool_executor()
@@ -93,15 +89,6 @@ class OpenAIIntegrationService:
     ) -> Dict[str, Any]:
         """
         Enhanced query processing with seamless re-routing.
-
-        Args:
-            query: User's question
-            user_id: User identifier
-            user_context: User context (accounts, transactions, integrations)
-            conversation_history: Previous conversation messages
-
-        Returns:
-            Complete response with classification, assistant response, and actions
         """
         try:
             # Step 1: Initial intent classification
@@ -131,13 +118,20 @@ class OpenAIIntegrationService:
                 conversation_history=conversation_history,
             )
 
+            logger.info(f"🔧 Assistant response success: {assistant_response.success}")
+            logger.info(
+                f"🔧 Function calls count: {len(assistant_response.function_calls)}"
+            )
+            logger.info(
+                f"🔧 Response content length: {len(assistant_response.content)}"
+            )
+
             final_assistant = initial_assistant
 
-            # Step 4: Check if we need to re-route for seamless experience
+            # Step 4: Check if we need to re-route
             if self._should_reroute(assistant_response, initial_assistant, query):
                 logger.info("🔄 Attempting seamless re-routing")
 
-                # Determine the correct assistant for re-routing
                 correct_assistant = self._determine_correct_assistant(
                     assistant_response, initial_assistant, query
                 )
@@ -147,7 +141,6 @@ class OpenAIIntegrationService:
                         f"🔄 Re-routing: {initial_assistant.value} -> {correct_assistant.value}"
                     )
 
-                    # Re-process with the correct assistant
                     rerouted_response = await self.assistant_manager.process_query(
                         query=query,
                         assistant_type=correct_assistant,
@@ -156,7 +149,6 @@ class OpenAIIntegrationService:
                         conversation_history=conversation_history,
                     )
 
-                    # Use the re-routed response if it's better
                     if (
                         rerouted_response.success
                         and len(rerouted_response.function_calls) > 0
@@ -173,11 +165,27 @@ class OpenAIIntegrationService:
             actions = self._process_function_calls_to_actions(
                 assistant_response.function_calls
             )
+            logger.info(f"🔧 Generated {len(actions)} actions from function calls")
 
-            # Step 6: Format response
-            return {
+            # Step 6: Create tool_results for Rails compatibility
+            tool_results = []
+            for func_call in assistant_response.function_calls:
+                tool_results.append(
+                    {
+                        "tool": func_call.get("function"),
+                        "parameters": func_call.get("arguments", {}),
+                        "result": func_call.get("result", {}),
+                    }
+                )
+
+            logger.info(f"🔧 Generated {len(tool_results)} tool_results for Rails")
+
+            # Step 7: Format response in the expected format
+            response = {
                 "message": assistant_response.content,
+                "response_text": assistant_response.content,  # Rails expects this key
                 "actions": actions,
+                "tool_results": tool_results,  # Rails expects this key
                 "classification": {
                     "intent": initial_intent,
                     "confidence": confidence,
@@ -203,11 +211,27 @@ class OpenAIIntegrationService:
                 },
             }
 
+            logger.info(f"📤 Final response keys: {list(response.keys())}")
+            logger.info(
+                f"📤 Response has message: {bool(response.get('response_text'))}"
+            )
+            logger.info(
+                f"📤 Tool results count: {len(response.get('tool_results', []))}"
+            )
+
+            return response
+
         except Exception as e:
             logger.error(f"❌ Error processing financial query: {e}")
+            import traceback
+
+            traceback.print_exc()
+
             return {
                 "message": "I apologize, but I encountered an error processing your request. Please try again.",
+                "response_text": "I apologize, but I encountered an error processing your request. Please try again.",
                 "actions": [],
+                "tool_results": [],
                 "classification": {"intent": "general", "confidence": 0.0},
                 "routing": {"strategy": "error"},
                 "success": False,
@@ -218,6 +242,10 @@ class OpenAIIntegrationService:
         self, response: AssistantResponse, current_assistant: AssistantType, query: str
     ) -> bool:
         """Determine if we should re-route to a different assistant."""
+
+        # If we got function calls and a good response, don't re-route
+        if len(response.function_calls) > 0 and response.success:
+            return False
 
         # Check if the response contains routing suggestions
         routing_phrases = [
@@ -232,14 +260,12 @@ class OpenAIIntegrationService:
 
         response_lower = response.content.lower()
 
-        # If an assistant is suggesting to use another assistant, we should re-route
         for phrase in routing_phrases:
             if phrase in response_lower:
                 return True
 
         # Check if the response is too generic for a specific question
         if len(response.function_calls) == 0 and len(response.content) < 100:
-            # Short response with no function calls might indicate the wrong assistant
             return True
 
         # Check specific patterns based on the current assistant
@@ -294,7 +320,6 @@ class OpenAIIntegrationService:
     ) -> AssistantType:
         """Determine which assistant to use based on intent and routing strategy."""
         strategy = routing_result["routing"]["strategy"]
-        confidence = routing_result["classification"]["confidence"]
 
         # For high confidence, use the mapped assistant
         if strategy == "direct_route":
@@ -306,7 +331,6 @@ class OpenAIIntegrationService:
 
         # For low confidence, use a more general approach
         elif strategy in ["general_with_context", "general_fallback"]:
-            # Route to transaction assistant as it handles the most general queries
             return AssistantType.TRANSACTION
 
         # Default fallback
@@ -322,6 +346,11 @@ class OpenAIIntegrationService:
             function_name = func_call.get("function")
             result = func_call.get("result", {})
 
+            logger.info(f"🔧 Processing function call: {function_name}")
+            logger.info(
+                f"🔧 Result keys: {list(result.keys()) if isinstance(result, dict) else 'not dict'}"
+            )
+
             # Map function names to action types
             action_mapping = {
                 "get_transactions": "show_transactions",
@@ -329,7 +358,7 @@ class OpenAIIntegrationService:
                 "create_invoice": "invoice_created",
                 "get_invoices": "show_invoices",
                 "initiate_plaid_connection": "initiate_plaid_connection",
-                "setup_stripe_connect": "connect_stripe",
+                "setup_stripe_connect": "setup_stripe_connect",
                 "forecast_cash_flow": "show_forecast",
                 "generate_budget": "show_budget",
                 "analyze_trends": "show_trends",
@@ -354,7 +383,11 @@ class OpenAIIntegrationService:
             elif result.get("error"):
                 # Error result
                 actions.append(
-                    {"type": "error", "data": result, "function_called": function_name}
+                    {
+                        "type": "error",
+                        "data": result,
+                        "function_called": function_name,
+                    }
                 )
             else:
                 # Regular data result
@@ -366,6 +399,7 @@ class OpenAIIntegrationService:
                     }
                 )
 
+        logger.info(f"🔧 Generated actions: {[a['type'] for a in actions]}")
         return actions
 
     def clear_conversation(self, user_id: str):

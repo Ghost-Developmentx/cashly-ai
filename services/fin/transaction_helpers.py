@@ -35,6 +35,13 @@ def get_transactions(
         max_amount = filters.get("max_amount")
         transaction_type = filters.get("type", "").lower()  # 'income', 'expense', 'all'
 
+        logger.info(f"🔍 Filtering transactions for user {user_id}")
+        logger.info(f"🔍 Total transactions available: {len(transactions)}")
+        logger.info(f"🔍 Account filter - ID: {account_id}, Name: '{account_name}'")
+        logger.info(
+            f"🔍 Date filter - Days: {days}, Start: {start_date}, End: {end_date}"
+        )
+
         # Calculate date range
         today = datetime.now().date()
         if start_date and end_date:
@@ -44,38 +51,106 @@ def get_transactions(
             start = today - timedelta(days=days)
             end = today
 
+        logger.info(f"🔍 Date range: {start} to {end}")
+
         # Get account info for filtering
         accounts = user_context.get("accounts", [])
+        logger.info(f"🔍 Available accounts: {len(accounts)}")
+
+        # Log account names for debugging
+        for acc in accounts:
+            logger.info(f"🔍 Account: ID={acc.get('id')}, Name='{acc.get('name')}'")
+
         target_account = None
 
         if account_id:
             target_account = next(
                 (acc for acc in accounts if str(acc.get("id")) == str(account_id)), None
             )
+            logger.info(f"🔍 Found account by ID: {target_account}")
         elif account_name:
+            # More flexible account name matching
+            account_name_clean = account_name.strip().lower()
+
+            # Try exact match first
             target_account = next(
                 (
                     acc
                     for acc in accounts
-                    if account_name in acc.get("name", "").lower()
+                    if acc.get("name", "").lower() == account_name_clean
                 ),
                 None,
             )
 
+            # If no exact match, try partial match
+            if not target_account:
+                target_account = next(
+                    (
+                        acc
+                        for acc in accounts
+                        if account_name_clean in acc.get("name", "").lower()
+                    ),
+                    None,
+                )
+
+            # If still no match, try reverse partial match (account name contains filter)
+            if not target_account:
+                target_account = next(
+                    (
+                        acc
+                        for acc in accounts
+                        if acc.get("name", "").lower() in account_name_clean
+                    ),
+                    None,
+                )
+
+            logger.info(f"🔍 Found account by name '{account_name}': {target_account}")
+
         # Filter transactions
         filtered_transactions = []
-        for txn in transactions:
+
+        logger.info(f"🔍 Starting transaction filtering...")
+
+        for i, txn in enumerate(transactions):
             try:
-                # Parse transaction date
-                txn_date = datetime.strptime(txn["date"], "%Y-%m-%d").date()
+                # Log first few transactions for debugging
+                if i < 3:
+                    logger.info(
+                        f"🔍 Transaction {i}: date={txn.get('date')}, account={txn.get('account')}, account_id={txn.get('account_id')}, amount={txn.get('amount')}"
+                    )
+
+                # Parse transaction date - handle multiple formats
+                date_str = txn["date"]
+                try:
+                    # Try YYYY-MM-DD format first
+                    txn_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+                except ValueError:
+                    try:
+                        # Try with timestamp format
+                        txn_date = datetime.strptime(date_str[:10], "%Y-%m-%d").date()
+                    except ValueError:
+                        # Try parsing as ISO format
+                        txn_date = datetime.fromisoformat(date_str.split("T")[0]).date()
+
+                if i < 3:  # Log first few dates for debugging
+                    logger.info(f"🔍 Transaction {i} date: '{date_str}' -> {txn_date}")
 
                 # Date filter
                 if not (start <= txn_date <= end):
                     continue
 
                 # Account filter
-                if target_account and txn.get("account_id") != target_account.get("id"):
-                    continue
+                if target_account:
+                    txn_account_id = txn.get("account_id")
+                    target_account_id = target_account.get("id")
+
+                    # Convert both to strings for comparison
+                    if str(txn_account_id) != str(target_account_id):
+                        if i < 5:  # Log first few mismatches
+                            logger.info(
+                                f"🔍 Transaction {i} account mismatch: txn_account_id='{txn_account_id}' vs target='{target_account_id}'"
+                            )
+                        continue
 
                 # Category filter
                 if category and category not in txn.get("category", "").lower():
@@ -97,8 +172,12 @@ def get_transactions(
                 filtered_transactions.append(txn)
 
             except Exception as e:
-                logger.warning(f"Error processing transaction: {e}")
+                logger.warning(f"Error processing transaction {i}: {e}")
                 continue
+
+        logger.info(
+            f"🔍 Filtered transactions: {len(filtered_transactions)} out of {len(transactions)}"
+        )
 
         # Sort by date (newest first)
         filtered_transactions.sort(key=lambda x: x["date"], reverse=True)
@@ -123,7 +202,7 @@ def get_transactions(
                     float(txn["amount"])
                 )
 
-        return {
+        result = {
             "transactions": filtered_transactions,
             "summary": {
                 "count": len(filtered_transactions),
@@ -138,14 +217,26 @@ def get_transactions(
             "category_breakdown": category_spending,
             "filters_applied": {
                 "account": target_account.get("name") if target_account else None,
+                "account_id": target_account.get("id") if target_account else None,
                 "days": days,
                 "category": category if category else None,
                 "date_range": f"{start} to {end}",
+                "total_available_transactions": len(transactions),
+                "accounts_available": [acc.get("name") for acc in accounts],
             },
         }
 
+        logger.info(
+            f"🔍 Final result: {len(filtered_transactions)} transactions, account='{target_account.get('name') if target_account else 'All'}'"
+        )
+
+        return result
+
     except Exception as e:
         logger.error(f"Error getting transactions: {e}")
+        import traceback
+
+        traceback.print_exc()
         return {"error": f"Error retrieving transactions: {str(e)}"}
 
 
@@ -199,7 +290,7 @@ def create_transaction(
         if not target_account:
             return {"error": "Please specify a valid account for this transaction"}
 
-        # Parse date (default to today)
+        # Parse date (default today)
         if date_str:
             try:
                 transaction_date = datetime.strptime(date_str, "%Y-%m-%d").strftime(
