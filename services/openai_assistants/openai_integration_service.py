@@ -403,6 +403,8 @@ class OpenAIIntegrationService:
             "create_invoice": "invoice_created",
             "initiate_plaid_connection": "initiate_plaid_connection",
             "setup_stripe_connect": "setup_stripe_connect",
+            "check_stripe_connect_status": "check_stripe_connect_status",
+            "create_stripe_connect_dashboard_link": "create_stripe_connect_dashboard_link",
             "forecast_cash_flow": "show_forecast",
             "generate_budget": "show_budget",
             "analyze_trends": "show_trends",

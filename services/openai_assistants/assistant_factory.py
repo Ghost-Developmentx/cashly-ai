@@ -282,6 +282,7 @@ Important: You handle account information and can assist with related transactio
     ❌ Handle bank account connections (that's for Bank Connection Assistant)
     ❌ Handle transaction viewing
     ❌ Ask questions before acting - USE TOOLS IMMEDIATELY
+    x Write out in details the Stripe Connect requirements and process as it will be shown in a UI element
 
     Available Tools:
     - setup_stripe_connect: Set up Stripe Connect for payments
