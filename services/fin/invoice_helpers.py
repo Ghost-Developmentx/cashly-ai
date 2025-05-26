@@ -20,12 +20,51 @@ def connect_stripe_account(user_id: str, api_key: str) -> Dict[str, Any]:
 
 def create_invoice(user_id: str, invoice_data: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Create a new invoice
+    Create a new invoice with proper due date validation
     """
+    logger.info(f"📧 Creating invoice with data: {invoice_data}")
+
+    # Validate required fields
+    required_fields = ["client_name", "client_email", "amount"]
+    missing_fields = [field for field in required_fields if not invoice_data.get(field)]
+
+    if missing_fields:
+        return {
+            "action": "create_invoice",
+            "error": f"Missing required fields: {', '.join(missing_fields)}",
+            "message": f"Cannot create invoice: missing {', '.join(missing_fields)}",
+        }
+
+    # Handle due date - if not provided or in the past, use 30 days from now
+    due_date = invoice_data.get("due_date")
+    if not due_date:
+        # Default to 30 days from now
+        due_date = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
+        logger.info(f"No due date provided, using: {due_date}")
+    else:
+        # Check if the provided date is in the past
+        try:
+            due_date_obj = datetime.strptime(due_date, "%Y-%m-%d")
+            if due_date_obj < datetime.now():
+                due_date = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
+                logger.info(f"Due date was in the past, updated to: {due_date}")
+        except ValueError:
+            due_date = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
+            logger.info(f"Invalid due date format, using: {due_date}")
+
+    # Prepare the cleaned invoice data
+    cleaned_invoice_data = {
+        "client_name": invoice_data.get("client_name"),
+        "client_email": invoice_data.get("client_email"),
+        "amount": float(invoice_data.get("amount", 0)),
+        "description": invoice_data.get("description", ""),
+        "due_date": due_date,
+    }
+
     return {
         "action": "create_invoice",
-        "invoice": invoice_data,
-        "message": f"I'll create an invoice for {invoice_data.get('client_name')} for {invoice_data.get('amount')}.",
+        "invoice": cleaned_invoice_data,
+        "message": f"Creating invoice for {cleaned_invoice_data['client_name']} for ${cleaned_invoice_data['amount']} (due: {due_date})",
     }
 
 

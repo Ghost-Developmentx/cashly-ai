@@ -169,6 +169,18 @@ class AssistantManager:
             account_summary = f"Connected accounts: {len(accounts)} accounts with total balance of ${sum(acc.get('balance', 0) for acc in accounts):,.2f}"
             context_parts.append(account_summary)
 
+        # Add Stripe Connect context
+        stripe_status = user_context.get("stripe_connect", {})
+        if stripe_status.get("connected"):
+            if stripe_status.get("can_accept_payments"):
+                context_parts.append("Stripe Connect: Active and ready for payments")
+            else:
+                context_parts.append(
+                    f"Stripe Connect: Connected but status is {stripe_status.get('status', 'unknown')}"
+                )
+        else:
+            context_parts.append("Stripe Connect: Not connected")
+
         # Add integration context
         integrations = user_context.get("integrations", [])
         if integrations:
@@ -209,14 +221,21 @@ class AssistantManager:
                 "Note: User has one connected account. Consider suggesting additional accounts for comprehensive tracking."
             )
 
-        # Integration-specific instructions
-        integrations = user_context.get("integrations", [])
-        has_stripe = any(
-            integration.get("provider") == "stripe" for integration in integrations
-        )
-        if not has_stripe:
+        # Stripe Connect status
+        stripe_status = user_context.get("stripe_connect", {})
+        if stripe_status.get("connected") and stripe_status.get("can_accept_payments"):
             instructions.append(
-                "Note: User doesn't have Stripe Connect. For invoice-related queries, suggest setting up Stripe Connect."
+                "Note: User has Stripe Connect set up and can accept payments. Invoices can be created and sent with payment links."
+            )
+        elif stripe_status.get("connected") and not stripe_status.get(
+            "can_accept_payments"
+        ):
+            instructions.append(
+                "Note: User has Stripe Connect but needs to complete setup requirements. Invoices can be created but may need manual payment processing."
+            )
+        else:
+            instructions.append(
+                "Note: User doesn't have Stripe Connect set up. For invoice-related queries, suggest setting up Stripe Connect for payment processing."
             )
 
         return " ".join(instructions)
