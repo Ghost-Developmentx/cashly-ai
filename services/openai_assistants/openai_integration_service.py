@@ -319,9 +319,17 @@ class OpenAIIntegrationService:
         return self.intent_to_assistant.get(new_intent, AssistantType.TRANSACTION)
 
     def _get_assistant_for_intent(
-        self, intent: str, routing_result: Dict, query: str
+        self,
+        intent: str,
+        routing_result: Dict,
+        query: str,
+        conversation_history: Optional[List[Dict]] = None,
     ) -> AssistantType:
         """Determine which assistant to use based on intent and query content."""
+
+        if self._check_invoice_context(query, conversation_history):
+            logger.info("📧 Detected invoice context - routing to Invoice Assistant")
+            return AssistantType.INVOICE
 
         # Define keywords for different assistant types
         assistant_keywords = {
@@ -387,6 +395,53 @@ class OpenAIIntegrationService:
 
         return AssistantType.TRANSACTION
 
+    def _check_invoice_context(
+        self, query: str, conversation_history: Optional[List[Dict]]
+    ) -> bool:
+        """Check if the query is related to a recent invoice action."""
+
+        # Check for invoice-related keywords in query
+        invoice_keywords = [
+            "send it",
+            "yes send",
+            "go ahead",
+            "send that",
+            "send the invoice",
+            "confirm",
+            "looks good",
+            "send to",
+            "send invoice",
+        ]
+
+        query_lower = query.lower()
+        has_invoice_keyword = any(
+            keyword in query_lower for keyword in invoice_keywords
+        )
+
+        if not has_invoice_keyword:
+            return False
+
+        # Check the recent conversation history for invoice creation
+        if conversation_history and len(conversation_history) > 1:
+            # Look at the last few messages
+            recent_messages = conversation_history[-4:]
+
+            for msg in recent_messages:
+                if msg.get("role") == "assistant":
+                    content = msg.get("content", "").lower()
+                    if any(
+                        phrase in content
+                        for phrase in [
+                            "created a draft invoice",
+                            "invoice draft created",
+                            "ready to send",
+                            "invoice for",
+                        ]
+                    ):
+                        return True
+
+        return False
+
     def _process_function_calls_to_actions(
         self, function_calls: List[Dict]
     ) -> List[Dict[str, Any]]:
@@ -401,6 +456,7 @@ class OpenAIIntegrationService:
             "delete_transaction": "transaction_deleted",
             "get_invoices": "show_invoices",
             "create_invoice": "invoice_created",
+            "send_invoice": "send_invoice",
             "initiate_plaid_connection": "initiate_plaid_connection",
             "setup_stripe_connect": "setup_stripe_connect",
             "check_stripe_connect_status": "check_stripe_connect_status",

@@ -300,6 +300,9 @@ class AssistantManager:
                                 user_context=user_context or {},
                             )
 
+                            # Log the result for debugging
+                            logger.info(f"Function {function_name} returned: {result}")
+
                             function_calls.append(
                                 {
                                     "function": function_name,
@@ -308,12 +311,28 @@ class AssistantManager:
                                 }
                             )
 
-                            tool_outputs.append(
-                                {
-                                    "tool_call_id": tool_call.id,
-                                    "output": json.dumps(result),
+                            # For invoice creation, ensure the ID is visible in the output
+                            if (
+                                function_name == "create_invoice"
+                                and "invoice" in result
+                            ):
+                                output_result = {
+                                    **result,
+                                    "invoice_id": result.get("invoice", {}).get("id"),
                                 }
-                            )
+                                tool_outputs.append(
+                                    {
+                                        "tool_call_id": tool_call.id,
+                                        "output": json.dumps(output_result),
+                                    }
+                                )
+                            else:
+                                tool_outputs.append(
+                                    {
+                                        "tool_call_id": tool_call.id,
+                                        "output": json.dumps(result),
+                                    }
+                                )
 
                         except Exception as e:
                             logger.error(

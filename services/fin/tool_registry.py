@@ -25,6 +25,7 @@ from services.fin.transaction_helpers import (
 from services.fin.invoice_helpers import (
     connect_stripe_account,
     create_invoice,
+    send_invoice,
     get_invoices,
     send_invoice_reminder,
     mark_invoice_paid,
@@ -70,6 +71,7 @@ class ToolRegistry:
             "categorize_transactions": self._categorize_transactions,
             "connect_stripe": self._connect_stripe,
             "create_invoice": self._create_invoice,
+            "send_invoice": self._send_invoice,
             "get_invoices": self._get_invoices,
             "send_invoice_reminder": self._send_invoice_reminder,
             "mark_invoice_paid": self._mark_invoice_paid,
@@ -231,6 +233,10 @@ class ToolRegistry:
     @staticmethod
     def _create_invoice(args, *, user_id, txns, user_context):
         return create_invoice(user_id, args)
+
+    @staticmethod
+    def _send_invoice(args, *, user_id, txns, user_context):
+        return send_invoice(user_id, args.get("invoice_id"))
 
     @staticmethod
     def _get_invoices(args, *, user_id, txns, user_context):

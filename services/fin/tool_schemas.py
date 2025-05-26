@@ -268,6 +268,20 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
         },
     },
     {
+        "name": "send_invoice",
+        "description": "Send a draft invoice to the client",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "invoice_id": {
+                    "type": "string",
+                    "description": "ID of the invoice to send",
+                }
+            },
+            "required": ["invoice_id"],
+        },
+    },
+    {
         "name": "get_invoices",
         "description": "Retrieve invoices with optional filters",
         "input_schema": {

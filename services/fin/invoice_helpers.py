@@ -68,13 +68,28 @@ def create_invoice(user_id: str, invoice_data: Dict[str, Any]) -> Dict[str, Any]
     }
 
 
+def send_invoice(user_id: str, invoice_id: str) -> Dict[str, Any]:
+    """
+    Send a draft invoice to the client.
+    """
+    logger.info(f"📧 Sending invoice {invoice_id} for user {user_id}")
+
+    return {
+        "action": "send_invoice",
+        "invoice_id": invoice_id,
+        "user_id": user_id,
+        "message": f"Sending invoice {invoice_id} to the client now...",
+    }
+
+
 def get_invoices(user_id: str, **filters) -> Dict[str, Any]:
     """
-    Retrieve user invoices with optional filters
+    Retrieve user invoices with optional filters.
+    This will trigger the Rails backend to fetch real invoices.
     """
-    # This would normally query the database
-    # For now, return a structure for the Rails backend to handle
-    return {"action": "get_invoices", "filters": filters}
+    logger.info(f"📋 Getting invoices for user {user_id} with filters: {filters}")
+
+    return {"action": "get_invoices", "filters": filters, "user_id": user_id}
 
 
 def send_invoice_reminder(user_id: str, invoice_id: str) -> Dict[str, Any]:
@@ -90,10 +105,13 @@ def send_invoice_reminder(user_id: str, invoice_id: str) -> Dict[str, Any]:
 
 def mark_invoice_paid(user_id: str, invoice_id: str) -> Dict[str, Any]:
     """
-    Mark an invoice as paid
+    Mark an invoice as paid.
     """
+    logger.info(f"✅ Marking invoice {invoice_id} as paid for user {user_id}")
+
     return {
         "action": "mark_invoice_paid",
         "invoice_id": invoice_id,
-        "message": "I'll mark this invoice as paid.",
+        "user_id": user_id,
+        "message": f"I'll mark invoice {invoice_id} as paid.",
     }
