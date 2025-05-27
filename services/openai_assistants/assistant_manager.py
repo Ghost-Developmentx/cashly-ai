@@ -310,30 +310,12 @@ class AssistantManager:
                                     "result": result,
                                 }
                             )
-
-                            # For invoice creation, ensure the ID is visible in the output
-                            if (
-                                function_name == "create_invoice"
-                                and "invoice" in result
-                            ):
-                                output_result = {
-                                    **result,
-                                    "invoice_id": result.get("invoice", {}).get("id"),
+                            tool_outputs.append(
+                                {
+                                    "tool_call_id": tool_call.id,
+                                    "output": json.dumps(result),
                                 }
-                                tool_outputs.append(
-                                    {
-                                        "tool_call_id": tool_call.id,
-                                        "output": json.dumps(output_result),
-                                    }
-                                )
-                            else:
-                                tool_outputs.append(
-                                    {
-                                        "tool_call_id": tool_call.id,
-                                        "output": json.dumps(result),
-                                    }
-                                )
-
+                            )
                         except Exception as e:
                             logger.error(
                                 f"Error executing function {function_name}: {e}"

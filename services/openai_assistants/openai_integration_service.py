@@ -2,6 +2,7 @@ import logging
 from typing import Dict, List, Any, Optional
 from .assistant_manager import AssistantManager, AssistantType, AssistantResponse
 from ..intent_classification.intent_service import IntentService
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -445,7 +446,7 @@ class OpenAIIntegrationService:
     def _process_function_calls_to_actions(
         self, function_calls: List[Dict]
     ) -> List[Dict[str, Any]]:
-        """Convert function calls to frontend actions - simplified version."""
+        """Convert function calls to frontend actions with deduplication."""
 
         # Simple mapping: function name -> action type
         ACTION_MAPPING = {
@@ -469,12 +470,27 @@ class OpenAIIntegrationService:
         }
 
         actions = []
+        # Track processed function calls to detect duplicates
+        processed_function_signatures = set()
 
         for func_call in function_calls:
             function_name = func_call.get("function")
             result = func_call.get("result", {})
+            arguments = func_call.get("arguments", {})
 
             logger.info(f"🔧 Processing: {function_name}")
+
+            function_signature = (
+                f"{function_name}:{json.dumps(arguments, sort_keys=True)}"
+            )
+
+            # Skip if this exact function call has been processed already
+            if function_signature in processed_function_signatures:
+                logger.info(f"🔄 Skipping duplicate function call: {function_name}")
+                continue
+
+            # Add to a processed set
+            processed_function_signatures.add(function_signature)
 
             # Handle errors
             if result.get("error"):
