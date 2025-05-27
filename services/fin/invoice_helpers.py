@@ -67,7 +67,6 @@ def create_invoice(user_id: str, invoice_data: Dict[str, Any]) -> Dict[str, Any]
         },
     }
 
-    # Make synchronous call to Rails
     try:
         response = requests.post(
             f"{RAILS_API_URL}/api/internal/invoices",
@@ -89,9 +88,6 @@ def create_invoice(user_id: str, invoice_data: Dict[str, Any]) -> Dict[str, Any]
                 "invoice_id": result["invoice_id"],
                 "invoice": result["invoice"],
                 "platform_fee": result.get("platform_fee"),
-                "message": f"I've created invoice #{result['invoice_id']} for {result['invoice']['client_name']} "
-                f"for ${result['invoice']['amount']}. It's currently a draft. "
-                f"When you're ready to send it, just say 'send invoice {result['invoice_id']}'.",
                 "success": True,
             }
         else:
@@ -140,7 +136,22 @@ def get_invoices(user_id: str, **filters) -> Dict[str, Any]:
     """
     logger.info(f"📋 Getting invoices for user {user_id} with filters: {filters}")
 
-    return {"action": "get_invoices", "filters": filters, "user_id": user_id}
+    # Don't filter by default - show ALL invoices unless specifically requested
+    clean_filters = {}
+
+    # Only add filters if they're explicitly provided
+    if filters.get("status"):
+        clean_filters["status"] = filters["status"]
+    if filters.get("client_name"):
+        clean_filters["client_name"] = filters["client_name"]
+    if filters.get("days"):
+        clean_filters["days"] = filters["days"]
+
+    return {
+        "action": "get_invoices",
+        "filters": clean_filters,  # Pass clean filters
+        "user_id": user_id,
+    }
 
 
 def send_invoice_reminder(user_id: str, invoice_id: str) -> Dict[str, Any]:

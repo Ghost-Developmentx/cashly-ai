@@ -343,7 +343,7 @@ Important: You handle account information and can assist with related transactio
 
     1. INVOICE CREATION:
        - When you create an invoice, you ALWAYS use create_invoice to create it before ANYTHING else
-       - ALWAYS present a draft of the Invoice Details for review before sending
+       - When presenting a draft only give MINIMAL details as the UI will display the draft in card format
 
     2. SENDING INVOICES:
        - When user says "yes send it" after invoice creation, use the invoice_id to send the invoice
