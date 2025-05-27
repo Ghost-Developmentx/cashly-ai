@@ -118,11 +118,12 @@ def create_invoice(user_id: str, invoice_data: Dict[str, Any]) -> Dict[str, Any]
 def send_invoice(user_id: str, invoice_id: str) -> Dict[str, Any]:
     """
     Send a draft invoice to the client.
+    Returns an INITIATION action, Rails will handle the actual sending.
     """
-    logger.info(f"📧 Sending invoice {invoice_id} for user {user_id}")
+    logger.info(f"📧 Initiating invoice send for {invoice_id}")
 
     return {
-        "action": "send_invoice",
+        "action": "send_invoice_initiated",  # Changed action type
         "invoice_id": invoice_id,
         "user_id": user_id,
         "message": f"Sending invoice {invoice_id} to the client now...",
