@@ -52,7 +52,7 @@ def create_assistants():
         print(f"✅ Created {len(assistant_ids)} assistants")
 
         # Update .env file with assistant IDs
-        env_file = ".env"
+        env_file = "../.env"
         for assistant_type, assistant_id in assistant_ids.items():
             env_var = f"{assistant_type.upper()}_ASSISTANT_ID"
             set_key(env_file, env_var, assistant_id)

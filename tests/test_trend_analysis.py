@@ -210,7 +210,7 @@ def plot_spending_trends(df, categories=None):
     plt.xticks(rotation=45)
 
     # Save plot if data directory exists
-    if os.path.exists("data"):
+    if os.path.exists("../data"):
         plt.savefig("data/spending_trends.png")
 
     plt.tight_layout()

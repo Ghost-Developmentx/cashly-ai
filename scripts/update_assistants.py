@@ -285,7 +285,7 @@ def main():
 
         # Step 4: Update environment variables
         print("\n4. Updating environment variables...")
-        env_file = ".env"
+        env_file = "../.env"
 
         # Remove old CONNECTION_ASSISTANT_ID
         if old_connection_id:

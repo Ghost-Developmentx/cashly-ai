@@ -146,8 +146,8 @@ def test_forecasting_model():
     # Plot forecast vs actual
     print("\nPlotting forecast vs actual...")
     # Save the plot if a data directory exists
-    if os.path.exists("data"):
-        plot_forecast(test_df, forecast_df, output_path="data/forecast_test.png")
+    if os.path.exists("../data"):
+        plot_forecast(test_df, forecast_df, output_path="../data/forecast_test.png")
     else:
         plot_forecast(test_df, forecast_df)
 
