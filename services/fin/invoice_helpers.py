@@ -130,6 +130,66 @@ def send_invoice(user_id: str, invoice_id: str) -> Dict[str, Any]:
     }
 
 
+def delete_invoice(user_id: str, invoice_id: str) -> Dict[str, Any]:
+    """
+    Delete a draft invoice permanently from both our local database and Stripe.
+    Calls Rails API directly for immediate processing.
+
+    Args:
+        user_id: User identifier
+        invoice_id: ID of the invoice to delete
+
+    Returns:
+        Dictionary with a delete result
+    """
+    logger.info(f"🗑️ Deleting invoice {invoice_id} for user {user_id}")
+
+    try:
+        response = requests.delete(
+            f"{RAILS_API_URL}/api/internal/invoices/{invoice_id}",
+            json={"user_id": user_id},
+            headers={
+                "X-Internal-Api-Key": INTERNAL_API_KEY,
+                "Content-Type": "application/json",
+            },
+            timeout=10,
+        )
+
+        if response.status_code == 200:
+            result = response.json()
+            logger.info(f"✅ Invoice {invoice_id} deleted successfully")
+
+            return {
+                "success": True,
+                "deleted_invoice": result["deleted_invoice"],
+                "stripe_deleted": result.get("stripe_deleted", False),
+                "message": result.get("message", "Invoice deleted successfully"),
+            }
+        else:
+            error_data = response.json()
+            logger.error(f"❌ Failed to delete invoice: {error_data}")
+            return {
+                "success": False,
+                "error": error_data.get("error", "Failed to delete invoice"),
+                "message": f"I couldn't delete the invoice: {error_data.get('error', 'Unknown error')}",
+            }
+
+    except requests.exceptions.Timeout:
+        logger.error("❌ Rails API timeout during deletion")
+        return {
+            "success": False,
+            "error": "Request timeout",
+            "message": "The invoice deletion is taking too long. Please try again.",
+        }
+    except Exception as e:
+        logger.error(f"❌ Error calling Rails API for deletion: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "message": "I encountered an error deleting the invoice. Please try again.",
+        }
+
+
 def get_invoices(user_id: str, **filters) -> Dict[str, Any]:
     """
     Retrieve user invoices with optional filters.
@@ -137,16 +197,18 @@ def get_invoices(user_id: str, **filters) -> Dict[str, Any]:
     """
     logger.info(f"📋 Getting invoices for user {user_id} with filters: {filters}")
 
-    # Don't filter by default - show ALL invoices unless specifically requested
     clean_filters = {}
 
-    # Only add filters if they're explicitly provided
     if filters.get("status"):
         clean_filters["status"] = filters["status"]
     if filters.get("client_name"):
         clean_filters["client_name"] = filters["client_name"]
     if filters.get("days"):
         clean_filters["days"] = filters["days"]
+    if filters.get("invoice_id"):
+        clean_filters["invoice_id"] = filters["invoice_id"]
+    if filters.get("id"):
+        clean_filters["id"] = filters["id"]
 
     return {
         "action": "get_invoices",

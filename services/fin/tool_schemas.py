@@ -282,6 +282,20 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
         },
     },
     {
+        "name": "delete_invoice",
+        "description": "Delete a draft invoice permanently from both local database and Stripe",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "invoice_id": {
+                    "type": "string",
+                    "description": "ID of the invoice to delete",
+                }
+            },
+            "required": ["invoice_id"],
+        },
+    },
+    {
         "name": "get_invoices",
         "description": "Retrieve invoices with optional filters",
         "input_schema": {

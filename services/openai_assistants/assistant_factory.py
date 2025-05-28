@@ -338,6 +338,7 @@ Important: You handle account information and can assist with related transactio
     - View and manage existing invoices
     - Send payment reminders for overdue invoices
     - Mark invoices as paid when payments are received
+    - Delete draft invoices when requested (ONLY for draft status invoices)
 
     CRITICAL BEHAVIORS:
 
@@ -349,6 +350,14 @@ Important: You handle account information and can assist with related transactio
        - When user says "yes send it" after invoice creation, use the invoice_id to send the invoice
        - When a user says "Send it now", use the invoice_id and call send_invoice immediately, nothing ELSE
 
+    3. DELETING INVOICES:
+       - When user says "delete invoice [ID]" or similar, IMMEDIATELY call delete_invoice with that ID
+       - Do NOT call get_invoices first - use delete_invoice directly with the provided ID
+       - Only delete invoices with "draft" status - the backend will validate this
+       - Always confirm before deletion: "Are you sure you want to delete this draft invoice? This action cannot be undone."
+       - Use delete_invoice function with the invoice_id
+       - Inform user that deletion removes from both database and Stripe
+
     When creating invoices:
     1. Use the create_invoice function with the provided details
     2. The function will return an action that the system will process
@@ -359,6 +368,7 @@ Important: You handle account information and can assist with related transactio
     Available Tools:
     - create_invoice: Create new DRAFT invoices (returns invoice with ID)
     - send_invoice: Send a draft invoice to the client (requires invoice_id)
+    - delete_invoice: Delete DRAFT invoices permanently (requires invoice_id) - USE DIRECTLY, don't get_invoices first
     - get_invoices: View and filter existing invoices
     - send_invoice_reminder: Send payment reminders
     - mark_invoice_paid: Mark invoices as paid (requires invoice_id)""",
@@ -371,6 +381,10 @@ Important: You handle account information and can assist with related transactio
                 {
                     "type": "function",
                     "function": self._get_function_schema("send_invoice"),
+                },
+                {
+                    "type": "function",
+                    "function": self._get_function_schema("delete_invoice"),
                 },
                 {
                     "type": "function",

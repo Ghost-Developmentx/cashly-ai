@@ -29,6 +29,7 @@ from services.fin.invoice_helpers import (
     get_invoices,
     send_invoice_reminder,
     mark_invoice_paid,
+    delete_invoice,
 )
 from services.fin.stripe_connect_helpers import (
     setup_stripe_connect,
@@ -72,6 +73,7 @@ class ToolRegistry:
             "connect_stripe": self._connect_stripe,
             "create_invoice": self._create_invoice,
             "send_invoice": self._send_invoice,
+            "delete_invoice": self._delete_invoice,
             "get_invoices": self._get_invoices,
             "send_invoice_reminder": self._send_invoice_reminder,
             "mark_invoice_paid": self._mark_invoice_paid,
@@ -237,6 +239,29 @@ class ToolRegistry:
     @staticmethod
     def _send_invoice(args, *, user_id, txns, user_context):
         return send_invoice(user_id, args.get("invoice_id"))
+
+    @staticmethod
+    def _delete_invoice(args, *, user_id, txns, user_context):
+        """Delete an invoice handler - now calls API directly"""
+        from services.fin.invoice_helpers import delete_invoice
+
+        result = delete_invoice(user_id, args.get("invoice_id"))
+
+        if result.get("success"):
+            return {
+                "action": "delete_invoice_completed",
+                "deleted_invoice": result["deleted_invoice"],
+                "stripe_deleted": result.get("stripe_deleted", False),
+                "message": result.get("message", "Invoice deleted successfully"),
+                "success": True,
+            }
+        else:
+            return {
+                "action": "delete_invoice_failed",
+                "error": result.get("error", "Failed to delete invoice"),
+                "message": result.get("message", "Failed to delete invoice"),
+                "success": False,
+            }
 
     @staticmethod
     def _get_invoices(args, *, user_id, txns, user_context):
