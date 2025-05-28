@@ -48,7 +48,7 @@ def wait_for_database(max_attempts=30, delay=1):
 def main():
     """Set up the database."""
     # Wait for database to be ready
-    if not wait_for_database():
+    if not wait_for_database(max_attempts=120, delay=1):
         print("❌ Could not connect to database!")
         sys.exit(1)
 
