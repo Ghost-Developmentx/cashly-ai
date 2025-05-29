@@ -18,7 +18,7 @@ def upgrade(db_connection: DatabaseConnection):
     # Create all tables
     Base.metadata.create_all(bind=db_connection.engine)
 
-    # Add vector similarity index
+    # Add a vector similarity index
     with db_connection.get_session() as session:
         session.execute(
             text(

@@ -7,8 +7,11 @@ import sys
 import time
 import logging
 from pathlib import Path
+from dotenv import load_dotenv
 
-# Add project root to a path
+load_dotenv()
+
+# Add a project root to a path
 sys.path.append(str(Path(__file__).parent.parent))
 
 from db.init import DatabaseInitializer
@@ -22,13 +25,16 @@ def wait_for_database(max_attempts=30, delay=1):
     from config.database import DatabaseConfig
 
     config = DatabaseConfig.from_env()
+    print(
+        f"🔍 Connecting to {config.host}:{config.port} as {config.user} to {config.database}"
+    )
 
     for attempt in range(max_attempts):
         try:
             conn = psycopg2.connect(
                 host=config.host,
                 port=config.port,
-                database="cashly_ai_vectors",  # Connect to default db first
+                database="cashly_ai_vectors",
                 user=config.user,
                 password=config.password,
             )
@@ -47,7 +53,7 @@ def wait_for_database(max_attempts=30, delay=1):
 
 def main():
     """Set up the database."""
-    # Wait for database to be ready
+    # Wait for a database to be ready
     if not wait_for_database(max_attempts=120, delay=1):
         print("❌ Could not connect to database!")
         sys.exit(1)

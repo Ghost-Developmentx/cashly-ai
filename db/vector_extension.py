@@ -26,25 +26,39 @@ class VectorExtensionManager:
             True if successful, False otherwise
         """
         try:
-            # Create an extension if not exists
-            session.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
-            session.commit()
-
-            # Verify the extension is installed
+            # Check if extension already exists
             result = session.execute(
-                text("SELECT COUNT(*) FROM pg_extension " "WHERE extname = 'vector'")
+                text("SELECT COUNT(*) FROM pg_extension WHERE extname = 'vector'")
             )
             count = result.scalar()
 
             if count > 0:
-                logger.info("pgvector extension is installed and ready")
+                logger.info("✅ pgvector extension is already installed")
                 return True
-            else:
-                logger.error("pgvector extension installation failed")
-                return False
+
+            logger.info("Creating pgvector extension...")
+            session.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+            session.commit()
+            return True
 
         except Exception as e:
-            logger.error(f"Error setting up pgvector extension: {e}")
+            logger.error(f"❌ Error setting up pgvector extension: {e}")
+
+            # Check what extensions are available
+            try:
+                result = session.execute(
+                    text("SELECT * FROM pg_available_extensions WHERE name = 'vector'")
+                )
+                available = result.fetchall()
+                if available:
+                    logger.info(
+                        f"ℹ️ pgvector is listed in pg_available_extensions: {available}"
+                    )
+                else:
+                    logger.error("❌ pgvector is NOT listed in pg_available_extensions")
+            except Exception as e2:
+                logger.error(f"❌ Could not check available extensions: {e2}")
+
             session.rollback()
             return False
 

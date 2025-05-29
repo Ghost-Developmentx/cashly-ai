@@ -33,6 +33,7 @@ env/
 .env/
 .venv/
 .env
+.env.docker
 
 # PyCharm specific files
 .idea/

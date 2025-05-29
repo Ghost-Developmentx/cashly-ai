@@ -26,7 +26,7 @@ class DatabaseConfig:
             port=int(os.getenv("POSTGRES_PORT", "5432")),
             database=os.getenv("POSTGRES_DB", "cashly_ai_vectors"),
             user=os.getenv("POSTGRES_USER", "cashly_ai"),
-            password=os.getenv("POSTGRES_PASSWORD", ""),
+            password=os.getenv("POSTGRES_PASSWORD", "qwerT12321"),
             pool_size=int(os.getenv("DB_POOL_SIZE", "5")),
             max_overflow=int(os.getenv("DB_MAX_OVERFLOW", "10")),
         )

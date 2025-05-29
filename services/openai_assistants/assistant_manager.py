@@ -2,7 +2,7 @@ import os
 import logging
 import asyncio
 import json
-from typing import Dict, List, Optional, Any, Union
+from typing import Dict, List, Optional, Any
 from openai import OpenAI
 import time
 from dataclasses import dataclass

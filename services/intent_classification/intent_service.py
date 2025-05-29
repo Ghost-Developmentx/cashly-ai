@@ -5,6 +5,10 @@ from services.intent_classification.intent_classifier import IntentClassifier
 from services.intent_classification.conversation_data_processor import (
     ConversationDataProcessor,
 )
+from services.intent_classification.hybrid_intent_service import (
+    HybridIntentService,
+)
+
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +22,7 @@ class IntentService:
     def __init__(self, model_path: str = "models/intent_classifier"):
         self.classifier = IntentClassifier(model_path)
         self.processor = ConversationDataProcessor()
+        self.hybrid_classifier = HybridIntentService()
 
         # Define assistant routing based on intents
         self.assistant_routing = {
@@ -47,27 +52,25 @@ class IntentService:
     ) -> Dict[str, Any]:
         """
         Classify intent and determine routing strategy.
-
-        Args:
-            query: User's query text
-            user_context: User context including accounts, preferences, etc.
-            conversation_history: Previous conversation messages
-
-        Returns:
-            Dictionary with classification results and routing information
+        Now uses hybrid classification with embeddings when possible.
         """
-        # Get intent classification
-        classification = self.classifier.classify_intent(query)
+        # Get classification using hybrid approach
+        classification = self.hybrid_classifier.classify_intent(
+            query=query,
+            conversation_history=conversation_history,
+            user_id=user_context.get("user_id") if user_context else None,
+            user_context=user_context,
+        )
 
-        # Enhance classification with context
+        # Enhance classification with context (existing code)
         enhanced_classification = self._enhance_with_context(
             classification, user_context, conversation_history
         )
 
-        # Determine routing strategy
+        # Determine routing strategy (existing code)
         routing_strategy = self._determine_routing_strategy(enhanced_classification)
 
-        # Get fallback options
+        # Get fallback options (existing code)
         fallback_options = self._get_fallback_options(query, enhanced_classification)
 
         return {

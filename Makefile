@@ -27,7 +27,6 @@ docker-clean:
 
 db-setup: docker-up
 	@echo "Setting up database..."
-	cp .env.docker .env
 	python scripts/setup_database.py
 
 db-shell:

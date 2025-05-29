@@ -1,10 +1,6 @@
--- Create vector extension in template database
-\c template1
+-- Switch to the right database
+\c cashly_ai_vectors;
+
+-- Install pgvector extension in this DB
 CREATE EXTENSION IF NOT EXISTS vector;
 
--- Create vector extension in our database
-\c cashly_ai_vectors
-CREATE EXTENSION IF NOT EXISTS vector;
-
--- Verify installation
-SELECT extname, extversion FROM pg_extension WHERE extname = 'vector';
