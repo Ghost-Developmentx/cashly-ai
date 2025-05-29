@@ -34,18 +34,29 @@ class IntentResolver:
     ) -> Dict[str, Any]:
         """
         Resolve intent using full context and similarity search.
-
-        Args:
-            query: Current user query
-            conversation_history: Previous messages
-            user_id: User identifier
-            conversation_id: Conversation identifier
-            user_context: Additional user context
-
-        Returns:
-            Complete intent resolution with routing recommendation
         """
+        logger.info(f"🎯 IntentResolver.resolve_intent called with query: '{query}'")
+        logger.info(f"   User ID: {user_id}")
+        logger.info(f"   Conversation ID: {conversation_id}")
+        logger.info(
+            f"   History length: {len(conversation_history) if conversation_history else 0}"
+        )
+
         try:
+            # FIXED: For new conversations, add the query to the history
+            if not conversation_history:
+                logger.info("Empty conversation, using query as initial message")
+                # Create a minimal conversation with just the query
+                from datetime import datetime
+
+                conversation_history = [
+                    {
+                        "role": "user",
+                        "content": query,
+                        "created_at": datetime.now().isoformat(),
+                    }
+                ]
+
             # Process conversation context
             processed_context = self.aggregator_service.process_conversation(
                 conversation_id=conversation_id,
@@ -54,19 +65,33 @@ class IntentResolver:
                 user_context=user_context,
             )
 
-            # Generate embedding
-            embedding = self.embedding_client.create_embedding(
-                processed_context["embedding_text"]
-            )
+            embedding_text = processed_context["embedding_text"]
+
+            if query not in embedding_text:
+                logger.warning(
+                    f"Query '{query}' not found in embedding text, appending it"
+                )
+                embedding_text = f"{embedding_text}\nCurrent query: {query}"
+
+            embedding = self.embedding_client.create_embedding(embedding_text)
 
             if not embedding:
                 logger.warning("Failed to generate embedding")
                 return self._fallback_resolution(query)
 
-            # Search for similar conversations
             search_results = self.search_service.search_similar(
-                embedding=embedding, user_id=user_id, limit=10  # Personalized search
+                embedding=embedding,
+                user_id=None,
+                limit=10,
+                similarity_threshold=0.5,
             )
+
+            # Log what we found
+            if search_results:
+                logger.info(
+                    f"Found {len(search_results)} similar conversations, "
+                    f"top similarity: {search_results[0].similarity_score:.3f}"
+                )
 
             # Determine intent
             intent, confidence, analysis = self.intent_determiner.determine_intent(
@@ -106,6 +131,9 @@ class IntentResolver:
 
         except Exception as e:
             logger.error(f"Intent resolution failed: {e}")
+            import traceback
+
+            traceback.print_exc()
             return self._fallback_resolution(query)
 
     @staticmethod

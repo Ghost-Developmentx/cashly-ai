@@ -24,18 +24,25 @@ class IntentScore:
     @property
     def confidence(self) -> float:
         """Calculate overall confidence."""
-        # Combine score, evidence count, and success rate
-        evidence_weight = min(self.evidence_count / 5, 1.0)  # Cap at 5 examples
-        return self.score * 0.6 + self.success_rate * 0.3 + evidence_weight * 0.1
+        if self.score >= 0.6:
+            scaled_score = 0.7 + (self.score - 0.6) * 0.75
+        else:
+            scaled_score = self.score
+        evidence_weight = min(self.evidence_count / 3, 1.0)
+        confidence = (
+            scaled_score * 0.6 + self.success_rate * 0.3 + evidence_weight * 0.1
+        )
+        return min(confidence, 0.95)  # Cap at 95%
 
 
 class IntentDeterminer:
     """Determines the most likely intent from search results."""
 
     def __init__(self):
-        self.min_evidence_count = 2
+        self.min_evidence_count = 1
         self.success_weight = 1.2
         self.failure_weight = 0.8
+        self.min_similarity_for_confidence = 0.6
 
     def determine_intent(
         self,
@@ -44,13 +51,6 @@ class IntentDeterminer:
     ) -> Tuple[str, float, Dict[str, Any]]:
         """
         Determine the most likely intent from search results.
-
-        Args:
-            search_results: Similar conversation search results
-            query_context: Additional context about the query
-
-        Returns:
-            Tuple of (intent, confidence, analysis)
         """
         if not search_results:
             return self._default_intent()
@@ -66,6 +66,16 @@ class IntentDeterminer:
 
         # Select best intent
         best_intent = self._select_best_intent(intent_scores)
+
+        # BOOST confidence if we have good similarity scores
+        avg_similarity = self._calculate_avg_similarity(search_results)
+        if avg_similarity >= self.min_similarity_for_confidence:
+            # Boost confidence based on similarity
+            boost_factor = 1 + (avg_similarity - self.min_similarity_for_confidence)
+            best_intent.score = min(best_intent.score * boost_factor, 0.95)
+            logger.info(
+                f"Boosted intent confidence due to similarity {avg_similarity:.3f}"
+            )
 
         # Build analysis
         analysis = self._build_analysis(best_intent, intent_scores, search_results)

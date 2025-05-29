@@ -45,16 +45,13 @@ class IntentService:
     ) -> Dict[str, Any]:
         """
         Classify intent and determine routing strategy with enhanced fallback.
-
-        Args:
-            query: User's query text
-            user_context: User profile and context
-            conversation_history: Previous messages
-
-        Returns:
-            Classification and routing result
         """
         try:
+            logger.info(f"🚀 classify_and_route called with:")
+            logger.info(f"   Query: '{query}'")
+            logger.info(f"   User context: {user_context is not None}")
+            logger.info(f"   Conversation history: {conversation_history is not None}")
+
             # First attempt: Use vector-based resolution
             vector_result = self._try_vector_classification(
                 query, user_context, conversation_history
@@ -95,6 +92,8 @@ class IntentService:
     ) -> Optional[Dict[str, Any]]:
         """Attempt vector-based classification with adjusted confidence threshold."""
         try:
+            logger.info(f"🔍 Attempting vector classification for: '{query}'")
+
             # Prepare context
             user_id = (
                 user_context.get("user_id", "anonymous")
@@ -107,6 +106,13 @@ class IntentService:
                 else f"temp_{user_id}"
             )
 
+            logger.info(
+                f"📋 Context: user_id={user_id}, conversation_id={conversation_id}"
+            )
+            logger.info(
+                f"📋 Conversation history: {len(conversation_history) if conversation_history else 0} messages"
+            )
+
             # Use context-aware resolution
             resolution = self.resolver.resolve_intent(
                 query=query,
@@ -117,36 +123,51 @@ class IntentService:
             )
 
             # Log the resolution details
-            logger.info(
-                f"Vector resolution: {resolution['intent']} ({resolution['confidence']:.1%})"
-            )
+            logger.info(f"📊 Vector resolution result:")
+            logger.info(f"   Intent: {resolution['intent']}")
+            logger.info(f"   Confidence: {resolution['confidence']:.3f}")
+            logger.info(f"   Method: {resolution.get('method', 'unknown')}")
+
+            # Check if we have analysis data
+            if "analysis" in resolution:
+                logger.info(f"   Analysis: {resolution['analysis']}")
 
             # ADJUSTED: Use a lower threshold and boost confidence from similarity
             raw_confidence = resolution["confidence"]
 
             # If we have good similarity results, boost confidence
-            if hasattr(resolution, "analysis") and "avg_similarity" in resolution.get(
+            if "analysis" in resolution and "avg_similarity" in resolution.get(
                 "analysis", {}
             ):
                 avg_similarity = resolution["analysis"]["avg_similarity"]
+                logger.info(f"   Avg similarity: {avg_similarity:.3f}")
+
                 if avg_similarity >= 0.65:  # Good similarity
                     boosted_confidence = min(raw_confidence * 1.2, 0.95)  # Boost by 20%
                     logger.info(
-                        f"Boosted confidence from {raw_confidence:.1%} to {boosted_confidence:.1%} due to similarity {avg_similarity:.3f}"
+                        f"   Boosted confidence from {raw_confidence:.3f} to {boosted_confidence:.3f} "
+                        f"due to similarity {avg_similarity:.3f}"
                     )
                     resolution["confidence"] = boosted_confidence
 
             # Only return if we have reasonable confidence
             if resolution["confidence"] >= self.min_confidence_threshold:
+                logger.info(
+                    f"✅ Vector classification successful with confidence {resolution['confidence']:.3f}"
+                )
                 return resolution
 
             logger.info(
-                f"Vector classification confidence too low: {resolution['confidence']:.1%} < {self.min_confidence_threshold:.1%}"
+                f"❌ Vector classification confidence too low: {resolution['confidence']:.3f} < "
+                f"{self.min_confidence_threshold:.3f}"
             )
             return None
 
         except Exception as e:
-            logger.error(f"Vector classification error: {e}")
+            logger.error(f"❌ Vector classification error: {e}")
+            import traceback
+
+            traceback.print_exc()
             return None
 
     def _format_response(
