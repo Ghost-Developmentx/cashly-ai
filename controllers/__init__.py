@@ -11,7 +11,6 @@ from .budget_controller import BudgetController
 from .insights_controller import InsightsController
 from .anomaly_controller import AnomalyController
 from .account_controller import AccountController
-from .learning_controller import LearningController
 
 __all__ = [
     "BaseController",
@@ -22,5 +21,4 @@ __all__ = [
     "InsightsController",
     "AnomalyController",
     "AccountController",
-    "LearningController",
 ]

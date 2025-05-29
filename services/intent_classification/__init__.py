@@ -1,5 +1,9 @@
-from .intent_classifier import IntentClassifier
-from .conversation_data_processor import ConversationDataProcessor
-from .intent_service import IntentService
+"""
+Intent classification services using context-aware embeddings.
+"""
 
-__all__ = ["IntentClassifier", "ConversationDataProcessor", "IntentService"]
+from .intent_service_v2 import IntentService
+from .intent_learner import IntentLearner
+from .fallback_classifier import FallbackClassifier
+
+__all__ = ["IntentService", "IntentLearner", "FallbackClassifier"]

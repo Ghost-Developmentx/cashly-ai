@@ -7,7 +7,7 @@ from typing import Dict, List, Any, Optional
 from datetime import datetime
 
 from .assistant_manager import AssistantManager
-from ..intent_classification.intent_service import IntentService
+from ..intent_classification.intent_service_v2 import IntentService
 
 from .core.router import AssistantRouter
 from .core.intent_mapper import IntentMapper

@@ -1,17 +1,14 @@
 from datetime import datetime
-
 import pandas as pd
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
-from sklearn.pipeline import Pipeline, FeatureUnion
+from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.metrics import classification_report, accuracy_score, f1_score
-from sklearn.model_selection import train_test_split, GridSearchCV
-import joblib
-import os
+from sklearn.model_selection import train_test_split
 
 from util.data_processing import clean_transaction_description
 from util.model_registry import ModelRegistry

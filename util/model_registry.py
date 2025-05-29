@@ -4,7 +4,7 @@ import json
 from datetime import datetime
 import hashlib
 import pandas as pd
-from config import config
+from ai_config import config
 
 
 class ModelRegistry:

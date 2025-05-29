@@ -11,7 +11,6 @@ from controllers.budget_controller import BudgetController
 from controllers.insights_controller import InsightsController
 from controllers.anomaly_controller import AnomalyController
 from controllers.account_controller import AccountController
-from controllers.learning_controller import LearningController
 
 
 def create_api_routes() -> Blueprint:
@@ -31,7 +30,6 @@ def create_api_routes() -> Blueprint:
     insights_controller = InsightsController()
     anomaly_controller = AnomalyController()
     account_controller = AccountController()
-    learning_controller = LearningController()
 
     # Health check route
     @api_bp.route("/health", methods=["GET"])
@@ -119,13 +117,6 @@ def create_api_routes() -> Blueprint:
     def initiate_account_connection():
         """Initiate a Plaid connection process from Fin"""
         response_data, status_code = account_controller.initiate_account_connection()
-        return jsonify(response_data), status_code
-
-    # Learning routes
-    @api_bp.route("/fin/learn", methods=["POST"])
-    def learn_from_feedback():
-        """Learn from user feedback to improve Fin's capabilities"""
-        response_data, status_code = learning_controller.learn_from_feedback()
         return jsonify(response_data), status_code
 
     return api_bp

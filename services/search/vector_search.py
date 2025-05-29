@@ -143,9 +143,9 @@ class VectorSearchService:
                     assistant_type,
                     success_indicator,
                     conversation_metadata,
-                    1 - (embedding <=> :embedding::vector) as similarity
+                    1 - (embedding <=> embedding::vector) as similarity
                 FROM conversation_embeddings
-                WHERE 1 - (embedding <=> :embedding::vector) >= :threshold \
+                WHERE 1 - (embedding <=> embedding::vector) >= :threshold \
                 """
 
         # Add filters

@@ -3,7 +3,7 @@ Builds and formats responses for Rails backend compatibility.
 """
 
 import logging
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 from ..assistant_manager import AssistantResponse, AssistantType
 
 logger = logging.getLogger(__name__)

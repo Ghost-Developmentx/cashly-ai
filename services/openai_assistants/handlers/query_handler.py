@@ -132,12 +132,24 @@ class QueryHandler:
         conversation_history: Optional[List[Dict]],
     ) -> AssistantType:
         """Determine the initial assistant to use."""
-        initial_assistant = self.intent_mapper.get_assistant_for_intent(
-            classification_result["classification"]["intent"],
-            classification_result,
-            query,
-            conversation_history,
+        # Get the recommended assistant from the new context-aware system
+        recommended_assistant = classification_result.get(
+            "recommended_assistant", "transaction_assistant"
         )
+
+        # Try to convert the recommended assistant string to AssistantType
+        try:
+            # Remove the '_ assistant' suffix if present
+            assistant_name = recommended_assistant.replace("_assistant", "")
+            initial_assistant = AssistantType(assistant_name)
+        except ValueError:
+            # If conversion fails, use the intent mapper as fallback
+            initial_assistant = self.intent_mapper.get_assistant_for_intent(
+                classification_result["classification"]["intent"],
+                classification_result,
+                query,
+                conversation_history,
+            )
 
         logger.info(f"🤖 Initial assistant: {initial_assistant.value}")
         return initial_assistant
