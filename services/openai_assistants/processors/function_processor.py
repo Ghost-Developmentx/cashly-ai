@@ -31,7 +31,7 @@ class FunctionProcessor:
         """
         actions = []
 
-        # Reset processed signatures for new batch
+        # Reset processed signatures for a new batch
         self.processed_signatures.clear()
 
         for func_call in function_calls:

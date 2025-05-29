@@ -25,7 +25,7 @@ class ConversationEmbedding(Base):
     embedding = Column(Vector(1536), nullable=False)
     message_count = Column(Integer, default=1)
     success_indicator = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.now)
     conversation_metadata = Column(JSON, default={})  # Changed from 'metadata'
 
     # Indexes for performance
@@ -47,5 +47,5 @@ class ConversationEmbedding(Base):
             "message_count": self.message_count,
             "success_indicator": self.success_indicator,
             "created_at": self.created_at.isoformat(),
-            "conversation_metadata": self.conversation_metadata,  # Changed
+            "conversation_metadata": self.conversation_metadata,
         }
