@@ -37,6 +37,7 @@ CROSS_ROUTING_PATTERNS: Dict[str, Dict[str, str]] = {
         "forecast": "forecasting",
         "predict": "forecasting",
         "cash_flow": "forecasting",
+        "invoice": "invoice",
         "future": "forecasting",
     },
 }

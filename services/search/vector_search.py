@@ -41,7 +41,7 @@ class VectorSearchService:
     def __init__(self):
         self.db = get_db_connection()
         self.default_limit = 5
-        self.min_similarity = 0.7
+        self.min_similarity = 0.6
 
     def search_similar(
         self,
@@ -69,16 +69,16 @@ class VectorSearchService:
 
         try:
             with self.db.get_session() as session:
-                # Build the query
+                # Build the query with FIXED SQL
                 query = self._build_search_query(
                     user_id=user_id, intent_filter=intent_filter
                 )
 
-                # Execute search
+                # Execute search with proper parameter binding
                 results = session.execute(
                     text(query),
                     {
-                        "embedding": embedding,
+                        "query_embedding": embedding,
                         "threshold": threshold,
                         "limit": limit,
                         "user_id": user_id,
@@ -105,6 +105,9 @@ class VectorSearchService:
 
         except Exception as e:
             logger.error(f"Vector search failed: {e}")
+            import traceback
+
+            logger.error(f"Full traceback: {traceback.format_exc()}")
             return []
 
     def search_by_intent(
@@ -135,18 +138,19 @@ class VectorSearchService:
     def _build_search_query(
         user_id: Optional[str] = None, intent_filter: Optional[str] = None
     ) -> str:
-        """Build the similarity search SQL query."""
+        """Build the similarity search SQL query with FIXED comparison."""
+        # FIXED: Compare with the query embedding parameter, not self-comparison
         query = """
-                SELECT
-                    conversation_id,
-                    intent,
-                    assistant_type,
-                    success_indicator,
-                    conversation_metadata,
-                    1 - (embedding <=> embedding::vector) as similarity
-                FROM conversation_embeddings
-                WHERE 1 - (embedding <=> embedding::vector) >= :threshold \
-                """
+    SELECT
+        conversation_id,
+        intent,
+        assistant_type,
+        success_indicator,
+        conversation_metadata,
+        1 - (embedding <=> (:query_embedding)::vector) as similarity
+    FROM conversation_embeddings
+    WHERE 1 - (embedding <=> (:query_embedding)::vector) >= :threshold
+"""
 
         # Add filters
         if user_id:
@@ -159,3 +163,102 @@ class VectorSearchService:
         query += " ORDER BY similarity DESC LIMIT :limit"
 
         return query
+
+    def test_search(self, test_query: str = "Show me my invoices") -> Dict[str, Any]:
+        """Test the vector search functionality."""
+        try:
+            from services.embeddings.openai_client import OpenAIEmbeddingClient
+
+            # Generate embedding for test query
+            client = OpenAIEmbeddingClient()
+            embedding = client.create_embedding(test_query)
+
+            if not embedding:
+                return {"error": "Failed to generate embedding"}
+
+            logger.info(f"Testing search with query: '{test_query}'")
+            logger.info(f"Generated embedding with {len(embedding)} dimensions")
+
+            # Search with different thresholds
+            results_07 = self.search_similar(
+                embedding, similarity_threshold=0.7, limit=10
+            )
+            results_05 = self.search_similar(
+                embedding, similarity_threshold=0.5, limit=10
+            )
+            results_03 = self.search_similar(
+                embedding, similarity_threshold=0.3, limit=10
+            )
+
+            # Get total count from database
+            with self.db.get_session() as session:
+                total_count = session.execute(
+                    text("SELECT COUNT(*) FROM conversation_embeddings")
+                ).scalar()
+
+            return {
+                "test_query": test_query,
+                "embedding_dimensions": len(embedding),
+                "total_embeddings_in_db": total_count,
+                "results": {
+                    "threshold_0.7": len(results_07),
+                    "threshold_0.5": len(results_05),
+                    "threshold_0.3": len(results_03),
+                },
+                "sample_results": (
+                    [r.to_dict() for r in results_03[:3]] if results_03 else []
+                ),
+            }
+
+        except Exception as e:
+            logger.error(f"Test search failed: {e}")
+            return {"error": str(e)}
+
+    def debug_database_contents(self) -> Dict[str, Any]:
+        """Debug what's actually in the database."""
+        try:
+            with self.db.get_session() as session:
+                # Count total embeddings
+                total_count = session.execute(
+                    text("SELECT COUNT(*) FROM conversation_embeddings")
+                ).scalar()
+
+                # Count by intent
+                intent_counts = session.execute(
+                    text(
+                        """
+                         SELECT intent, COUNT(*) as count
+                         FROM conversation_embeddings
+                         GROUP BY intent
+                         ORDER BY count DESC
+                         """
+                    )
+                ).fetchall()
+
+                # Sample a few records
+                sample_records = session.execute(
+                    text(
+                        """
+                         SELECT conversation_id, intent, assistant_type
+                         FROM conversation_embeddings
+                         LIMIT 5
+                         """
+                    )
+                ).fetchall()
+
+                return {
+                    "total_embeddings": total_count,
+                    "intent_counts": {row.intent: row.count for row in intent_counts},
+                    "sample_records": [
+                        {
+                            "conversation_id": row.conversation_id,
+                            "intent": row.intent,
+                            "assistant_type": row.assistant_type,
+                        }
+                        for row in sample_records
+                    ],
+                }
+
+        except Exception as e:
+            logger.error(f"Database debug failed: {e}")
+            return {"error": str(e)}
