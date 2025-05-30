@@ -91,7 +91,7 @@ class AsyncIntentResolver:
 
             # Search for similar conversations asynchronously
             search_results = await self.search_service.search_similar(
-                embedding=embedding, user_id=user_id, limit=10
+                embedding=embedding, user_id=None, limit=10
             )
 
             # Determine intent (sync is fine here - just computation)

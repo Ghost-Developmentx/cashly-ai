@@ -1,109 +1,33 @@
 """
-Base controller class for Cashly API endpoints.
-Provides common functionality for all controllers.
+Base controller class with common functionality for all controllers.
 """
 
-import logging
-import traceback
-from typing import Dict, Any, Optional, Tuple
-from flask import jsonify, request
-from datetime import datetime
 import json
-
-
-class DateTimeEncoder(json.JSONEncoder):
-    """Custom JSON encoder for datetime objects"""
-
-    def default(self, obj):
-        if isinstance(obj, datetime):
-            return obj.strftime("%Y-%m-%d")
-        return super().default(obj)
+import logging
+from typing import Dict, Any, Tuple, Callable
+from flask import request
+from datetime import datetime, date
 
 
 class BaseController:
-    """Base controller providing common functionality for all API endpoints"""
+    """Base controller with common functionality"""
 
     def __init__(self):
         self.logger = logging.getLogger(self.__class__.__name__)
 
-    def handle_request(
-        self, handler_func, *args, **kwargs
-    ) -> Tuple[Dict[str, Any], int]:
-        """
-        Common request handling with error management and logging
-
-        Args:
-            handler_func: The actual handler function to execute
-            *args, **kwargs: Arguments to pass to the handler
-
-        Returns:
-            Tuple of (response_dict, status_code)
-        """
-        try:
-            # Log incoming request
-            self.logger.info(f"Processing request: {handler_func.__name__}")
-
-            # Execute the handler
-            result = handler_func(*args, **kwargs)
-
-            # Handle different return types
-            if isinstance(result, tuple):
-                response_data, status_code = result
-            else:
-                response_data, status_code = result, 200
-
-            # Ensure response is JSON serializable
-            response_json = json.loads(json.dumps(response_data, cls=DateTimeEncoder))
-
-            self.logger.info(f"Request completed successfully: {handler_func.__name__}")
-            return response_json, status_code
-
-        except ValueError as e:
-            self.logger.warning(
-                f"Validation error in {handler_func.__name__}: {str(e)}"
-            )
-            return self._error_response(f"Invalid input: {str(e)}", 400), 400
-
-        except Exception as e:
-            self.logger.error(f"Error in {handler_func.__name__}: {str(e)}")
-            self.logger.error(f"Full traceback: {traceback.format_exc()}")
-
-            return (
-                self._error_response(
-                    "An internal error occurred. Please try again.", 500
-                ),
-                500,
-            )
-
-    @staticmethod
-    def validate_required_fields(data: Dict[str, Any], required_fields: list) -> None:
-        """
-        Validate that required fields are present in the request data
-
-        Args:
-            data: Request data dictionary
-            required_fields: List of required field names
-
-        Raises:
-            ValueError: If any required fields are missing
-        """
-        missing_fields = [field for field in required_fields if not data.get(field)]
-        if missing_fields:
-            raise ValueError(f"Missing required fields: {', '.join(missing_fields)}")
-
     @staticmethod
     def get_request_data() -> Dict[str, Any]:
         """
-        Get and validate JSON request data
+        Get and validate request JSON data
 
         Returns:
-            Dictionary containing request data
+            Parsed JSON data from request
 
         Raises:
             ValueError: If request data is invalid
         """
         if not request.is_json:
-            raise ValueError("Request must contain valid JSON")
+            raise ValueError("Request must be JSON")
 
         data = request.get_json()
         if not data:
@@ -112,45 +36,81 @@ class BaseController:
         return data
 
     @staticmethod
-    def _error_response(message: str, status_code: int) -> Dict[str, Any]:
+    def validate_required_fields(data: Dict[str, Any], required_fields: list):
         """
-        Create a standardized error response
+        Validate that required fields are present in data
 
         Args:
-            message: Error message
-            status_code: HTTP status code
+            data: Request data dictionary
+            required_fields: List of required field names
 
-        Returns:
-            Error response dictionary
+        Raises:
+            ValueError: If any required field is missing
         """
-        return {
-            "error": message,
-            "success": False,
-            "timestamp": datetime.now().isoformat(),
-            "status_code": status_code,
-        }
+        missing_fields = [field for field in required_fields if field not in data]
+        if missing_fields:
+            raise ValueError(f"Missing required fields: {', '.join(missing_fields)}")
 
     @staticmethod
-    def success_response(data: Any, message: Optional[str] = None) -> Dict[str, Any]:
+    def success_response(
+        data: Any, status_code: int = 200
+    ) -> Tuple[Dict[str, Any], int]:
         """
-        Create a standardized success response
+        Create a success response
 
         Args:
             data: Response data
-            message: Optional success message
+            status_code: HTTP status code (default: 200)
 
         Returns:
-            Success response dictionary
+            Tuple of (response_dict, status_code)
         """
-        response = {"success": True, "timestamp": datetime.now().isoformat()}
+        return data, status_code
 
-        if message:
-            response["message"] = message
+    @staticmethod
+    def error_response(
+        message: str, status_code: int = 400
+    ) -> Tuple[Dict[str, Any], int]:
+        """
+        Create an error response
 
-        # Handle different data types
-        if isinstance(data, dict):
-            response.update(data)
-        else:
-            response["data"] = data
+        Args:
+            message: Error message
+            status_code: HTTP status code (default: 400)
 
-        return response
+        Returns:
+            Tuple of (response_dict, status_code)
+        """
+        return {
+            "error": message,
+            "status": "error",
+            "timestamp": datetime.now().isoformat(),
+        }, status_code
+
+    def handle_request(self, handler: Callable) -> Tuple[Dict[str, Any], int]:
+        """
+        Handle request with error handling
+
+        Args:
+            handler: Request handler function
+
+        Returns:
+            Tuple of (response_dict, status_code)
+        """
+        try:
+            return handler()
+        except ValueError as e:
+            self.logger.warning(f"Validation error: {str(e)}")
+            return self.error_response(str(e), 400)
+        except Exception as e:
+            self.logger.error(f"Unexpected error: {str(e)}", exc_info=True)
+            return self.error_response("An unexpected error occurred", 500)
+
+
+class DateTimeEncoder(json.JSONEncoder):
+    """Custom JSON encoder for datetime objects"""
+
+    def default(self, obj):
+        if isinstance(obj, (datetime, date)):
+            return obj.isoformat()
+        return super().default(obj)

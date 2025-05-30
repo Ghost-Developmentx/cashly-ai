@@ -87,8 +87,27 @@ class AsyncToolExecutor:
         if "action" in result:
             return True
 
-        # Check for data responses
-        if any(key in result for key in ["data", "result", "message", "transactions"]):
+        # Check for data responses - expanded to include more common patterns
+        valid_data_keys = [
+            "data",
+            "result",
+            "message",
+            "transactions",
+            "accounts",  # Added for account-related responses
+            "account_count",  # Added for account summary responses
+            "invoices",  # Added for invoice responses
+            "invoice",  # Added for single invoice responses
+            "forecast",  # Added for forecast responses
+            "daily_forecast",  # Added for forecast responses
+            "budget",  # Added for budget responses
+            "trends",  # Added for trends responses
+            "anomalies",  # Added for anomaly responses
+            "earnings",  # Added for earnings responses
+            "requirements",  # Added for requirements responses
+            "success",  # General success indicator
+        ]
+
+        if any(key in result for key in valid_data_keys):
             return True
 
         return False

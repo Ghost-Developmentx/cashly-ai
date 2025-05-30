@@ -4,7 +4,7 @@ Analyzes spending patterns for budget generation.
 
 import logging
 from typing import Dict, List, Any
-from datetime import datetime, timedelta
+from datetime import datetime
 from collections import defaultdict
 
 logger = logging.getLogger(__name__)

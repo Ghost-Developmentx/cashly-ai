@@ -94,7 +94,7 @@ class AsyncAssistantManager:
                 enhancement.enhanced_query,
                 metadata={
                     "original_query": query,
-                    "context_added": enhancement.has_context
+                    "context_added": str(enhancement.has_context)
                 }
             )
 

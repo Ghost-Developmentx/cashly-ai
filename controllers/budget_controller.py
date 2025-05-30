@@ -1,33 +1,30 @@
 """
 Controller for budget generation endpoints.
-Handles budget-related HTTP requests and delegates to business services.
+Now uses async budget service.
 """
 
+import asyncio
 from typing import Dict, Any, Tuple
 from controllers.base_controller import BaseController
-from services.budget_service import BudgetService
+from services.budget import AsyncBudgetService
 
 
 class BudgetController(BaseController):
-    """Controller for budget generation operations"""
+    """Controller for budget operations"""
 
     def __init__(self):
         super().__init__()
-        self.budget_service = BudgetService()
+        self.budget_service = AsyncBudgetService()
 
     def generate_budget(self) -> Tuple[Dict[str, Any], int]:
         """
-        Generate budget recommendations based on spending patterns
+        Generate budget recommendations based on spending patterns.
 
         Expected JSON input:
         {
             "user_id": "user_123",
-            "transactions": [
-                {"date": "2025-01-01", "amount": -50.00, "category": "groceries"},
-                {"date": "2025-01-05", "amount": -200.00, "category": "utilities"},
-                ...
-            ],
-            "income": 5000.00
+            "transactions": [...],
+            "monthly_income": 5000.00  # Optional
         }
 
         Returns:
@@ -40,36 +37,29 @@ class BudgetController(BaseController):
             # Validate required fields
             self.validate_required_fields(data, ["user_id", "transactions"])
 
-            # Extract parameters
             user_id = data.get("user_id")
             transactions = data.get("transactions", [])
-            monthly_income = data.get("income", 0)
+            monthly_income = data.get("monthly_income")
 
-            # Validate transactions data
-            if not transactions:
-                raise ValueError("Transactions list cannot be empty")
+            self.logger.info(f"Generating budget for user {user_id}")
 
-            # Log request details
-            self.logger.info(
-                f"Generating budget recommendations for user {user_id} "
-                f"with income ${monthly_income}"
-            )
+            # Run async service
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                result = loop.run_until_complete(
+                    self.budget_service.generate_budget(
+                        user_id, transactions, monthly_income
+                    )
+                )
+            finally:
+                loop.close()
 
-            # Delegate to service
-            result = self.budget_service.generate_budget(
-                user_id=user_id,
-                transactions=transactions,
-                monthly_income=monthly_income,
-            )
+            if "error" in result:
+                self.logger.error(f"Budget generation failed: {result['error']}")
+                return self.error_response(result["error"], 400)
 
-            # Log result
-            budget_categories = len(
-                result.get("recommended_budget", {}).get("by_category", {})
-            )
-            self.logger.info(
-                f"Budget recommendations generated for {budget_categories} categories"
-            )
-
+            self.logger.info(f"Budget generated successfully for user {user_id}")
             return self.success_response(result)
 
         return self.handle_request(_handle)

@@ -122,6 +122,9 @@ class AsyncVectorOperations:
             # Prepare vector as an array
             vector_array = np.array(vector, dtype=np.float32)
 
+            # Convert vector to string format for asyncpg
+            vector_str = f"[{','.join(map(str, vector_array.tolist()))}]"
+
             # Build an insert query dynamically
             columns = ["embedding"] + list(metadata.keys())
             placeholders = ["$1::vector"] + [f"${i+2}" for i in range(len(metadata))]
@@ -132,7 +135,7 @@ class AsyncVectorOperations:
                 RETURNING id
             """
 
-            values = [vector_array.tolist()] + list(metadata.values())
+            values = [vector_str] + list(metadata.values())
 
             async with self.pool.acquire() as conn:
                 record_id = await conn.fetchval(query, *values)
@@ -166,6 +169,9 @@ class AsyncVectorOperations:
         try:
             vector_array = np.array(query_vector, dtype=np.float32)
 
+            # Convert vector to string format for asyncpg
+            vector_str = f"[{','.join(map(str, vector_array.tolist()))}]"
+
             # Build a query with filters
             base_query = f"""
                 SELECT *,
@@ -174,7 +180,7 @@ class AsyncVectorOperations:
                 WHERE 1 - (embedding <=> $1::vector) >= $2
             """
 
-            params = [vector_array.tolist(), threshold]
+            params = [vector_str, threshold]
             param_count = 2
 
             # Add filters

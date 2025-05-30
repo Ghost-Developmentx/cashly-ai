@@ -110,5 +110,5 @@ class AsyncContextAggregator:
             "embedding_text": embedding_text,
             "key_information": key_info,
             "user_context": user_context or {},
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now().isoformat(),
         }

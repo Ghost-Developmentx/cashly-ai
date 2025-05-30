@@ -67,10 +67,10 @@ class IntegrationConfig:
         self.intent_mapper = IntentMapper()
         self.function_processor = FunctionProcessor()
         # Setup tool executor
-        self._setup_tool_executor()
+        self._setup_tool_executor_sync()
         logger.info("✅ Integration components initialized")
 
-    async def _setup_tool_executor(self):
+    def _setup_tool_executor_sync(self):
         """Configure tool executor from existing Fin service."""
         try:
             from services.fin.async_tool_registry import AsyncToolRegistry
