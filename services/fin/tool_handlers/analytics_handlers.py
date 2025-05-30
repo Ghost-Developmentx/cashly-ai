@@ -8,6 +8,11 @@ from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
+from services.forecast.async_forecast_service import AsyncForecastService
+from services.budget.async_budget_service import AsyncBudgetService
+from services.insights.async_insight_service import AsyncInsightService
+from services.anomaly.async_anomaly_service import AsyncAnomalyService
+
 
 class AsyncAnalyticsHandlers:
     """
@@ -33,16 +38,11 @@ class AsyncAnalyticsHandlers:
     """
 
     def __init__(self):
-        # Initialize services (these would need to be converted to async too)
-        from services.forecast_service import ForecastService
-        from services.budget_service import BudgetService
-        from services.insight_service import InsightService
-        from services.anomaly_service import AnomalyService
-
-        self.forecast_service = ForecastService()
-        self.budget_service = BudgetService()
-        self.insight_service = InsightService()
-        self.anomaly_service = AnomalyService()
+        # Initialize async services
+        self.forecast_service = AsyncForecastService()
+        self.budget_service = AsyncBudgetService()
+        self.insight_service = AsyncInsightService()
+        self.anomaly_service = AsyncAnomalyService()
 
     async def forecast_cash_flow(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Generate cash flow forecast."""
@@ -54,28 +54,13 @@ class AsyncAnalyticsHandlers:
         adjustments = tool_args.get("adjustments", {})
 
         try:
-            # Note: These services would need async versions
-            # For now, we'll use sync calls in an executor
-            import asyncio
-
-            loop = asyncio.get_event_loop()
-
             if adjustments:
-                result = await loop.run_in_executor(
-                    None,
-                    self.forecast_service.forecast_cash_flow_scenario,
-                    user_id,
-                    transactions,
-                    days,
-                    adjustments,
+                result = await self.forecast_service.forecast_cash_flow_scenario(
+                    user_id, transactions, days, adjustments
                 )
             else:
-                result = await loop.run_in_executor(
-                    None,
-                    self.forecast_service.forecast_cash_flow,
-                    user_id,
-                    transactions,
-                    days,
+                result = await self.forecast_service.forecast_cash_flow(
+                    user_id, transactions, days
                 )
 
             return result
@@ -91,20 +76,7 @@ class AsyncAnalyticsHandlers:
         transactions = context["transactions"]
         period = tool_args.get("period", "3m")
 
-        try:
-            import asyncio
-
-            loop = asyncio.get_event_loop()
-
-            result = await loop.run_in_executor(
-                None, self.insight_service.analyze_trends, user_id, transactions, period
-            )
-
-            return result
-
-        except Exception as e:
-            logger.error(f"Trend analysis error: {e}")
-            return {"error": f"Failed to analyze trends: {str(e)}"}
+        return await self.insight_service.analyze_trends(user_id, transactions, period)
 
     async def detect_anomalies(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Detect anomalous transactions."""
@@ -113,24 +85,9 @@ class AsyncAnalyticsHandlers:
         transactions = context["transactions"]
         threshold = tool_args.get("threshold")
 
-        try:
-            import asyncio
-
-            loop = asyncio.get_event_loop()
-
-            result = await loop.run_in_executor(
-                None,
-                self.anomaly_service.detect_anomalies,
-                user_id,
-                transactions,
-                threshold,
-            )
-
-            return result
-
-        except Exception as e:
-            logger.error(f"Anomaly detection error: {e}")
-            return {"error": f"Failed to detect anomalies: {str(e)}"}
+        return await self.anomaly_service.detect_anomalies(
+            user_id, transactions, threshold
+        )
 
     async def generate_budget(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Generate budget recommendations."""
@@ -139,24 +96,9 @@ class AsyncAnalyticsHandlers:
         transactions = context["transactions"]
         monthly_income = tool_args.get("monthly_income")
 
-        try:
-            import asyncio
-
-            loop = asyncio.get_event_loop()
-
-            result = await loop.run_in_executor(
-                None,
-                self.budget_service.generate_budget,
-                user_id,
-                transactions,
-                monthly_income,
-            )
-
-            return result
-
-        except Exception as e:
-            logger.error(f"Budget generation error: {e}")
-            return {"error": f"Failed to generate budget: {str(e)}"}
+        return await self.budget_service.generate_budget(
+            user_id, transactions, monthly_income
+        )
 
     async def calculate_category_spending(
         self, context: Dict[str, Any]

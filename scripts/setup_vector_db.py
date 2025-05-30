@@ -39,7 +39,7 @@ def setup_logging():
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         handlers=[
             logging.StreamHandler(sys.stdout),
-            logging.FileHandler("enhanced_vector_setup.log"),
+            logging.FileHandler("../enhanced_vector_setup.log"),
         ],
     )
 

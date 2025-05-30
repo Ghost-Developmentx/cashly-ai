@@ -4,7 +4,7 @@ Manages service-level settings and initialization.
 """
 
 import logging
-from typing import Optional, Dict, Any
+from typing import Dict, Any
 from ..assistant_manager import AsyncAssistantManager, AssistantConfig
 from ...intent_classification.async_intent_service import AsyncIntentService
 from ..core.router import AssistantRouter
