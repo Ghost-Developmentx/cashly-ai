@@ -18,7 +18,7 @@ def debug_intent_flow():
     print("🔍 Debugging Intent Classification Flow")
     print("=" * 60)
 
-    from services.intent_classification.intent_service_v2 import IntentService
+    from services.intent_classification.intent_service import IntentService
     from services.intent_determination.intent_resolver import IntentResolver
     from services.embeddings.openai_client import OpenAIEmbeddingClient
     from services.search.vector_search import VectorSearchService

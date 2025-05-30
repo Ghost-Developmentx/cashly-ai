@@ -174,7 +174,7 @@ def seed_enhanced_database():
 def test_intent_classification():
     """Test the intent classification system with various queries."""
     try:
-        from services.intent_classification.intent_service_v2 import IntentService
+        from services.intent_classification.intent_service import IntentService
 
         print("🔄 Testing enhanced intent classification...")
         intent_service = IntentService()

@@ -50,7 +50,7 @@ def test_intent_classification():
     print("\n🎯 Testing Intent Classification")
     print("=" * 50)
 
-    from services.intent_classification.intent_service_v2 import IntentService
+    from services.intent_classification.intent_service import IntentService
 
     service = IntentService()
 
@@ -77,7 +77,7 @@ def test_intent_classification_with_vector():
     print("=" * 55)
 
     try:
-        from services.intent_classification.intent_service_v2 import IntentService
+        from services.intent_classification.intent_service import IntentService
 
         intent_service = IntentService()
 

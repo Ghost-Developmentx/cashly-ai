@@ -22,7 +22,7 @@ def test_full_flow():
     print("🔍 Testing Full Intent Classification Flow")
     print("=" * 60)
 
-    from services.intent_classification.intent_service_v2 import IntentService
+    from services.intent_classification.intent_service import IntentService
 
     # Create service
     service = IntentService()

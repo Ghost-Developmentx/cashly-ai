@@ -6,7 +6,7 @@ Manages service-level settings and initialization.
 import logging
 from typing import Optional, Dict, Any
 from ..assistant_manager import AsyncAssistantManager, AssistantConfig
-from ...intent_classification.intent_service_v2 import IntentService
+from ...intent_classification.intent_service import IntentService
 from ..core.router import AssistantRouter
 from ..core.intent_mapper import IntentMapper
 from ..processors.function_processor import FunctionProcessor

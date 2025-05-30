@@ -1,6 +1,6 @@
 """
-Context-aware intent classification service.
-This is the main entry point for all intent classifications.
+Async intent classification service.
+Main entry point for async intent classification.
 """
 
 import logging
@@ -9,19 +9,19 @@ from typing import Dict, List, Optional, Any
 from services.intent_determination.intent_resolver import IntentResolver
 from services.intent_classification.intent_learner import IntentLearner
 from services.intent_classification.fallback_classifier import FallbackClassifier
+from services.embeddings.async_embeddings import AsyncEmbeddingStorage
 
 logger = logging.getLogger(__name__)
 
 
-class IntentService:
-    """
-    Main service for intent classification using context-aware embeddings.
-    """
+class AsyncIntentService:
+    """Async intent classification using embeddings."""
 
     def __init__(self):
         self.resolver = IntentResolver()
         self.learner = IntentLearner()
         self.fallback = FallbackClassifier()
+        self.storage = AsyncEmbeddingStorage()
         self.min_confidence_threshold = 0.55
 
         # Assistant routing mapping
