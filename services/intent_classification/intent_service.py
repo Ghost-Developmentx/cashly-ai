@@ -6,7 +6,7 @@ Main entry point for async intent classification.
 import logging
 from typing import Dict, List, Optional, Any
 
-from services.intent_determination.intent_resolver import IntentResolver
+from services.intent_determination.intent_resolver import AsyncIntentResolver
 from services.intent_classification.intent_learner import IntentLearner
 from services.intent_classification.fallback_classifier import FallbackClassifier
 from services.embeddings.async_embeddings import AsyncEmbeddingStorage
@@ -18,7 +18,7 @@ class AsyncIntentService:
     """Async intent classification using embeddings."""
 
     def __init__(self):
-        self.resolver = IntentResolver()
+        self.resolver = AsyncIntentResolver()
         self.learner = IntentLearner()
         self.fallback = FallbackClassifier()
         self.storage = AsyncEmbeddingStorage()

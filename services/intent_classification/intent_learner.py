@@ -3,12 +3,10 @@ Learns from conversation outcomes to improve intent classification.
 """
 
 import logging
-from typing import Dict, List, Optional, Any
-from datetime import datetime
-
+from typing import Dict, List, Optional
 from services.embeddings.openai_client import OpenAIEmbeddingClient
 from services.embeddings.context_builder import ConversationContextBuilder
-from services.async_embeddings.storage import EmbeddingStorage
+from services.embeddings.async_embeddings import AsyncEmbeddingStorage
 
 logger = logging.getLogger(__name__)
 
@@ -20,11 +18,11 @@ class IntentLearner:
         self,
         embedding_client: Optional[OpenAIEmbeddingClient] = None,
         context_builder: Optional[ConversationContextBuilder] = None,
-        storage: Optional[EmbeddingStorage] = None,
+        storage: Optional[AsyncEmbeddingStorage] = None,
     ):
         self.embedding_client = embedding_client or OpenAIEmbeddingClient()
         self.context_builder = context_builder or ConversationContextBuilder()
-        self.storage = storage or EmbeddingStorage()
+        self.storage = storage or AsyncEmbeddingStorage()
 
     def learn_from_conversation(
         self,
@@ -114,30 +112,3 @@ class IntentLearner:
         except Exception as e:
             logger.error(f"Failed to learn from conversation {conversation_id}: {e}")
             return False
-
-    def get_learning_stats(self, user_id: Optional[str] = None) -> Dict[str, Any]:
-        """
-        Get learning statistics.
-
-        Args:
-            user_id: Optional user filter
-
-        Returns:
-            Learning statistics
-        """
-        try:
-            if user_id:
-                patterns = self.storage.get_user_conversation_patterns(user_id)
-            else:
-                # Get global patterns (would need to implement this method)
-                patterns = {"message": "Global stats not implemented yet"}
-
-            return {
-                "success": True,
-                "patterns": patterns,
-                "timestamp": datetime.utcnow().isoformat(),
-            }
-
-        except Exception as e:
-            logger.error(f"Failed to get learning stats: {e}")
-            return {"success": False, "error": str(e)}

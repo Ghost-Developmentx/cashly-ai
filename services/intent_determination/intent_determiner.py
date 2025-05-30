@@ -7,7 +7,7 @@ from typing import Dict, List, Tuple, Optional, Any
 from collections import defaultdict
 from dataclasses import dataclass
 
-from services.search.vector_search import SearchResult
+from services.search.async_vector_search import SearchResult
 
 logger = logging.getLogger(__name__)
 
