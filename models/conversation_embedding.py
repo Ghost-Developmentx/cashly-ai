@@ -13,7 +13,38 @@ Base = declarative_base()
 
 
 class ConversationEmbedding(Base):
-    """Model for storing conversation embeddings."""
+    """
+    Represents a database model for storing conversation embeddings.
+
+    The ConversationEmbedding class is used to store metadata and embeddings
+    related to a specific conversation. It provides attributes for storing
+    information about the user, conversation, assistant type, intent, and
+    various other metrics to facilitate analysis and processing of stored
+    conversational data.
+
+    Attributes
+    ----------
+    id : int
+        The unique identifier for the conversation embedding record.
+    conversation_id : str
+        Identifier of the conversation associated with the embedding.
+    user_id : str
+        Identifier of the user associated with the conversation.
+    intent : str
+        Detected intent of the conversation.
+    assistant_type : str
+        Type of assistant that generated the embedding.
+    embedding : Vector
+        High-dimensional vector representing the conversation's embedding.
+    message_count : int
+        The number of messages associated with the conversation. Defaults to 1.
+    success_indicator : bool
+        Whether the conversation was successful. Defaults to True.
+    created_at : datetime
+        Timestamp indicating when the conversation embedding was created.
+    conversation_metadata : JSON
+        Additional metadata related to the conversation.
+    """
 
     __tablename__ = "conversation_embeddings"
 

@@ -17,8 +17,23 @@ logger = logging.getLogger(__name__)
 
 class OpenAIIntegrationService:
     """
-    Async integration service for OpenAI assistants.
-    Provides unified interface for all AI operations.
+    Service for integrating and managing OpenAI-based operations.
+
+    This class serves as the primary interface for the OpenAI Integration,
+    enabling processing of user queries, conversation management, health
+    checks, and analytics tracking. It initializes required components such
+    as configuration, analytics, and query handlers to facilitate secured
+    and robust interaction with the OpenAI assistant.
+
+    Attributes
+    ----------
+    config : IntegrationConfig
+        Configuration object for managing dependencies and settings.
+    analytics : IntegrationAnalytics
+        Handles analytics tracking related to query processing outcomes.
+    query_handler : QueryHandler
+        Manages processing of user queries with the OpenAI assistant and its
+        related functionality.
     """
 
     def __init__(self):

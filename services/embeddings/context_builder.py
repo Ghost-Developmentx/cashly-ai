@@ -10,7 +10,21 @@ logger = logging.getLogger(__name__)
 
 
 class ConversationContextBuilder:
-    """Builds optimized context from conversation history."""
+    """
+    Handles building context and extracting metadata for conversation systems.
+
+    The `ConversationContextBuilder` provides utilities to process conversation history,
+    generate context strings for embedding, and extract meaningful metadata like intent,
+    topics, and conversational characteristics. It is intended for usage in chatbot or
+    assistant systems.
+
+    Attributes
+    ----------
+    max_messages : int
+        Maximum number of messages to include in the built context.
+    max_tokens : int
+        Maximum token limit for the context string.
+    """
 
     def __init__(self, max_messages: int = 10, max_tokens: int = 4000):
         self.max_messages = max_messages

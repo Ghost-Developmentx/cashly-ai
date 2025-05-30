@@ -15,10 +15,16 @@ from controllers.account_controller import AccountController
 
 def create_api_routes() -> Blueprint:
     """
-    Create and configure API routes blueprint
+    create_api_routes() -> Blueprint
+        Creates a Flask blueprint containing API routes for various functionalities of the application.
+        These routes handle operations such as health checks, categorization of transactions, cash flow
+        forecasting, conversational AI operations, budget generation, trends analysis, anomaly detection,
+        and account management.
 
-    Returns:
-        Flask Blueprint with configured routes
+    Returns
+    -------
+    Blueprint
+        A Flask blueprint with all defined routes and handlers.
     """
     api_bp = Blueprint("api", __name__)
 

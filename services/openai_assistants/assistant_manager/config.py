@@ -9,7 +9,30 @@ from .types import AssistantType
 
 
 class AssistantConfig:
-    """Configuration for the assistant manager."""
+    """
+    Handles configuration for an AI assistant system.
+
+    This class is responsible for loading, maintaining, and validating the
+    configuration of an AI assistant system. It retrieves settings from
+    environment variables and validates whether the required parameters
+    are configured properly. It also manages assistant-specific IDs used for
+    various functionalities.
+
+    Attributes
+    ----------
+    api_key : str
+        The API key used for authenticating with the OpenAI service.
+    model : str
+        The model identifier to use for assistant operations.
+    timeout : int
+        The request timeout configuration, specified in seconds.
+    max_retries : int
+        The maximum number of retry attempts for requests.
+    retry_delay : float
+        The delay between retry attempts, specified in seconds.
+    assistant_ids : dict
+        A dictionary mapping assistant types to their corresponding IDs.
+    """
 
     def __init__(self):
         # API Configuration

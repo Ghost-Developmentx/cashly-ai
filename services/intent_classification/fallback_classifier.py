@@ -10,7 +10,25 @@ logger = logging.getLogger(__name__)
 
 
 class FallbackClassifier:
-    """Enhanced keyword-based fallback classifier."""
+    """
+    Classifies user queries into specific intents based on keyword and context pattern
+    matching.
+
+    The `FallbackClassifier` class applies keyword prioritization, assigns confidence
+    scores, and uses predefined patterns to determine the user's intent. It is capable
+    of handling ambiguous or general queries by using a fallback mechanism to suggest
+    the most appropriate intent. The classification process is enhanced with context-based
+    boosting to refine scores.
+
+    Attributes
+    ----------
+    keyword_map : dict
+        Intent-specific keyword mappings, including high-priority, medium-priority,
+        and generic keywords, used for scoring and classification.
+    context_patterns : dict
+        Predefined context patterns containing question words, action words,
+        and time references for score boosting.
+    """
 
     def __init__(self):
         # Multi-level keyword mapping with priorities

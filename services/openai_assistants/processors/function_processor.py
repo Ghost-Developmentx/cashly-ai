@@ -11,7 +11,23 @@ logger = logging.getLogger(__name__)
 
 
 class FunctionProcessor:
-    """Handles conversion of function calls to frontend actions."""
+    """
+    Encapsulates the processing of function calls into frontend-compatible actions.
+
+    The `FunctionProcessor` is designed to convert backend function call results into
+    frontend actions, ensuring deduplication of function calls. It maintains a mapping
+    from function names to action types and keeps track of processed function call
+    signatures to avoid processing duplicates. This class also provides utilities for
+    resetting processed signatures, getting action types for functions, and validating
+    if a function is known.
+
+    Attributes
+    ----------
+    action_mapping : Dict[str, str]
+        A mapping of function names to their corresponding frontend action types.
+    processed_signatures : Set[str]
+        A set of unique function call signatures that have been processed.
+    """
 
     def __init__(self):
         self.action_mapping = FUNCTION_TO_ACTION_MAPPING

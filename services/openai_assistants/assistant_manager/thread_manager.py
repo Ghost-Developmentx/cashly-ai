@@ -11,7 +11,24 @@ from .base import BaseManager
 logger = logging.getLogger(__name__)
 
 class ThreadManager(BaseManager):
-    """Manages conversation threads for users."""
+    """
+    Manages user-specific threads and related operations.
+
+    This class serves as a manager for handling user-specific threads, supporting
+    operations like creating new threads, retrieving messages, adding messages, and
+    clearing threads. The class maintains in-memory storage for active threads and their
+    metadata, enabling efficient access and management of thread-related data. This
+    storage can be extended or replaced with external persistent solutions, like Redis,
+    for scalability.
+
+    Attributes
+    ----------
+    _active_threads : Dict[str, str]
+        Dictionary mapping user identifiers to their active thread IDs.
+    _thread_metadata : Dict[str, Dict[str, Any]]
+        Dictionary containing metadata for threads, such as user ID, creation time,
+        message count, and other thread-specific details.
+    """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

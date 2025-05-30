@@ -11,7 +11,19 @@ logger = logging.getLogger(__name__)
 
 
 class ContextEnhancer:
-    """Handles query context enhancement."""
+    """
+    A utility class for enhancing user queries with contextual information.
+
+    This class provides functionality to enrich original user queries with
+    contextual information extracted from the user's data, such as accounts,
+    payment integration status, and transaction history. It helps generate
+    an enhanced query that combines original intent with relevant contextual
+    content, as well as additional instructions for further guidance.
+
+    Attributes
+    ----------
+    None
+    """
 
     @staticmethod
     def enhance_query(

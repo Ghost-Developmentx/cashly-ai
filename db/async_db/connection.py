@@ -15,13 +15,31 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
 )
 
-from config import AsyncDatabaseConfig
+from .config import AsyncDatabaseConfig
 
 logger = logging.getLogger(__name__)
 
 
 class AsyncDatabaseConnection:
-    """Manages async database connections with pooling."""
+    """
+    Manages asynchronous database connections and operations.
+
+    This class provides functionality to work with asynchronous database connections,
+    including the creation and management of an async engine, session factory, and
+    connection pool. It supports executing queries, leveraging asyncpg for raw query
+    operations, and ensures proper cleanup of resources.
+
+    Attributes
+    ----------
+    config : AsyncDatabaseConfig
+        Configuration object for database connection settings.
+    _engine : Optional[AsyncEngine]
+        Internal async database engine instance, lazily created.
+    _session_factory : Optional[async_sessionmaker]
+        Internal async session factory instance, lazily created.
+    _asyncpg_pool : Optional[asyncpg.Pool]
+        Internal asyncpg connection pool for raw queries, lazily created.
+    """
 
     def __init__(self, config: Optional[AsyncDatabaseConfig] = None):
         self.config = config or AsyncDatabaseConfig.from_env()
@@ -31,7 +49,7 @@ class AsyncDatabaseConnection:
 
     @property
     async def engine(self) -> AsyncEngine:
-        """Get or create async database engine."""
+        """Get or create an async database engine."""
         if self._engine is None:
             self._engine = create_async_engine(
                 self.config.async_connection_string,

@@ -13,7 +13,22 @@ from .types import AssistantType, AssistantResponse
 logger = logging.getLogger(__name__)
 
 class ResponseHandler(BaseManager):
-    """Handles assistant run responses asynchronously."""
+    """
+    Manages responses by handling the completion of asynchronous operations.
+
+    This class provides utilities for monitoring and managing the states of
+    asynchronous operations, interacting with tools, handling completion or errors,
+    and formatting responses effectively for clients. It ensures robust handling of
+    multiple operational states like completed, failed, or requiring additional
+    actions.
+
+    Attributes
+    ----------
+    config : Any
+        Configuration settings for managing response timeouts, execution limits, and other configurations.
+    client : Any
+        Client instance used for communication with external APIs or services.
+    """
 
     async def wait_for_run_completion(
             self,

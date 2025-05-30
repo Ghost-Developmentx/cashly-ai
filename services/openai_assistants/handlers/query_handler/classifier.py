@@ -11,7 +11,22 @@ from ...assistant_manager import AssistantType
 logger = logging.getLogger(__name__)
 
 class ClassificationHandler:
-    """Handles query classification and initial routing."""
+    """
+    Handles classification of user queries and mapping to corresponding assistants.
+
+    This class is responsible for processing user queries, classifying their intents,
+    and routing them to the appropriate assistant type based on classification results
+    and business logic. It leverages an intent service and an intent mapper for
+    classification and fallback mechanisms.
+
+    Attributes
+    ----------
+    intent_service : Any
+        Service utility for running the intent classification and routing.
+    intent_mapper : Any
+        Mapper utility for determining assistants based on intents and fallback
+        logic.
+    """
 
     def __init__(self, intent_service, intent_mapper):
         self.intent_service = intent_service

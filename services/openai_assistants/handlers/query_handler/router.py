@@ -11,7 +11,26 @@ from ...assistant_manager import AssistantType, AssistantResponse
 logger = logging.getLogger(__name__)
 
 class RoutingHandler:
-    """Handles routing and rerouting decisions."""
+    """
+    Handles routing decisions and attempts reroutes for assistant responses.
+
+    The `RoutingHandler` class serves to evaluate the necessity of rerouting
+    user queries between available assistants based on various criteria and
+    performs rerouting operations when deemed appropriate. It integrates
+    closely with a routing system, an assistant manager, and an intent
+    service to make decisions and process rerouted queries. This enables
+    dynamic and context-aware redirection of user queries to the most
+    suitable assistant.
+
+    Attributes
+    ----------
+    router : Router
+        Manages routing rules and logic for determining if rerouting is needed.
+    assistant_manager : AssistantManager
+        Responsible for managing queries and interactions with assistants.
+    intent_service : IntentService
+        Provides intent analysis and related functionality for query context.
+    """
 
     def __init__(self, router, assistant_manager, intent_service):
         self.router = router

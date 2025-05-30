@@ -14,7 +14,22 @@ from .base import BaseManager
 logger = logging.getLogger(__name__)
 
 class ToolExecutor(BaseManager):
-    """Handles async tool execution for assistants."""
+    """
+    Manages and executes tool calls asynchronously.
+
+    The `ToolExecutor` class is designed to manage and execute asynchronous or synchronous tool
+    calls with compatibility for concurrent execution. It allows for custom tool executor functions
+    to be set and handles execution in a robust manner with error handling and logging for failed
+    executions. The class also includes thread pooling for executing synchronous functions in an
+    asynchronous environment.
+
+    Attributes
+    ----------
+    _tool_executor : Callable, optional
+        The function used to execute tools. Can be either synchronous or asynchronous.
+    _thread_pool : ThreadPoolExecutor
+        A thread pool executor for running synchronous tasks asynchronously.
+    """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

@@ -14,7 +14,22 @@ logger = logging.getLogger(__name__)
 
 
 class AsyncDatabaseInitializer:
-    """Handles async database initialization and setup."""
+    """
+    Handles asynchronous initialization of a database.
+
+    This class is responsible for preparing the database environment,
+    including testing the connection, setting up required extensions,
+    managing migrations, and creating indexes. It leverages both
+    asynchronous and synchronous operations to ensure proper database
+    setup.
+
+    Attributes
+    ----------
+    config : Optional[AsyncDatabaseConfig]
+        Configuration details for the database connection.
+    connection : AsyncDatabaseConnection
+        Asynchronous database connection instance.
+    """
 
     def __init__(self, config: Optional[AsyncDatabaseConfig] = None):
         self.config = config or AsyncDatabaseConfig.from_env()
@@ -74,7 +89,18 @@ _async_db_connection: Optional[AsyncDatabaseConnection] = None
 
 
 async def get_async_db_connection() -> AsyncDatabaseConnection:
-    """Get or create an async database connection instance."""
+    """
+    Get the global asynchronous database connection instance.
+
+    This function initializes and retrieves a singleton instance of an asynchronous database connection.
+    If the connection is not yet created, it will use configuration data loaded from the environment to
+    initialize the connection. Subsequent calls to this function will return the same instance.
+
+    Returns
+    -------
+    AsyncDatabaseConnection
+        The global asynchronous database connection instance.
+    """
     global _async_db_connection
     if _async_db_connection is None:
         config = AsyncDatabaseConfig.from_env()
@@ -83,7 +109,24 @@ async def get_async_db_connection() -> AsyncDatabaseConnection:
 
 
 def get_db_connection():
-    """Get sync database connection (deprecated)."""
+    """
+    Establish a synchronous database connection.
+
+    This function retrieves database configuration using environment variables
+    and establishes a connection to the database. Note that this function
+    is deprecated and should be replaced by `get_async_db_connection()` for
+    asynchronous database operations.
+
+    Warnings
+    --------
+    This function is deprecated. Use `get_async_db_connection()` instead.
+
+    Returns
+    -------
+    DatabaseConnection
+        An instance of `DatabaseConnection` representing the established
+        database connection.
+    """
     logger.warning(
         "get_db_connection() is deprecated. " "Use get_async_db_connection() instead."
     )

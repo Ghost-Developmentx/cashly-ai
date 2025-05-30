@@ -9,7 +9,26 @@ from enum import Enum
 
 
 class MessageRole(str, Enum):
-    """Message role enumeration."""
+    """
+    Enumeration of roles in a messaging system.
+
+    The `MessageRole` class represents different roles that could exist in a
+    messaging context. It inherits from `str` and `Enum` to enable comparison
+    and string-based usage. This can be used in systems where messages are
+    categorized or processed based on the role of the entity sending or
+    associated with the message.
+
+    Attributes
+    ----------
+    USER : MessageRole
+        Represents a user in the messaging system.
+    ASSISTANT : MessageRole
+        Represents an assistant, such as an AI or chatbot, in the messaging
+        system.
+    SYSTEM : MessageRole
+        Represents the system itself, often used for internal or system-level
+        messages.
+    """
 
     USER = "user"
     ASSISTANT = "assistant"
@@ -18,7 +37,24 @@ class MessageRole(str, Enum):
 
 @dataclass
 class Message:
-    """Represents a single message in a conversation."""
+    """
+    Represents a message object with role, content, timestamp, and metadata.
+
+    This class is used to encapsulate data related to a message, such as its role,
+    content, an optional timestamp, and associated metadata. It provides functionality
+    to convert the message object to and from a dictionary representation.
+
+    Attributes
+    ----------
+    role : MessageRole
+        The role associated with the message, defining its purpose or source.
+    content : str
+        The textual content of the message.
+    timestamp : Optional[datetime]
+        The optional timestamp indicating when the message was created or sent.
+    metadata : Dict[str, Any]
+        Additional metadata or information related to the message.
+    """
 
     role: MessageRole
     content: str
@@ -51,7 +87,30 @@ class Message:
 
 @dataclass
 class ConversationContext:
-    """Complete conversation context with metadata."""
+    """
+    Represents the context of a conversation.
+
+    This class stores information about an ongoing conversation, including the
+    history of messages, the user's context, and any active intent or assistant.
+    It acts as a state container for managing conversations and retrieving specific
+    information such as user or assistant messages.
+
+    Attributes
+    ----------
+    conversation_id : str
+        Unique identifier for the conversation.
+    user_id : str
+        Unique identifier for the user participating in the conversation.
+    messages : List[Message]
+        List of messages exchanged during the conversation.
+    current_intent : Optional[str]
+        Current recognized user intent, if available.
+    current_assistant : Optional[str]
+        Current assistant assigned to handle the conversation, if applicable.
+    user_context : Dict[str, Any]
+        Contextual information related to the user, such as preferences or
+        metadata.
+    """
 
     conversation_id: str
     user_id: str

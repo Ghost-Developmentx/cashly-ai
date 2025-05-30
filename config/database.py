@@ -8,7 +8,32 @@ from dataclasses import dataclass
 
 @dataclass
 class DatabaseConfig:
-    """Database configuration settings."""
+    """
+    Configuration for connecting to a PostgreSQL database.
+
+    This class provides configuration settings necessary for establishing a connection
+    to a PostgreSQL database. It includes the host address, port, database name,
+    user credentials, and connection pool settings. The default values for optional
+    parameters can be overridden by environment variables.
+
+    Attributes
+    ----------
+    host : str
+        The hostname or IP address of the PostgreSQL server.
+    port : int
+        The port number on which the PostgreSQL server is listening.
+    database : str
+        The name of the PostgreSQL database.
+    user : str
+        The username to authenticate with the PostgreSQL server.
+    password : str
+        The password associated with the `user`.
+    pool_size : int
+        The number of connections to maintain in the pool. Defaults to 5.
+    max_overflow : int
+        The number of connections allowed above `pool_size` when the pool is full.
+        Defaults to 10.
+    """
 
     host: str
     port: int

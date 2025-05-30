@@ -13,7 +13,22 @@ logger = logging.getLogger(__name__)
 
 
 class BaseManager:
-    """Base class for assistant manager components."""
+    """
+    Manage assistants and their configuration.
+
+    The BaseManager class is responsible for managing AI assistant configurations,
+    validating them, and interacting with an async client for API communication.
+    It provides utilities to retrieve assistant identifiers and validate availability.
+    This class primarily serves as a backend module for interacting with AI assistants.
+
+    Attributes
+    ----------
+    config : AssistantConfig
+        Configuration object for managing assistants. If none is provided,
+        a default AssistantConfig instance is created.
+    client : AsyncOpenAI
+        Asynchronous client for interacting with the OpenAI API.
+    """
 
     def __init__(self, config: Optional[AssistantConfig] = None):
         """

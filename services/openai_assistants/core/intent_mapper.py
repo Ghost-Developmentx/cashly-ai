@@ -18,7 +18,26 @@ logger = logging.getLogger(__name__)
 
 
 class IntentMapper:
-    """Handles mapping of intents to appropriate assistant types."""
+    """
+    Maps user intents to specific assistants and handles routing decisions.
+
+    This class is responsible for determining which assistant should handle a user's query
+    based on classified intent, query content, and conversation history. It integrates
+    specific routing logic for invoice contexts, accounts, and other custom routing
+    strategies. Configurations like intent mappings and contextual keywords are utilized
+    to manage routing effectively.
+
+    Attributes
+    ----------
+    intent_mapping : Dict[str, AssistantType]
+        A dictionary mapping classified intents to corresponding AssistantType enums.
+    assistant_keywords : Dict[str, List[str]]
+        Keywords used to identify specific assistant needs, categorized by assistant type.
+    invoice_keywords : List[str]
+        Keywords indicating invoice-related queries in user input.
+    invoice_phrases : List[str]
+        Common phrases to detect invoice-related context in past conversation history.
+    """
 
     def __init__(self):
         self.intent_mapping = self._convert_intent_mapping()

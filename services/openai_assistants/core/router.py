@@ -17,7 +17,30 @@ logger = logging.getLogger(__name__)
 
 
 class AssistantRouter:
-    """Manages routing decisions and re-routing logic."""
+    """
+    AssistantRouter is responsible for managing routing logic between
+    different assistants based on predefined patterns, triggers, and other
+    criteria.
+
+    This class provides methods for determining if re-routing should occur,
+    identifying the correct target assistant for handling a user query,
+    and validating routing paths between assistants. Its purpose is to
+    facilitate seamless collaboration between different assistants and
+    efficiently manage query redirection when needed.
+
+    Attributes
+    ----------
+    routing_patterns : Optional[Dict]
+        A dictionary defining routing patterns between assistants. Patterns
+        specify source assistants, target assistants, and their respective
+        triggers for re-routing.
+    trigger_phrases : list
+        List of phrases or keywords that may trigger re-routing behavior.
+    assistant_mentions : Dict[str, AssistantType]
+        A mapping of specific assistant mentions to their respective
+        AssistantType enums. Used to determine the referenced assistant
+        within a query or response.
+    """
 
     def __init__(self, routing_patterns: Optional[Dict] = None):
         self.routing_patterns = self._convert_routing_patterns(

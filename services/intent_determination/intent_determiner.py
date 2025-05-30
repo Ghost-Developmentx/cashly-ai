@@ -14,7 +14,25 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class IntentScore:
-    """Represents intent with its confidence score."""
+    """
+    Representation of an intent's performance score with associated metrics.
+
+    This class is used to assess and represent the performance and confidence of a
+    specific intent in a system by evaluating its score, evidence count, and success
+    rate. It provides a property to compute the overall confidence based on these
+    attributes.
+
+    Attributes
+    ----------
+    intent : str
+        Name of the intent being evaluated.
+    score : float
+        Base performance score of the intent, typically in the range [0.0, 1.0].
+    evidence_count : int
+        Number of supporting evidence items used for scoring.
+    success_rate : float
+        Success rate of the intent, typically in the range [0.0, 1.0].
+    """
 
     intent: str
     score: float
@@ -36,7 +54,27 @@ class IntentScore:
 
 
 class IntentDeterminer:
-    """Determines the most likely intent from search results."""
+    """
+    IntentDeterminer class determines the most likely user intent based on search results,
+    contextual data, and similarity scores.
+
+    The purpose of this class is to evaluate search results, analyze them in relation to a
+    given context, and calculate scores for potential user intents. It applies different
+    weights and adjustments to ensure the most accurate determination of the user's intent.
+    This includes functionality to adjust intent scores based on contextual keywords, as
+    well as confidence boosting based on similarity scores.
+
+    Attributes
+    ----------
+    min_evidence_count : int
+        The minimum number of pieces of evidence required to consider an intent as valid.
+    success_weight : float
+        The multiplier weight applied to positive search result feedback.
+    failure_weight : float
+        The multiplier weight applied to negative search result feedback.
+    min_similarity_for_confidence : float
+        The minimum average similarity threshold required to boost intent confidence.
+    """
 
     def __init__(self):
         self.min_evidence_count = 1

@@ -14,7 +14,18 @@ logger = logging.getLogger(__name__)
 
 
 class AsyncEmbeddingStorage:
-    """Async storage for conversation embeddings."""
+    """
+    Handles asynchronous storage and retrieval of conversation embeddings as well as
+    related operations. This class is designed to manage embeddings for conversation
+    analysis and similarity searches in an efficient and scalable manner.
+
+    Attributes
+    ----------
+    db : AsyncDatabaseConnection
+        Asynchronous database connection handler.
+    _vector_ops : Optional[AsyncVectorOperations]
+        Handler for vector operations, instantiated when required.
+    """
 
     def __init__(self, db_connection: Optional[AsyncDatabaseConnection] = None):
         self.db = db_connection or AsyncDatabaseConnection()

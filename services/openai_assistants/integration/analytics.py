@@ -12,7 +12,23 @@ logger = logging.getLogger(__name__)
 
 
 class IntegrationAnalytics:
-    """Handles analytics and usage tracking."""
+    """
+    Handles tracking and generation of analytics for user queries.
+
+    This class is designed to manage the tracking of user queries, classify intents,
+    and generate analytics. It provides methods for tracking queries, computing intent
+    distribution, calculating assistant usage, and assessing performance metrics. The
+    data collected is cached for optimization and efficiency purposes.
+
+    Attributes
+    ----------
+    intent_service : Any
+        Service to classify intents and route queries.
+    intent_mapper : Any
+        Mapper to resolve default assistants for specific intents.
+    _query_cache : defaultdict
+        In-memory cache to store tracked queries per user.
+    """
 
     def __init__(self, intent_service, intent_mapper):
         self.intent_service = intent_service

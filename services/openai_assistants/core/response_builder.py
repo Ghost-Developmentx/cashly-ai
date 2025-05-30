@@ -10,7 +10,19 @@ logger = logging.getLogger(__name__)
 
 
 class ResponseBuilder:
-    """Handles response formatting and building."""
+    """
+    Utility class for building response objects and managing response structure.
+
+    This class provides static methods to construct and format responses, both
+    successful and error cases, for a conversational assistant system. Additionally,
+    it contains methods to process tool results, classify metadata, and manage
+    response logging. The class aims to produce outputs compliant with specific
+    integrations and detailed enough for system debugging.
+
+    Methods include functionality to handle both user-intended responses and
+    exceptions in execution, while ensuring proper metadata alignment for subsequent
+    processing layers.
+    """
 
     @staticmethod
     def build_response(

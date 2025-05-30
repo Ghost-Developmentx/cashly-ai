@@ -12,7 +12,23 @@ logger = logging.getLogger(__name__)
 
 
 class RoutingIntelligence:
-    """Makes intelligent routing decisions based on historical data."""
+    """
+    RoutingIntelligence class.
+
+    Handles the logic for recommending the best assistant to handle a user's intent
+    based on historical data, user preferences, and predefined defaults. Ensures the
+    recommendation process considers success rates, similarity scores, and user-specific
+    settings to optimize assistant selection.
+
+    Attributes
+    ----------
+    min_success_rate : float
+        The minimum success rate threshold required for an assistant to be considered
+        in the recommendation process.
+    min_sample_size : int
+        The minimum number of historical samples required for an assistant to be
+        considered in the recommendation process.
+    """
 
     def __init__(self):
         self.min_success_rate = 0.7

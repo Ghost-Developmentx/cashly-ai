@@ -15,7 +15,30 @@ from ...core.response_builder import ResponseBuilder
 logger = logging.getLogger(__name__)
 
 class QueryHandler:
-    """Main handler orchestrating query processing."""
+    """
+    Handles user query processing by integrating classification, routing, and
+    assistant management systems.
+
+    This class is designed to manage complete query lifecycle processing, from
+    classification of user intents to routing the query to appropriate assistants,
+    processing function calls, and generating a final response. It utilizes internal
+    handlers for classification and routing, as well as an assistant management
+    system to facilitate these tasks. This handler streamlines query handling for
+    natural language processing or conversational AI systems.
+
+    Attributes
+    ----------
+    assistant_manager : Any
+        Manager responsible for handling assistant responses and interactions.
+    function_processor : Any
+        Processor responsible for transforming function calls into actionable
+        outputs or actions.
+    classifier : ClassificationHandler
+        Handles classification of user queries and determines initial assistants.
+    router : RoutingHandler
+        Handles rerouting decisions and execution for queries that require
+        alternate assistants.
+    """
 
     def __init__(
             self,

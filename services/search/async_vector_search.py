@@ -15,7 +15,27 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class SearchResult:
-    """Represents a similarity search result."""
+    """
+    Represents the result of a search operation where a conversational intent is
+    matched with a specific assistant type, along with its associated metadata and
+    evaluation indicators.
+
+    Attributes
+    ----------
+    conversation_id : str
+        The unique identifier of the related conversation.
+    intent : str
+        The identified intent from the search result.
+    assistant_type : str
+        The type of assistant associated with this result.
+    similarity_score : float
+        The calculated similarity score between the queried input and the identified
+        intent.
+    success_indicator : bool
+        Indicates whether the operation was considered successful.
+    metadata : Dict[str, Any]
+        Additional details or information about the search result.
+    """
 
     conversation_id: str
     intent: str
@@ -30,7 +50,24 @@ class SearchResult:
 
 
 class AsyncVectorSearchService:
-    """Async vector similarity search service."""
+    """
+    AsyncVectorSearchService performs similarity searches on conversation embeddings
+    and provides grouping, statistics retrieval, and management of vector operations.
+
+    This service is designed for applications requiring vector similarity calculations
+    with optional filters such as user-specific and intent-based constraints.
+
+    Attributes
+    ----------
+    db : Optional[AsyncDatabaseConnection]
+        An optional asynchronous database connection instance.
+    default_limit : int
+        The default maximum limit of search results.
+    min_similarity : float
+        The default minimum similarity threshold for search results.
+    _vector_ops : Optional[AsyncVectorOperations]
+        Lazy-initialized vector operations handler for performing vector-based searches.
+    """
 
     def __init__(
         self,

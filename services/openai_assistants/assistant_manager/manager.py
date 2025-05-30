@@ -16,8 +16,26 @@ logger = logging.getLogger(__name__)
 
 class AsyncAssistantManager:
     """
-    Unified async manager for OpenAI Assistants.
-    Combines all components for complete query processing.
+    Manage asynchronous query processing and assistant interactions.
+
+    The `AsyncAssistantManager` class orchestrates the execution of user queries
+    through various assistants, managing threads, context enhancement, and
+    response handling. It supports logging, health checks, and interaction with
+    other components like thread managers and tool executors. This class provides
+    a centralized API for handling user queries in an asynchronous environment.
+
+    Attributes
+    ----------
+    config : Optional[AssistantConfig]
+        Shared configuration for the assistant manager.
+    thread_manager : ThreadManager
+        Manages threads for user conversations.
+    tool_executor : ToolExecutor
+        Executes tools invoked during assistant interactions.
+    response_handler : ResponseHandler
+        Handles responses from assistant runs.
+    context_enhancer : ContextEnhancer
+        Enhances query context before processing.
     """
 
     def __init__(self, config: Optional[AssistantConfig] = None):

@@ -12,7 +12,22 @@ logger = logging.getLogger(__name__)
 
 
 class AsyncVectorOperations:
-    """Handles async vector operations with pgvector."""
+    """
+    AsyncVectorOperations is a utility class for performing various operations on vector embeddings
+    stored in a PostgreSQL database, using the pgvector extension. It supports creating vector extensions,
+    building vector similarity indexes, inserting vectors with metadata, searching for similar vectors, and
+    updating metadata of existing vector records.
+
+    This class is designed for asynchronous operations and relies on asyncpg as the database driver. It is
+    specifically crafted to work with OpenAI embedding vectors of fixed dimensionality.
+
+    Attributes
+    ----------
+    pool : asyncpg.Pool
+        A connection pool for asynchronous interaction with the PostgreSQL database.
+    vector_dimensions : int
+        The dimensionality of the OpenAI embedding vectors.
+    """
 
     def __init__(self, pool: asyncpg.Pool):
         self.pool = pool
