@@ -93,7 +93,8 @@ class ConversationContextBuilder:
 
         return metadata
 
-    def _summarize_assistant_response(self, content: str) -> str:
+    @staticmethod
+    def _summarize_assistant_response(content: str) -> str:
         """Summarize long assistant responses."""
         if len(content) < 200:
             return content
@@ -147,3 +148,35 @@ class ConversationContextBuilder:
                     function_calls.append("data_retrieval")
 
         return list(set(function_calls))
+
+    @staticmethod
+    def _extract_conversation_characteristics(
+        conversation_history: List[Dict],
+    ) -> List[str]:
+        """Extract characteristics of the conversation."""
+        characteristics = []
+
+        # Check for multi-turn
+        if len(conversation_history) > 2:
+            characteristics.append("multi_turn")
+
+        # Check for tool sequences
+        all_tools = []
+        for msg in conversation_history:
+            if msg.get("role") == "assistant" and "tools_used" in msg:
+                all_tools.extend([t["name"] for t in msg["tools_used"]])
+
+        if len(all_tools) > 1:
+            characteristics.append("multiple_tools")
+
+        # Check for corrections or updates
+        for msg in conversation_history:
+            content_lower = msg.get("content", "").lower()
+            if any(
+                word in content_lower
+                for word in ["update", "fix", "correct", "change", "actually"]
+            ):
+                characteristics.append("includes_corrections")
+                break
+
+        return characteristics

@@ -8,7 +8,7 @@ from datetime import datetime
 
 from services.embeddings.openai_client import OpenAIEmbeddingClient
 from services.embeddings.context_builder import ConversationContextBuilder
-from services.embeddings.storage import EmbeddingStorage
+from services.async_embeddings.storage import EmbeddingStorage
 
 logger = logging.getLogger(__name__)
 

@@ -1,9 +1,13 @@
-from .assistant_manager import AssistantManager, AssistantType, AssistantResponse
-from .openai_integration_service import OpenAIIntegrationService
+"""
+OpenAI Assistants package.
+"""
+
+from .integration import OpenAIIntegrationService
+from .assistant_manager import AsyncAssistantManager, AssistantType, AssistantResponse
 
 __all__ = [
-    "AssistantManager",
+    "OpenAIIntegrationService",
+    "AsyncAssistantManager",
     "AssistantType",
     "AssistantResponse",
-    "OpenAIIntegrationService",
 ]

@@ -1,5 +1,5 @@
 """
-Handlers for various aspects of the OpenAI integration.
+Handlers for OpenAI assistant operations.
 """
 
 from .query_handler import QueryHandler
