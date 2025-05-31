@@ -1,19 +1,23 @@
 import os
 import logging
+import sys
 from flask import Flask
 from flask_cors import CORS
 
 from routes.api_router import create_api_routes
 from controllers.base_controller import DateTimeEncoder
+import dotenv
+
+dotenv.load_dotenv()
 
 
 def create_app() -> Flask:
     """
     Application factory pattern for creating Flask app
-
-    Returns:
-        Configured Flask application
     """
+    # Check required environment variables
+    _check_environment()
+
     app = Flask(__name__)
 
     # Configure CORS
@@ -30,6 +34,25 @@ def create_app() -> Flask:
     app.register_blueprint(api_routes)
 
     return app
+
+
+def _check_environment():
+    """Check required environment variables."""
+    required_vars = [
+        "OPENAI_API_KEY",
+        "POSTGRES_HOST",
+        "POSTGRES_DB",
+        "POSTGRES_USER",
+        "POSTGRES_PASSWORD",
+    ]
+
+    missing_vars = [var for var in required_vars if not os.getenv(var)]
+
+    if missing_vars:
+        logging.error(
+            f"Missing required environment variables: {', '.join(missing_vars)}"
+        )
+        sys.exit(1)
 
 
 def _configure_logging():

@@ -8,6 +8,9 @@ from typing import Optional
 from openai import AsyncOpenAI
 from .config import AssistantConfig
 from .types import AssistantType
+import dotenv
+
+dotenv.load_dotenv()
 
 logger = logging.getLogger(__name__)
 

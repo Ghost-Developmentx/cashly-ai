@@ -3,7 +3,7 @@ Builds context from conversation history for embedding.
 """
 
 import logging
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
@@ -92,7 +92,7 @@ class ConversationContextBuilder:
             "intent": intent,
             "assistant_type": assistant_type,
             "message_count": len(conversation_history),
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now().isoformat(),
         }
 
         # Extract key topics
@@ -124,7 +124,8 @@ class ConversationContextBuilder:
             return context[: self.max_tokens * 4]
         return context
 
-    def _extract_topics(self, conversation_history: List[Dict[str, Any]]) -> List[str]:
+    @staticmethod
+    def _extract_topics(conversation_history: List[Dict[str, Any]]) -> List[str]:
         """Extract key topics from conversation."""
         topics = set()
 
@@ -145,8 +146,9 @@ class ConversationContextBuilder:
 
         return list(topics)
 
+    @staticmethod
     def _extract_function_calls(
-        self, conversation_history: List[Dict[str, Any]]
+        conversation_history: List[Dict[str, Any]],
     ) -> List[str]:
         """Extract function calls from conversation."""
         function_calls = []

@@ -63,8 +63,16 @@ class AsyncClassificationHandler:
     @staticmethod
     def _get_user_id(user_context: Optional[Dict]) -> str:
         """Extract user ID from context."""
-        if user_context and "user_id" in user_context:
-            return user_context["user_id"]
+        if user_context:
+            # Check multiple possible locations for user_id
+            if "user_id" in user_context:
+                return str(user_context["user_id"])
+            # Check if it's nested in metadata
+            if "metadata" in user_context and "user_id" in user_context["metadata"]:
+                return str(user_context["metadata"]["user_id"])
+
+        # Log warning when falling back to anonymous
+        logger.warning("No user_id found in context, using anonymous")
         return "anonymous"
 
     @staticmethod

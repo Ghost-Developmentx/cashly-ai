@@ -54,8 +54,8 @@ class AsyncDatabaseConfig:
     password: str
 
     # Async-specific settings
-    min_pool_size: int = 10
-    max_pool_size: int = 20
+    min_pool_size: int = 2
+    max_pool_size: int = 10
     max_queries: int = 50000
     max_inactive_connection_lifetime: float = 300.0
 

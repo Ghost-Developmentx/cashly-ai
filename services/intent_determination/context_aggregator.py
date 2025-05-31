@@ -5,6 +5,7 @@ Async context aggregation for intent resolution.
 import logging
 from typing import Dict, List, Any, Optional
 from datetime import datetime
+import hashlib
 
 from .context_processor import ContextProcessor
 from .context_cache import AsyncContextCache
@@ -50,22 +51,23 @@ class AsyncContextAggregator:
     ) -> Dict[str, Any]:
         """
         Process conversation context asynchronously.
-
-        Args:
-            conversation_id: Conversation identifier
-            user_id: User identifier
-            conversation_history: Raw conversation history
-            user_context: User context data
-            query: Current query
-
-        Returns:
-            Processed conversation data
         """
-        # Check cache first
-        cached_context = await self.cache.get(conversation_id)
+        # Create a unique cache key that includes the query and message count
+        cache_key = self._create_cache_key(
+            conversation_id, len(conversation_history), query
+        )
+
+        # Check cache with the unique key
+        cached_context = await self.cache.get(cache_key)
         if cached_context:
-            logger.info(f"Using cached context for {conversation_id}")
+            logger.info(f"Using cached context for {cache_key}")
             return cached_context
+
+        # Log what we're processing
+        logger.info(
+            f"Processing fresh context for conversation {conversation_id} "
+            f"with {len(conversation_history)} messages"
+        )
 
         # Process the context
         context_data = self._aggregate_context(
@@ -76,10 +78,16 @@ class AsyncContextAggregator:
             query=query,
         )
 
-        # Cache for future use
-        await self.cache.set(conversation_id, context_data)
+        # Cache for future use with the unique key
+        await self.cache.set(cache_key, context_data)
 
         return context_data
+
+    @staticmethod
+    def _create_cache_key(conversation_id: str, message_count: int, query: str) -> str:
+        """Create a unique cache key based on the conversation state."""
+        key_data = f"{conversation_id}:{message_count}:{query}"
+        return hashlib.md5(key_data.encode()).hexdigest()
 
     def _aggregate_context(
         self,

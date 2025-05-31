@@ -47,14 +47,6 @@ class AsyncRetryHandler:
     ) -> Optional[T]:
         """
         Execute an async function with exponential backoff retry.
-
-        Args:
-            func: Async function to execute
-            *args: Function arguments
-            **kwargs: Function keyword arguments
-
-        Returns:
-            Function result or None if all retries failed
         """
         last_exception = None
 
@@ -77,43 +69,33 @@ class AsyncRetryHandler:
                 )
                 await asyncio.sleep(wait_time)
 
-            except openai.APIError as e:
+            except (openai.APIConnectionError, openai.APITimeoutError) as e:
                 last_exception = e
-                logger.error(f"OpenAI API error: {e}")
-
-                # Don't retry on certain errors
-                if "invalid_api_key" in str(e).lower():
-                    break
+                logger.error(f"OpenAI API error: {type(e).__name__}: {e}")
 
                 if attempt < self.max_retries - 1:
                     wait_time = self._calculate_delay(attempt)
                     logger.info(f"Retrying after {wait_time:.1f}s...")
                     await asyncio.sleep(wait_time)
+                else:
+                    logger.error(f"All retries failed. Last error: {e}")
+
+            except openai.AuthenticationError as e:
+                logger.error(f"Authentication error: {e}")
+                break  # Don't retry auth errors
 
             except Exception as e:
                 logger.error(f"Unexpected error in retry handler: {e}")
                 last_exception = e
                 break
 
-        # All retries failed
-        if last_exception:
-            logger.error(f"All retries failed. Last error: {last_exception}")
-
         return None
 
     def _calculate_delay(self, attempt: int) -> float:
-        """
-        Calculate delay for exponential backoff.
-
-        Args:
-            attempt: Current attempt number (0-indexed)
-
-        Returns:
-            Delay in seconds
-        """
+        """Calculate delay for exponential backoff."""
         delay = min(self.base_delay * (self.exponential_base**attempt), self.max_delay)
 
-        # Add jitter to prevent thundering herd
+        # Add jitter
         import random
 
         jitter = random.uniform(0, 0.1 * delay)

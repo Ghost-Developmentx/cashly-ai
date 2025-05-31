@@ -36,8 +36,8 @@ class OpenAIConfig:
     api_key: str
     embedding_model: str = "text-embedding-3-small"
     embedding_dimensions: int = 1536
-    max_tokens: int = 8191  # Max tokens for text-embedding-3-small
-    request_timeout: int = 30
+    max_tokens: int = 8191
+    request_timeout: int = 60  # Increased from 30
     max_retries: int = 3
 
     @classmethod
@@ -54,6 +54,6 @@ class OpenAIConfig:
             ),
             embedding_dimensions=int(os.getenv("OPENAI_EMBEDDING_DIMENSIONS", "1536")),
             max_tokens=int(os.getenv("OPENAI_MAX_TOKENS", "8191")),
-            request_timeout=int(os.getenv("OPENAI_REQUEST_TIMEOUT", "30")),
+            request_timeout=int(os.getenv("OPENAI_REQUEST_TIMEOUT", "60")),
             max_retries=int(os.getenv("OPENAI_MAX_RETRIES", "3")),
         )

@@ -6,6 +6,7 @@ Provides connection pooling and session management.
 import logging
 from contextlib import asynccontextmanager
 from typing import Optional, AsyncGenerator
+import inspect, time
 
 import asyncpg
 from sqlalchemy.ext.asyncio import (
@@ -51,6 +52,7 @@ class AsyncDatabaseConnection:
     async def engine(self) -> AsyncEngine:
         """Get or create an async database engine."""
         if self._engine is None:
+            logger.debug("🛠 Creating async SQLAlchemy engine...")
             self._engine = create_async_engine(
                 self.config.async_connection_string,
                 echo=False,
@@ -64,7 +66,7 @@ class AsyncDatabaseConnection:
                     "command_timeout": self.config.command_timeout,
                 },
             )
-            logger.info("Created async database engine")
+            logger.info("✅ Created async SQLAlchemy engine")
         return self._engine
 
     @property
@@ -98,12 +100,18 @@ class AsyncDatabaseConnection:
                 await session.close()
 
     async def get_asyncpg_pool(self) -> asyncpg.Pool:
-        """Get or create asyncpg connection pool for raw queries."""
         if self._asyncpg_pool is None:
+            ts = time.perf_counter()
+            caller = inspect.stack()[1]
+            logger.warning(
+                "🚰 NEW asyncpg pool built (%.0f ms) | caller=%s:%d",
+                (time.perf_counter() - ts) * 1000,
+                caller.filename,
+                caller.lineno,
+            )
             self._asyncpg_pool = await asyncpg.create_pool(
                 self.config.asyncpg_url, **self.config.get_pool_kwargs()
             )
-            logger.info("Created asyncpg connection pool")
         return self._asyncpg_pool
 
     async def test_connection(self) -> bool:
@@ -120,11 +128,11 @@ class AsyncDatabaseConnection:
         """Close all database connections."""
         if self._asyncpg_pool:
             await self._asyncpg_pool.close()
-            logger.info("Closed asyncpg pool")
+            logger.info("🔒 Closed asyncpg pool")
 
         if self._engine:
             await self._engine.dispose()
-            logger.info("Disposed async engine")
+            logger.info("🔒 Disposed SQLAlchemy async engine")
 
         self._engine = None
         self._session_factory = None

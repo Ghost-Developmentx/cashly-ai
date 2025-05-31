@@ -76,15 +76,6 @@ class ContextProcessor:
     ) -> str:
         """
         Prepare text for embedding generation.
-
-        Args:
-            conversation_history: Conversation messages
-            user_context: User context data
-            current_query: Current user query
-            max_length: Maximum text length
-
-        Returns:
-            Text optimized for embedding
         """
         parts = []
 
@@ -95,11 +86,15 @@ class ContextProcessor:
                 parts.append(f"User Context: {context_summary}")
 
         # Add conversation flow
-        conversation_flow = self._create_conversation_flow(
-            conversation_history[-10:]  # Last 10 messages
-        )
-        if conversation_flow:
-            parts.append(f"Conversation:\n{conversation_flow}")
+        if conversation_history:
+            logger.info(
+                f"Including {len(conversation_history)} messages in embedding context"
+            )
+            conversation_flow = self._create_conversation_flow(
+                conversation_history[-10:]  # Last 10 messages
+            )
+            if conversation_flow:
+                parts.append(f"Conversation:\n{conversation_flow}")
 
         # Add current query
         parts.append(f"Current Query: {current_query}")
@@ -109,6 +104,7 @@ class ContextProcessor:
         if len(text) > max_length:
             text = text[: max_length - 3] + "..."
 
+        logger.debug(f"Prepared embedding text: {len(text)} characters")
         return text
 
     @staticmethod
@@ -209,20 +205,29 @@ class ContextProcessor:
     def _create_conversation_flow(self, messages: List[Dict[str, Any]]) -> str:
         """Create a conversation flow summary."""
         flow_parts = []
+        total_length = 0
+        max_flow_length = 2000  # Limit conversation flow size
 
         for msg in messages:
             role = msg.get("role", "unknown")
             content = msg.get("content", "")
+
+            # Skip if adding this would exceed limit
+            if total_length + len(content) > max_flow_length:
+                flow_parts.append("... (truncated earlier messages)")
+                break
 
             if role == "user":
                 # Truncate long messages
                 if len(content) > 200:
                     content = content[:200] + "..."
                 flow_parts.append(f"User: {content}")
+                total_length += len(content) + 6  # "User: "
             elif role == "assistant":
                 # Summarize assistant responses
                 summary = self._summarize_assistant_response(content)
                 flow_parts.append(f"Assistant: {summary}")
+                total_length += len(summary) + 11  # "Assistant: "
 
         return "\n".join(flow_parts)
 

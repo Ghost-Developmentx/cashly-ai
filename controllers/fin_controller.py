@@ -47,12 +47,26 @@ class FinController(BaseController):
             conversation_history = data.get("conversation_history", [])
             user_context = data.get("user_context", {})
 
+            # Add conversation_id to user_context if available
+            if conversation_history and not user_context.get("conversation_id"):
+                # Generate a proper conversation ID based on user and session
+                user_context["conversation_id"] = (
+                    f"conv_{user_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+                )
+
+            # Ensure user_id is in context
+            if "user_id" not in user_context:
+                user_context["user_id"] = user_id
+
             # Log request details with debugging info
             self.logger.info(f"📥 OpenAI Fin query from user {user_id}: {query}")
             self.logger.info(
                 f"📥 User context: {len(user_context.get('accounts', []))} accounts"
             )
             self.logger.info(f"📥 Transactions: {len(transactions)}")
+            self.logger.info(
+                f"📥 Conversation history: {len(conversation_history)} messages"
+            )
 
             # Add transactions to user_context for assistant access
             if user_context and transactions:

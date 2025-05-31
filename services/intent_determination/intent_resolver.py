@@ -8,41 +8,30 @@ import logging
 from typing import Dict, Any, List, Optional
 
 from ..embeddings.async_embedding_client import AsyncOpenAIEmbeddingClient
-from ..search.async_vector_search import AsyncVectorSearchService
+from services.search.async_vector_search import AsyncVectorSearchService
 from .intent_determiner import IntentDeterminer
 from .routing_intelligence import RoutingIntelligence
 from .context_aggregator import AsyncContextAggregator
 
 logger = logging.getLogger(__name__)
 
+_shared_search_service = AsyncVectorSearchService()
+
 
 class AsyncIntentResolver:
     """
-    Handles asynchronous intent resolution by processing context, generating embeddings,
-    performing similarity searches, and determining intent with appropriate routing decision-making.
-
-    This class is designed to resolve user intents asynchronously by leveraging vector-based
-    searches and routing intelligence. It integrates multiple services for embedding generation,
-    context aggregation, search, and analysis, ensuring a comprehensive and structured resolution
-    procedure. The fallback mechanism ensures reliability in case of resolution failures.
-
-    Attributes
-    ----------
-    embedding_client : AsyncOpenAIEmbeddingClient
-        Service for generating text embeddings asynchronously.
-    search_service : AsyncVectorSearchService
-        Service for searching similar embeddings or contexts asynchronously.
-    intent_determiner : IntentDeterminer
-        Component for determining intent from search results and context.
-    routing_intelligence : RoutingIntelligence
-        Component for recommending routing or assistants based on intent and user preferences.
-    context_aggregator : AsyncContextAggregator
-        Service for aggregating and processing conversation context asynchronously.
+    Handles asynchronous intent resolution.
     """
 
+    _shared_embedding_client: Optional[AsyncOpenAIEmbeddingClient] = None
+
     def __init__(self):
-        self.embedding_client = AsyncOpenAIEmbeddingClient()
-        self.search_service = AsyncVectorSearchService()
+        # Use a shared embedding client to avoid connection issues
+        if AsyncIntentResolver._shared_embedding_client is None:
+            AsyncIntentResolver._shared_embedding_client = AsyncOpenAIEmbeddingClient()
+        self.embedding_client = AsyncIntentResolver._shared_embedding_client
+
+        self.search_service = _shared_search_service
         self.intent_determiner = IntentDeterminer()
         self.routing_intelligence = RoutingIntelligence()
         self.context_aggregator = AsyncContextAggregator()
@@ -57,18 +46,11 @@ class AsyncIntentResolver:
     ) -> Dict[str, Any]:
         """
         Resolve intent asynchronously using context and similarity search.
-
-        Args:
-            query: Current user query
-            conversation_history: Previous messages
-            user_id: User identifier
-            conversation_id: Conversation identifier
-            user_context: Additional user context
-
-        Returns:
-            Complete intent resolution with routing
         """
         try:
+            # Log the start of processing
+            logger.info(f"Starting intent resolution for query: '{query}'")
+
             # Process conversation context asynchronously
             processed_context = (
                 await self.context_aggregator.process_conversation_async(
@@ -80,6 +62,11 @@ class AsyncIntentResolver:
                 )
             )
 
+            # Log embedding generation
+            logger.info(
+                f"Generating embedding for text ({len(processed_context['embedding_text'])} chars)"
+            )
+
             # Generate embedding asynchronously
             embedding = await self.embedding_client.create_embedding(
                 processed_context["embedding_text"]
@@ -89,18 +76,16 @@ class AsyncIntentResolver:
                 logger.warning("Failed to generate embedding")
                 return self._create_fallback_resolution(query)
 
-            # Search for similar conversations asynchronously
+            # Continue with search and resolution...
             search_results = await self.search_service.search_similar(
                 embedding=embedding, user_id=None, limit=10
             )
 
-            # Determine intent (sync is fine here - just computation)
             intent, confidence, analysis = self.intent_determiner.determine_intent(
                 search_results=search_results,
                 query_context=processed_context["key_information"],
             )
 
-            # Get routing recommendation (sync is fine here - just computation)
             routing = self.routing_intelligence.recommend_assistant(
                 intent=intent,
                 search_results=search_results,
@@ -109,7 +94,6 @@ class AsyncIntentResolver:
                 ),
             )
 
-            # Build complete resolution
             resolution = self._build_resolution(
                 intent=intent,
                 confidence=confidence,
@@ -190,4 +174,3 @@ class AsyncIntentResolver:
     async def close(self):
         """Close async resources."""
         await self.embedding_client.close()
-        await self.search_service.close()

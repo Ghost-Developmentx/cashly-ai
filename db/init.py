@@ -3,7 +3,6 @@ Database initialization module with async support.
 """
 
 import logging
-import asyncio
 from typing import Optional
 
 from config.database import DatabaseConfig
@@ -33,22 +32,27 @@ class AsyncDatabaseInitializer:
 
     def __init__(self, config: Optional[AsyncDatabaseConfig] = None):
         self.config = config or AsyncDatabaseConfig.from_env()
-        self.connection = AsyncDatabaseConnection(self.config)
+        self.connection: Optional[AsyncDatabaseConnection] = (
+            None  # ✅ Delay instantiation
+        )
 
     async def initialize(self) -> bool:
         """
-        Initialize database with all required tables and extensions.
+        Initialize a database with all required tables and extensions.
 
         Returns:
             True if successful, False otherwise
         """
         try:
+            # ✅ Use shared async DB connection
+            self.connection = await get_async_db_connection()
+
             # Test connection
             if not await self.connection.test_connection():
                 logger.error("Database connection failed")
                 return False
 
-            # Setup pgvector extension
+            # Set up pgvector extension
             pool = await self.connection.get_asyncpg_pool()
             from db.async_db.vector_ops import AsyncVectorOperations
 
@@ -60,8 +64,6 @@ class AsyncDatabaseInitializer:
 
             # Run migrations (still sync for now)
             logger.info("Running database migrations...")
-            # Note: Migrations would need to be converted to async
-            # For now, we'll use sync connection for migrations
             from db.connection import DatabaseConnection
 
             sync_config = DatabaseConfig.from_env()
@@ -80,8 +82,10 @@ class AsyncDatabaseInitializer:
         except Exception as e:
             logger.error(f"Database initialization failed: {e}")
             return False
+
         finally:
-            await self.connection.close()
+            # ✅ Do not close the shared pool here
+            pass
 
 
 # Singleton instance
@@ -91,10 +95,6 @@ _async_db_connection: Optional[AsyncDatabaseConnection] = None
 async def get_async_db_connection() -> AsyncDatabaseConnection:
     """
     Get the global asynchronous database connection instance.
-
-    This function initializes and retrieves a singleton instance of an asynchronous database connection.
-    If the connection is not yet created, it will use configuration data loaded from the environment to
-    initialize the connection. Subsequent calls to this function will return the same instance.
 
     Returns
     -------
@@ -110,28 +110,17 @@ async def get_async_db_connection() -> AsyncDatabaseConnection:
 
 def get_db_connection():
     """
-    Establish a synchronous database connection.
-
-    This function retrieves database configuration using environment variables
-    and establishes a connection to the database. Note that this function
-    is deprecated and should be replaced by `get_async_db_connection()` for
-    asynchronous database operations.
-
-    Warnings
-    --------
-    This function is deprecated. Use `get_async_db_connection()` instead.
+    Establish a synchronous database connection (deprecated).
 
     Returns
     -------
     DatabaseConnection
-        An instance of `DatabaseConnection` representing the established
-        database connection.
+        An instance of `DatabaseConnection`.
     """
     logger.warning(
-        "get_db_connection() is deprecated. " "Use get_async_db_connection() instead."
+        "get_db_connection() is deprecated. Use get_async_db_connection() instead."
     )
     from db.connection import DatabaseConnection
-    from config.database import DatabaseConfig
 
     config = DatabaseConfig.from_env()
     return DatabaseConnection(config)
