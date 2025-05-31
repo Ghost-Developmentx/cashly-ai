@@ -6,9 +6,25 @@ from flask_cors import CORS
 
 from routes.api_router import create_api_routes
 from controllers.base_controller import DateTimeEncoder
+from middleware.async_context import AsyncContextMiddleware
+from db.singleton_registry import registry
 import dotenv
+import atexit
+import asyncio
 
 dotenv.load_dotenv()
+
+
+def cleanup_on_exit():
+    """Clean up resources on application exit."""
+    logger = logging.getLogger(__name__)
+    logger.info("🛑 Application shutting down...")
+
+    # Run async cleanup
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(registry.cleanup_all())
+    loop.close()
 
 
 def create_app() -> Flask:
@@ -29,9 +45,13 @@ def create_app() -> Flask:
     # Configure logging
     _configure_logging()
 
+    AsyncContextMiddleware(app)
+
     # Register API routes
     api_routes = create_api_routes()
     app.register_blueprint(api_routes)
+
+    atexit.register(cleanup_on_exit)
 
     return app
 
@@ -58,7 +78,7 @@ def _check_environment():
 def _configure_logging():
     """Configure application logging"""
     logging.basicConfig(
-        level=logging.INFO,
+        level=logging.DEBUG,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 

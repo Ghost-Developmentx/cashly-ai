@@ -3,12 +3,13 @@ Async vector similarity search service.
 High-performance similarity search for embeddings.
 """
 
-import asyncio
 import logging
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass, asdict
 
+from db.async_db import AsyncDatabaseConnection
 from db.init import get_async_db_connection
+from db.singleton_registry import registry
 from db.async_db.vector_ops import AsyncVectorOperations
 
 logger = logging.getLogger(__name__)
@@ -28,36 +29,24 @@ class SearchResult:
 
 
 class AsyncVectorSearchService:
-    """Singleton async vector search layer that re‑uses one asyncpg pool."""
-
-    _instance: "AsyncVectorSearchService | None" = None
-    _lock: asyncio.Lock = asyncio.Lock()
-
-    # --------------------------- singleton accessor --------------------------- #
-    @classmethod
-    async def get_instance(cls) -> "AsyncVectorSearchService":
-        async with cls._lock:
-            if cls._instance is None:
-                cls._instance = cls()
-            return cls._instance
-
-    # ------------------------------- lifecycle -------------------------------- #
-    def __init__(self, default_limit: int = 5, min_similarity: float = 0.6) -> None:
-        # this runs only once thanks to the singleton
-        self.db = None  # set lazily to the shared connection
+    def __init__(self, default_limit: int = 5, min_similarity: float = 0.6):
         self.default_limit = default_limit
         self.min_similarity = min_similarity
+        self._db: Optional[AsyncDatabaseConnection] = None
         self._vector_ops: Optional[AsyncVectorOperations] = None
+        logger.info("✅ AsyncVectorSearchService created")
 
-    async def _ensure_db(self) -> None:
-        if self.db is None:
-            self.db = await get_async_db_connection()
+    async def _ensure_connection(self) -> None:
+        """Ensure a database connection is established."""
+        if self._db is None:
+            self._db = await get_async_db_connection()
+            logger.info("✅ AsyncVectorSearchService connected to shared DB")
 
-    # ------------------------------- internals -------------------------------- #
     async def _get_vector_ops(self) -> AsyncVectorOperations:
-        await self._ensure_db()
+        """Get or create a vector operations handler."""
+        await self._ensure_connection()
         if self._vector_ops is None:
-            pool = await self.db.get_asyncpg_pool()
+            pool = await self._db.get_asyncpg_pool()
             self._vector_ops = AsyncVectorOperations(pool)
         return self._vector_ops
 
@@ -70,6 +59,7 @@ class AsyncVectorSearchService:
         limit: Optional[int] = None,
         similarity_threshold: Optional[float] = None,
     ) -> List[SearchResult]:
+        """Search for similar vectors."""
         limit = limit or self.default_limit
         threshold = similarity_threshold or self.min_similarity
 
@@ -88,6 +78,7 @@ class AsyncVectorSearchService:
                 threshold=threshold,
                 filters=filters,
             )
+
             return [
                 SearchResult(
                     conversation_id=row["conversation_id"],
@@ -106,6 +97,7 @@ class AsyncVectorSearchService:
     async def search_by_intent(
         self, embedding: List[float], intents: List[str], limit: int = 10
     ) -> Dict[str, List[SearchResult]]:
+        """Search by multiple intents."""
         results: Dict[str, List[SearchResult]] = {}
         for intent in intents:
             results[intent] = await self.search_similar(
@@ -114,9 +106,10 @@ class AsyncVectorSearchService:
         return results
 
     async def get_statistics(self) -> Dict[str, Any]:
+        """Get search statistics."""
         try:
-            await self._ensure_db()
-            pool = await self.db.get_asyncpg_pool()
+            await self._ensure_connection()
+            pool = await self._db.get_asyncpg_pool()
             async with pool.acquire() as conn:
                 total = await conn.fetchval(
                     "SELECT COUNT(*) FROM conversation_embeddings"
@@ -136,7 +129,14 @@ class AsyncVectorSearchService:
             logger.error("Statistics query failed: %s", e, exc_info=True)
             return {"error": str(e)}
 
-    # ----------------------------- teardown (noop) ---------------------------- #
-    async def close(self):
-        """No‑op: pool is shared and closed at app shutdown."""
-        pass
+    @classmethod
+    async def get_instance(cls) -> "AsyncVectorSearchService":
+        async def factory():
+            return cls()
+
+        return await registry.get_or_create("vector_search_service", factory)
+
+    @staticmethod
+    async def close():
+        """No-op: pool is managed by shared connection."""
+        logger.info("AsyncVectorSearchService.close() called (no-op)")

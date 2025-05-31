@@ -2,49 +2,65 @@
 Database initialization module with async support.
 """
 
+import asyncio
+import atexit
 import logging
+import signal
 from typing import Optional
 
 from config.database import DatabaseConfig
 from db.async_db import AsyncDatabaseConnection, AsyncDatabaseConfig
+from db.singleton_registry import registry
 from db.migrations.m001_create_conversation_embeddings import upgrade
 
 logger = logging.getLogger(__name__)
 
 
+async def get_async_db_connection() -> AsyncDatabaseConnection:
+    """
+    Get the global asynchronous database connection instance.
+    Uses a process-wide singleton registry to ensure true singleton behavior.
+    """
+
+    async def create_connection():
+        config = AsyncDatabaseConfig.from_env()
+        return AsyncDatabaseConnection(config)
+
+    return await registry.get_or_create("async_db_connection", create_connection)
+
+
+def cleanup_handler(signum=None, frame=None):
+    """Handle cleanup on shutdown."""
+    logger.info("🛑 Shutdown signal received, cleaning up...")
+
+    # Run async cleanup in a new event loop if needed
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+    loop.run_until_complete(registry.cleanup_all())
+    logger.info("✅ Cleanup complete")
+
+
+# Register cleanup handlers
+atexit.register(cleanup_handler)
+signal.signal(signal.SIGINT, cleanup_handler)
+signal.signal(signal.SIGTERM, cleanup_handler)
+
+
 class AsyncDatabaseInitializer:
-    """
-    Handles asynchronous initialization of a database.
-
-    This class is responsible for preparing the database environment,
-    including testing the connection, setting up required extensions,
-    managing migrations, and creating indexes. It leverages both
-    asynchronous and synchronous operations to ensure proper database
-    setup.
-
-    Attributes
-    ----------
-    config : Optional[AsyncDatabaseConfig]
-        Configuration details for the database connection.
-    connection : AsyncDatabaseConnection
-        Asynchronous database connection instance.
-    """
+    """Handles asynchronous initialization of a database."""
 
     def __init__(self, config: Optional[AsyncDatabaseConfig] = None):
         self.config = config or AsyncDatabaseConfig.from_env()
-        self.connection: Optional[AsyncDatabaseConnection] = (
-            None  # ✅ Delay instantiation
-        )
+        self.connection: Optional[AsyncDatabaseConnection] = None
 
     async def initialize(self) -> bool:
-        """
-        Initialize a database with all required tables and extensions.
-
-        Returns:
-            True if successful, False otherwise
-        """
+        """Initialize a database with all required tables and extensions."""
         try:
-            # ✅ Use shared async DB connection
+            # Use the singleton connection
             self.connection = await get_async_db_connection()
 
             # Test connection
@@ -82,45 +98,3 @@ class AsyncDatabaseInitializer:
         except Exception as e:
             logger.error(f"Database initialization failed: {e}")
             return False
-
-        finally:
-            # ✅ Do not close the shared pool here
-            pass
-
-
-# Singleton instance
-_async_db_connection: Optional[AsyncDatabaseConnection] = None
-
-
-async def get_async_db_connection() -> AsyncDatabaseConnection:
-    """
-    Get the global asynchronous database connection instance.
-
-    Returns
-    -------
-    AsyncDatabaseConnection
-        The global asynchronous database connection instance.
-    """
-    global _async_db_connection
-    if _async_db_connection is None:
-        config = AsyncDatabaseConfig.from_env()
-        _async_db_connection = AsyncDatabaseConnection(config)
-    return _async_db_connection
-
-
-def get_db_connection():
-    """
-    Establish a synchronous database connection (deprecated).
-
-    Returns
-    -------
-    DatabaseConnection
-        An instance of `DatabaseConnection`.
-    """
-    logger.warning(
-        "get_db_connection() is deprecated. Use get_async_db_connection() instead."
-    )
-    from db.connection import DatabaseConnection
-
-    config = DatabaseConfig.from_env()
-    return DatabaseConnection(config)

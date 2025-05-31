@@ -1,9 +1,4 @@
 # services/intent_determination/async_intent_resolver.py
-"""
-Async intent resolver using vector similarity search.
-Determines intent through context-aware embedding search.
-"""
-
 import logging
 from typing import Dict, Any, List, Optional
 
@@ -15,26 +10,24 @@ from .context_aggregator import AsyncContextAggregator
 
 logger = logging.getLogger(__name__)
 
-_shared_search_service = AsyncVectorSearchService()
-
 
 class AsyncIntentResolver:
-    """
-    Handles asynchronous intent resolution.
-    """
-
-    _shared_embedding_client: Optional[AsyncOpenAIEmbeddingClient] = None
-
     def __init__(self):
-        # Use a shared embedding client to avoid connection issues
-        if AsyncIntentResolver._shared_embedding_client is None:
-            AsyncIntentResolver._shared_embedding_client = AsyncOpenAIEmbeddingClient()
-        self.embedding_client = AsyncIntentResolver._shared_embedding_client
-
-        self.search_service = _shared_search_service
+        # Don't create the client here
+        self.embedding_client = None  # Will be set lazily
+        self.search_service = None  # Will be set lazily
         self.intent_determiner = IntentDeterminer()
         self.routing_intelligence = RoutingIntelligence()
         self.context_aggregator = AsyncContextAggregator()
+
+    async def _ensure_services(self):
+        """Ensure we have valid service instances."""
+        if self.embedding_client is None:
+            self.embedding_client = await AsyncOpenAIEmbeddingClient.get_instance()
+
+        if self.search_service is None:
+            # Use singleton pattern for search service too
+            self.search_service = await AsyncVectorSearchService.get_instance()
 
     async def resolve_intent(
         self,
@@ -47,6 +40,7 @@ class AsyncIntentResolver:
         """
         Resolve intent asynchronously using context and similarity search.
         """
+        await self._ensure_services()
         try:
             # Log the start of processing
             logger.info(f"Starting intent resolution for query: '{query}'")
@@ -171,6 +165,7 @@ class AsyncIntentResolver:
 
         return "general"
 
-    async def close(self):
-        """Close async resources."""
-        await self.embedding_client.close()
+    @staticmethod
+    async def close():
+        """No-op: singletons are managed globally."""
+        logger.info("AsyncIntentResolver.close() called (no-op)")

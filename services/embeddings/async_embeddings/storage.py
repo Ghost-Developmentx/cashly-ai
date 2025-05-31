@@ -8,9 +8,23 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 
 from db.async_db.vector_ops import AsyncVectorOperations
-from db.init import get_async_db_connection  # ✅ Use shared singleton
+from db.async_db import AsyncDatabaseConnection, AsyncDatabaseConfig
+from db.singleton_registry import registry
 
 logger = logging.getLogger(__name__)
+
+
+async def get_async_db_connection() -> AsyncDatabaseConnection:
+    """
+    Get the global asynchronous database connection instance.
+    Uses a process-wide singleton registry to ensure true singleton behavior.
+    """
+
+    async def create_connection():
+        config = AsyncDatabaseConfig.from_env()
+        return AsyncDatabaseConnection(config)
+
+    return await registry.get_or_create("async_db_connection", create_connection)
 
 
 class AsyncEmbeddingStorage:
@@ -21,19 +35,20 @@ class AsyncEmbeddingStorage:
     """
 
     def __init__(self):
-        self.db = None
+        self._db = None
         self._vector_ops: Optional[AsyncVectorOperations] = None
 
-    async def _ensure_db(self):
-        if self.db is None:
-            self.db = await get_async_db_connection()
+    async def _ensure_connection(self):
+        """Ensure database connection using a shared singleton."""
+        if self._db is None:
+            self._db = await get_async_db_connection()
 
     async def get_vector_ops(self) -> AsyncVectorOperations:
         """Get or create a vector operations handler."""
-        await self._ensure_db()
+        await self._ensure_connection()
 
         if self._vector_ops is None:
-            pool = await self.db.get_asyncpg_pool()
+            pool = await self._db.get_asyncpg_pool()
             self._vector_ops = AsyncVectorOperations(pool)
         return self._vector_ops
 
@@ -105,10 +120,10 @@ class AsyncEmbeddingStorage:
 
     async def get_user_patterns(self, user_id: str, days: int = 30) -> Dict[str, Any]:
         try:
-            await self._ensure_db()
+            await self._ensure_connection()
             cutoff_date = datetime.now() - timedelta(days=days)
 
-            pool = await self.db.get_asyncpg_pool()
+            pool = await self._db.get_asyncpg_pool()
             async with pool.acquire() as conn:
                 intent_rows = await conn.fetch(
                     """
@@ -156,10 +171,10 @@ class AsyncEmbeddingStorage:
 
     async def cleanup_old_embeddings(self, days_to_keep: int = 90) -> int:
         try:
-            await self._ensure_db()
+            await self._ensure_connection()
             cutoff_date = datetime.now() - timedelta(days=days_to_keep)
 
-            pool = await self.db.get_asyncpg_pool()
+            pool = await self._db.get_asyncpg_pool()
             async with pool.acquire() as conn:
                 deleted = await conn.fetchval(
                     """
@@ -177,6 +192,7 @@ class AsyncEmbeddingStorage:
             logger.error(f"Failed to cleanup embeddings: {e}", exc_info=True)
             return 0
 
-    async def close(self):
-        # No-op for shared singleton pattern
-        pass
+    @staticmethod
+    async def close():
+        """No-op: connection is managed globally."""
+        logger.info("AsyncEmbeddingStorage.close() called (no-op)")

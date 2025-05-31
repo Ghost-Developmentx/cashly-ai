@@ -10,6 +10,7 @@ import httpx
 from openai import AsyncOpenAI
 
 from config.openai import OpenAIConfig
+from db.singleton_registry import registry
 from .embedding_processor import EmbeddingProcessor
 from .token_manager import TokenManager
 from .retry_handler import AsyncRetryHandler
@@ -19,62 +20,86 @@ logger = logging.getLogger(__name__)
 
 class AsyncOpenAIEmbeddingClient:
     """
-    Asynchronous client for interacting with OpenAI API to generate text embeddings.
+    Asynchronous client for OpenAI embeddings with event loop management.
     """
 
-    _instance: Optional["AsyncOpenAIEmbeddingClient"] = None
-    _lock = asyncio.Lock()
-    _semaphore = asyncio.Semaphore(5)  # Limit concurrent embedding requests
-
     def __init__(self, config: Optional[OpenAIConfig] = None):
-        # ensure singleton initialization
-        if hasattr(self, "_initialized"):
-            return
-
         self.config = config or OpenAIConfig.from_env()
-        self._initialized = True
+        self._loop_id: Optional[int] = None
+        self._client: Optional[AsyncOpenAI] = None
+        self._httpx_client: Optional[httpx.AsyncClient] = None
 
-        # ---- custom HTTP transport (HTTP/2, explicit timeouts) ------------
-        _httpx_client = httpx.AsyncClient(
-            http2=True,
-            limits=httpx.Limits(max_connections=20, max_keepalive_connections=10),
-            timeout=httpx.Timeout(
-                connect=10.0,
-                read=60.0,
-                write=10.0,
-                pool=5.0,
-            ),
-        )
-
-        # ---- OpenAI async client (SDK retries disabled) --------------------
-        self.client = AsyncOpenAI(
-            api_key=self.config.api_key,
-            max_retries=0,
-            http_client=_httpx_client,
-        )
-
-        # sub‑components
+        # Components that don't need loop awareness
         self.token_manager = TokenManager(self.config)
         self.processor = EmbeddingProcessor()
         self.retry_handler = AsyncRetryHandler(self.config)
 
-    # ---------------------------------------------------------------------
-    # singleton accessor
-    # ---------------------------------------------------------------------
-    @classmethod
-    async def get_instance(cls, config: Optional[OpenAIConfig] = None):
-        async with cls._lock:
-            if cls._instance is None:
-                cls._instance = cls(config)
-            return cls._instance
+        # Semaphore for rate limiting
+        self._semaphore = asyncio.Semaphore(5)
+
+    async def is_valid(self) -> bool:
+        """Check if this client is valid for the current event loop."""
+        current_loop_id = id(asyncio.get_running_loop())
+        return self._loop_id == current_loop_id and self._client is not None
+
+    async def _ensure_client(self):
+        """Ensure we have a valid client for the current event loop."""
+        current_loop_id = id(asyncio.get_running_loop())
+
+        if self._loop_id != current_loop_id or self._client is None:
+            # Clean up old client if it exists
+            await self._cleanup_client()
+
+            logger.info(f"🔄 Creating OpenAI client for loop {current_loop_id}")
+
+            # Create a new HTTP client with proper settings
+            self._httpx_client = httpx.AsyncClient(
+                http2=True,
+                limits=httpx.Limits(max_connections=20, max_keepalive_connections=10),
+                timeout=httpx.Timeout(
+                    connect=10.0,
+                    read=self.config.request_timeout,
+                    write=10.0,
+                    pool=5.0,
+                ),
+            )
+
+            # Create OpenAI client
+            self._client = AsyncOpenAI(
+                api_key=self.config.api_key,
+                max_retries=0,  # We handle retries ourselves
+                http_client=self._httpx_client,
+            )
+
+            self._loop_id = current_loop_id
+
+    async def _cleanup_client(self):
+        """Clean up the current client."""
+        if self._client:
+            try:
+                await self._client.close()
+            except Exception as e:
+                logger.error(f"Error closing OpenAI client: {e}")
+            self._client = None
+
+        if self._httpx_client:
+            try:
+                await self._httpx_client.aclose()
+            except Exception as e:
+                logger.error(f"Error closing httpx client: {e}")
+            self._httpx_client = None
 
     # ---------------------------------------------------------------------
     # public helpers
     # ---------------------------------------------------------------------
     async def create_embedding(self, text: str) -> Optional[List[float]]:
+        """Create embedding with proper client management."""
         if not text or not text.strip():
             logger.warning("Empty text provided for embedding")
             return None
+
+        # Ensure we have a valid client
+        await self._ensure_client()
 
         processed_text = self.processor.prepare_text(text)
         truncated_text = self.token_manager.truncate_text(processed_text)
@@ -116,34 +141,18 @@ class AsyncOpenAIEmbeddingClient:
     # ---------------------------------------------------------------------
     # low‑level helpers
     # ---------------------------------------------------------------------
-    @staticmethod
-    def _log_sockets(tag: str):
-        proc = psutil.Process(os.getpid())
-        conns = proc.net_connections(kind="inet")
-        outbound = sum(1 for c in conns if c.raddr)
-        logger.debug(
-            "%s | fds=%d sockets=%d outbound=%d",
-            tag,
-            proc.num_fds(),
-            len(conns),
-            outbound,
-        )
 
     # call just before the API request
     async def _create_single_embedding(self, text: str):
-        self._log_sockets("📡 BEFORE embedding")
+        """Create a single embedding."""
         async with self._semaphore:
-            resp = await self.client.embeddings.create(
+            return await self._client.embeddings.create(
                 input=text, model=self.config.embedding_model
             )
-        self._log_sockets("📡 AFTER embedding")
-        return resp
 
     async def _create_batch_embeddings(self, texts: List[str]):
-        self._log_sockets("📡 BEFORE embedding")
         async with self._semaphore:
-            self._log_sockets("📡 AFTER embedding")
-            return await self.client.embeddings.create(
+            return await self._client.embeddings.create(
                 input=texts,
                 model=self.config.embedding_model,
             )
@@ -168,5 +177,15 @@ class AsyncOpenAIEmbeddingClient:
         return result
 
     async def close(self):
-        await self.client.close()
+        """Close the client and clean up resources."""
+        await self._cleanup_client()
         logger.info("AsyncOpenAIEmbeddingClient closed")
+
+    @classmethod
+    async def get_instance(cls) -> "AsyncOpenAIEmbeddingClient":
+        """Get a singleton instance using the registry."""
+
+        async def create_client():
+            return cls()
+
+        return await registry.get_or_create("openai_embedding_client", create_client)
