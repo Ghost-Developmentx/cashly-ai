@@ -33,6 +33,6 @@ api_router.include_router(insights.router, prefix="/insights", tags=["insights"]
 
 api_router.include_router(anomaly.router, prefix="/anomaly", tags=["anomaly"])
 
-api_router.include_router(accounts.router, prefix="/accounts", tags=["accounts"])
+api_router.include_router(accounts.router, prefix="/fin/accounts", tags=["accounts"])
 
 api_router.include_router(fin.router, prefix="/fin", tags=["fin"])
