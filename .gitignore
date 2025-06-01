@@ -90,7 +90,7 @@ data/trained_models/
 *.xls
 *.xlsx
 *.json
-!models/intents_data.json
+!app/models/intents_data.json
 !prompts/*.json
 !data/trained_models/registry.json
 

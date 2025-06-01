@@ -1,13 +1,10 @@
 import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
+from datetime import datetime
 from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import StandardScaler
-import joblib
-import os
 
-from util.model_registry import ModelRegistry
-from util.data_processing import extract_transaction_features
+from app.utils.model_registry import ModelRegistry
+from app.utils.data_processing import extract_transaction_features
 
 
 class AnomalyDetector:

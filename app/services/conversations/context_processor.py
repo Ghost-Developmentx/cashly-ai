@@ -5,7 +5,7 @@ Processes conversation context for different use cases.
 import logging
 from typing import List, Dict, Any
 
-from models.conversation_data import ConversationContext, MessageRole
+from app.models.conversation_data import ConversationContext, MessageRole
 
 logger = logging.getLogger(__name__)
 

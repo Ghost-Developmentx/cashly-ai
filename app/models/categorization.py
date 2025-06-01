@@ -10,8 +10,8 @@ from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.metrics import classification_report, accuracy_score, f1_score
 from sklearn.model_selection import train_test_split
 
-from util.data_processing import clean_transaction_description
-from util.model_registry import ModelRegistry
+from app.utils.data_processing import clean_transaction_description
+from app.utils.model_registry import ModelRegistry
 
 
 class DescriptionExtractor(BaseEstimator, TransformerMixin):

@@ -5,7 +5,7 @@ Migration to create conversation embeddings table.
 from sqlalchemy import text
 from app.db.connection import DatabaseConnection
 from app.db.vector_extension import VectorExtensionManager
-from models.conversation_embedding import Base
+from app.models.conversation_embedding import Base
 
 
 def upgrade(db_connection: DatabaseConnection):

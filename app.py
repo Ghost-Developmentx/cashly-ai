@@ -9,7 +9,7 @@ from routes.api_router import create_api_routes
 from controllers.base_controller import DateTimeEncoder
 from middleware.async_context import AsyncContextMiddleware
 from middleware.async_manager import async_manager
-from util.shutdown_handler import shutdown_handler
+from util import shutdown_handler
 import dotenv
 
 dotenv.load_dotenv()
@@ -97,7 +97,7 @@ def _configure_logging():
 
 if __name__ == "__main__":
     # Create model directory
-    MODEL_DIR = "models"
+    MODEL_DIR = "app/models"
     os.makedirs(MODEL_DIR, exist_ok=True)
 
     # Create and run the app

@@ -6,11 +6,8 @@ from huggingface_hub import model_info
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler
-from sklearn.pipeline import Pipeline
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from sklearn.model_selection import train_test_split, TimeSeriesSplit
-import joblib
-import os
+from sklearn.model_selection import train_test_split
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -22,8 +19,8 @@ try:
 except ImportError:
     PROPHET_AVAILABLE = False
 
-from util.data_processing import prepare_timeseries_data
-from util.model_registry import ModelRegistry
+from app.utils.data_processing import prepare_timeseries_data
+from app.utils.model_registry import ModelRegistry
 
 
 class CashFlowForecaster:

@@ -1,14 +1,11 @@
 from datetime import datetime
 
 import pandas as pd
-import numpy as np
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
-import joblib
-import os
 from collections import defaultdict
 
-from util.model_registry import ModelRegistry
+from app.utils.model_registry import ModelRegistry
 
 
 class BudgetRecommender:

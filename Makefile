@@ -9,6 +9,28 @@ help:
 	@echo "  make db-setup      - Initialize database schema"
 	@echo "  make db-shell      - Open PostgreSQL shell"
 
+run:
+	python run.py
+
+test:
+	pytest tests/ -v
+
+format:
+	black app/ tests/
+	isort app/ tests/
+
+lint:
+	flake8 app/
+	mypy app/
+
+migrate:
+	alembic upgrade head
+
+clean:
+	find . -type f -name "*.pyc" -delete
+	find . -type d -name "__pycache__" -delete
+	find . -type d -name "*.egg-info" -exec rm -rf {} +
+
 docker-up:
 	docker-compose up -d
 	@echo "Waiting for PostgreSQL to be ready..."

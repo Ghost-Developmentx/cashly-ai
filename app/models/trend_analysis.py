@@ -1,13 +1,9 @@
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
-from statsmodels.tsa.seasonal import seasonal_decompose
-from statsmodels.tsa.stattools import adfuller
 from sklearn.linear_model import LinearRegression
-import matplotlib.pyplot as plt
-from collections import defaultdict
 
-from util.model_registry import ModelRegistry
+from app.utils.model_registry import ModelRegistry
 
 
 class TrendAnalyzer:
