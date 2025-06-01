@@ -83,7 +83,7 @@ def check_environment():
 def test_database_connection():
     """Test the database connection."""
     try:
-        from db.init import get_db_connection
+        from app.db.init import get_db_connection
 
         print("🔄 Testing database connection...")
         db = get_db_connection()
@@ -101,7 +101,7 @@ def test_database_connection():
 def test_openai_connection():
     """Test the OpenAI API connection."""
     try:
-        from services.embeddings.openai_client import OpenAIEmbeddingClient
+        from app.services import OpenAIEmbeddingClient
 
         print("🔄 Testing OpenAI API connection...")
         client = OpenAIEmbeddingClient()
@@ -122,7 +122,7 @@ def test_openai_connection():
 def run_migrations():
     """Run database migrations."""
     try:
-        from db.init import DatabaseInitializer
+        from app.db.init import DatabaseInitializer
 
         print("🔄 Running database migrations...")
         initializer = DatabaseInitializer()
@@ -174,7 +174,7 @@ def seed_enhanced_database():
 def test_intent_classification():
     """Test the intent classification system with various queries."""
     try:
-        from services.intent_classification.intent_service import IntentService
+        from app.services.intent_classification import IntentService
 
         print("🔄 Testing enhanced intent classification...")
         intent_service = IntentService()

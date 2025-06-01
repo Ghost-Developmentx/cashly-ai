@@ -7,7 +7,7 @@ import asyncio
 from typing import Dict, Any, Tuple
 from datetime import datetime
 from controllers.base_controller import BaseController
-from services.fin.async_tool_registry import AsyncToolRegistry
+from app.services.fin import AsyncToolRegistry
 
 
 class AccountController(BaseController):

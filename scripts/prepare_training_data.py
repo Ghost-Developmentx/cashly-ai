@@ -1,5 +1,4 @@
 import json
-import pandas as pd
 import sys
 import os
 from typing import List, Dict
@@ -7,7 +6,7 @@ from typing import List, Dict
 # Add project root to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from services.intent_classification import ConversationDataProcessor
+from app.services import ConversationDataProcessor
 
 
 def load_conversation_data(file_path: str) -> List[Dict]:

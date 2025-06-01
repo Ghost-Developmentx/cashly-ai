@@ -7,7 +7,7 @@ import asyncio
 from datetime import datetime
 from typing import Dict, Any, Tuple
 from controllers.base_controller import BaseController
-from services.anomaly import AsyncAnomalyService
+from app.services import AsyncAnomalyService
 
 
 class AnomalyController(BaseController):

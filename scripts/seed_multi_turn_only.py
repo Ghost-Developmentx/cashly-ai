@@ -10,9 +10,9 @@ from typing import List, Dict, Any
 from datetime import datetime
 
 from seed_data.multi_turn_conversations import MultiTurnConversations
-from services.embeddings.openai_client import OpenAIEmbeddingClient
-from services.embeddings.storage import EmbeddingStorage
-from services.embeddings.context_builder import ConversationContextBuilder
+from app.services import OpenAIEmbeddingClient
+from app.services import EmbeddingStorage
+from app.services.embeddings.context_builder import ConversationContextBuilder
 
 from dotenv import load_dotenv
 

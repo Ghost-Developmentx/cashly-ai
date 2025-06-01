@@ -24,3 +24,5 @@ httpx~=0.23.3
 psutil~=7.0.0
 pydantic-settings~=2.9.1
 pydantic~=2.10.6
+fastapi~=0.115.12
+starlette~=0.46.2

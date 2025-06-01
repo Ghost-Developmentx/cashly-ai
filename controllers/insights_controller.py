@@ -6,7 +6,7 @@ Now uses async insight service.
 import asyncio
 from typing import Dict, Any, Tuple
 from controllers.base_controller import BaseController
-from services.insights import AsyncInsightService
+from app.services.insights import AsyncInsightService
 
 
 class InsightsController(BaseController):

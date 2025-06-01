@@ -1,6 +1,6 @@
 import os
-from services.openai_assistants.assistant_factory import AssistantFactory
-from services.openai_assistants.assistant_manager import AssistantType
+from app.services.openai_assistants import AssistantFactory
+from app.services.openai_assistants.assistant_manager import AssistantType
 from openai import OpenAI
 
 

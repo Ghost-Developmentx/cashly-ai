@@ -39,7 +39,7 @@ def initialize_models():
 
     try:
         sys.path.insert(0, os.getcwd())
-        from services.intent_classification import IntentClassifier
+        from app.services import IntentClassifier
 
         # Initialize classifier (this will create a default model)
         classifier = IntentClassifier()

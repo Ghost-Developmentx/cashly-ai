@@ -14,7 +14,7 @@ load_dotenv()
 # Add a project root to a path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from db.init import DatabaseInitializer
+from app.db.init import DatabaseInitializer
 
 logging.basicConfig(level=logging.INFO)
 

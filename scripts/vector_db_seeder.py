@@ -6,9 +6,9 @@ Run this script to populate initial training data.
 import logging
 from typing import List, Dict, Any
 from datetime import datetime
-from services.embeddings.openai_client import OpenAIEmbeddingClient
-from services.embeddings.storage import EmbeddingStorage
-from services.embeddings.context_builder import ConversationContextBuilder
+from app.services import OpenAIEmbeddingClient
+from app.services import EmbeddingStorage
+from app.services.embeddings.context_builder import ConversationContextBuilder
 
 logger = logging.getLogger(__name__)
 

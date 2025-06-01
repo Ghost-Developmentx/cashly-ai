@@ -37,7 +37,7 @@ def setup_environment():
 def create_assistants():
     """Create all Cashly assistants."""
     try:
-        from services.openai_assistants.assistant_factory import AssistantFactory
+        from app.services.openai_assistants import AssistantFactory
 
         print("Creating Cashly assistants...")
         factory = AssistantFactory()
@@ -68,7 +68,7 @@ def create_assistants():
 def test_assistants():
     """Test that assistants are working."""
     try:
-        from services.openai_assistants.assistant_manager import AssistantManager
+        from app.services.openai_assistants.assistant_manager import AssistantManager
 
         print("\nTesting assistant manager...")
         manager = AssistantManager()

@@ -6,7 +6,7 @@ Now uses async categorization service.
 import asyncio
 from typing import Dict, Any, Tuple
 from controllers.base_controller import BaseController
-from services.categorize import AsyncCategorizationService
+from app.services import AsyncCategorizationService
 
 
 class CategorizationController(BaseController):

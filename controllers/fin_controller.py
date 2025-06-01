@@ -7,7 +7,7 @@ from typing import Dict, Any, Tuple
 from datetime import datetime
 from flask import g
 from controllers.base_controller import BaseController
-from services.openai_assistants import OpenAIIntegrationService
+from app.services import OpenAIIntegrationService
 from middleware.async_manager import run_async
 
 

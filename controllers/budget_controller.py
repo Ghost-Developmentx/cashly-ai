@@ -6,7 +6,7 @@ Now uses async budget service.
 import asyncio
 from typing import Dict, Any, Tuple
 from controllers.base_controller import BaseController
-from services.budget import AsyncBudgetService
+from app.services import AsyncBudgetService
 
 
 class BudgetController(BaseController):

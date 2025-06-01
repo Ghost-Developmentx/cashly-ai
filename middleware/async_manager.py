@@ -115,7 +115,7 @@ class AsyncManager:
             # Schedule cleanup on the event loop
             async def _cleanup():
                 try:
-                    from db.singleton_registry import registry
+                    from app.db.singleton_registry import registry
 
                     await registry.cleanup_all()
                 except Exception as e:
