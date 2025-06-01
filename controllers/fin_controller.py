@@ -1,13 +1,14 @@
-"""
+""" "
 Controller for Fin conversational AI endpoints.
 Handles natural language query processing and OpenAI Assistant integration.
 """
 
-import asyncio
 from typing import Dict, Any, Tuple
 from datetime import datetime
+from flask import g
 from controllers.base_controller import BaseController
 from services.openai_assistants import OpenAIIntegrationService
+from middleware.async_manager import run_async
 
 
 class FinController(BaseController):
@@ -19,7 +20,7 @@ class FinController(BaseController):
 
     def process_query(self) -> Tuple[Dict[str, Any], int]:
         """
-        Process a natural language query using OpenAI Assistants with intent classification
+        Process a natural language query using OpenAI Assistants.
 
         Expected JSON input:
         {
@@ -49,7 +50,6 @@ class FinController(BaseController):
 
             # Add conversation_id to user_context if available
             if conversation_history and not user_context.get("conversation_id"):
-                # Generate a proper conversation ID based on user and session
                 user_context["conversation_id"] = (
                     f"conv_{user_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}"
                 )
@@ -58,7 +58,7 @@ class FinController(BaseController):
             if "user_id" not in user_context:
                 user_context["user_id"] = user_id
 
-            # Log request details with debugging info
+            # Log request details
             self.logger.info(f"📥 OpenAI Fin query from user {user_id}: {query}")
             self.logger.info(
                 f"📥 User context: {len(user_context.get('accounts', []))} accounts"
@@ -68,27 +68,20 @@ class FinController(BaseController):
                 f"📥 Conversation history: {len(conversation_history)} messages"
             )
 
-            # Add transactions to user_context for assistant access
+            # Add transactions to user_context
             if user_context and transactions:
                 user_context["transactions"] = transactions
                 self.logger.info(
                     f"📥 Added {len(transactions)} transactions to user_context"
                 )
 
-            # Process the query asynchronously
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            try:
-                result = loop.run_until_complete(
-                    self.openai_service.process_financial_query(
-                        query=query,
-                        user_id=user_id,
-                        user_context=user_context,
-                        conversation_history=conversation_history,
-                    )
-                )
-            finally:
-                loop.close()
+            # Process query using async manager
+            result = self._process_query_async(
+                query=query,
+                user_id=user_id,
+                user_context=user_context,
+                conversation_history=conversation_history,
+            )
 
             # Log response details
             self.logger.info("📤 OpenAI response generated successfully")
@@ -98,7 +91,7 @@ class FinController(BaseController):
             )
             self.logger.info(f"📤 Actions: {len(result.get('actions', []))}")
 
-            # Log detailed action information for debugging
+            # Log action details
             if result.get("actions"):
                 for i, action in enumerate(result["actions"]):
                     self.logger.info(f"📤 Action {i}: {action.get('type')}")
@@ -107,35 +100,58 @@ class FinController(BaseController):
 
         return self.handle_request(_handle)
 
+    @run_async
+    async def _process_query_async(
+        self,
+        query: str,
+        user_id: str,
+        user_context: Dict[str, Any],
+        conversation_history: list,
+    ) -> Dict[str, Any]:
+        """Process query asynchronously using the centralized event loop."""
+        return await self.openai_service.process_financial_query(
+            query=query,
+            user_id=user_id,
+            user_context=user_context,
+            conversation_history=conversation_history,
+        )
+
     def health_check(self) -> Tuple[Dict[str, Any], int]:
         """
-        Health check for the OpenAI Assistants system
+        Health check for the OpenAI Assistants system.
 
         Returns:
             Tuple of (response_dict, status_code)
         """
 
         def _handle():
-            health = self.openai_service.health_check()
+            health = self._health_check_async()
 
             response_data = {
                 "status": health["status"],
                 "components": health["components"],
-                "available_assistants": health["available_assistants"],
-                "missing_assistants": health["missing_assistants"],
                 "timestamp": datetime.now().isoformat(),
             }
 
-            # Return the appropriate status code based on health
-            status_code = 200 if health["status"] == "healthy" else 503
+            # Add async manager status
+            if hasattr(g, "async_manager"):
+                response_data["async_manager"] = "healthy"
+            else:
+                response_data["async_manager"] = "unavailable"
 
+            status_code = 200 if health["status"] == "healthy" else 503
             return response_data, status_code
 
         return self.handle_request(_handle)
 
+    @run_async
+    async def _health_check_async(self) -> Dict[str, Any]:
+        """Run health check asynchronously."""
+        return await self.openai_service.health_check()
+
     def get_analytics(self) -> Tuple[Dict[str, Any], int]:
         """
-        Get analytics for recent queries and assistant usage
+        Get analytics for recent queries and assistant usage.
 
         Expected JSON input:
         {

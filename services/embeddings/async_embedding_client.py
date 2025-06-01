@@ -47,8 +47,6 @@ class AsyncOpenAIEmbeddingClient:
         current_loop_id = id(asyncio.get_running_loop())
 
         if self._loop_id != current_loop_id or self._client is None:
-            # Clean up old client if it exists
-            await self._cleanup_client()
 
             logger.info(f"🔄 Creating OpenAI client for loop {current_loop_id}")
 
@@ -72,22 +70,6 @@ class AsyncOpenAIEmbeddingClient:
             )
 
             self._loop_id = current_loop_id
-
-    async def _cleanup_client(self):
-        """Clean up the current client."""
-        if self._client:
-            try:
-                await self._client.close()
-            except Exception as e:
-                logger.error(f"Error closing OpenAI client: {e}")
-            self._client = None
-
-        if self._httpx_client:
-            try:
-                await self._httpx_client.aclose()
-            except Exception as e:
-                logger.error(f"Error closing httpx client: {e}")
-            self._httpx_client = None
 
     # ---------------------------------------------------------------------
     # public helpers
@@ -175,11 +157,6 @@ class AsyncOpenAIEmbeddingClient:
         for i, idx in enumerate(valid_indices):
             result[idx] = embedding_data[i].embedding
         return result
-
-    async def close(self):
-        """Close the client and clean up resources."""
-        await self._cleanup_client()
-        logger.info("AsyncOpenAIEmbeddingClient closed")
 
     @classmethod
     async def get_instance(cls) -> "AsyncOpenAIEmbeddingClient":

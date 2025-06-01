@@ -1,49 +1,39 @@
 """
-Middleware to ensure proper async context for each request.
+Async context middleware for Flask.
+Manages async operations using a centralized event loop.
 """
 
-import asyncio
 import logging
-from flask import g
+from flask import Flask, g
+from .async_manager import async_manager
 
 logger = logging.getLogger(__name__)
 
 
 class AsyncContextMiddleware:
-    def __init__(self, app):
+    """
+    Middleware to provide async context for Flask requests.
+    Uses a centralized event loop manager instead of per-request loops.
+    """
+
+    def __init__(self, app: Flask):
         self.app = app
-        app.before_request(self.before_request)
-        app.teardown_appcontext(self.teardown_appcontext)
+        self._setup_handlers()
 
-    def before_request(self):
-        """Ensure each request has its own event loop."""
-        # Check if we're in an async context
-        try:
-            loop = asyncio.get_running_loop()
-            g._async_loop_reused = True
-        except RuntimeError:
-            # Create a new event loop for this request
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            g._async_loop = loop
-            g._async_loop_reused = False
+    def _setup_handlers(self):
+        """Set up request handlers."""
 
-    def teardown_appcontext(self, exception):
-        """Clean up request-specific resources."""
-        # Only close the loop if we created it
-        if hasattr(g, "_async_loop") and not g._async_loop_reused:
-            loop = g._async_loop
+        @self.app.before_request
+        def before_request():
+            """Store async manager in Flask g object."""
+            g.async_manager = async_manager
+            logger.debug("Async context established for request")
 
-            # Close any pending tasks
-            pending = asyncio.all_tasks(loop)
-            for task in pending:
-                task.cancel()
+        @self.app.teardown_appcontext
+        def teardown_appcontext(exception):
+            """Clean up request context."""
+            if exception:
+                logger.error(f"Request ended with exception: {exception}")
 
-            # Run until all tasks are cancelled
-            if pending:
-                loop.run_until_complete(
-                    asyncio.gather(*pending, return_exceptions=True)
-                )
-
-            # Close the loop
-            loop.close()
+            # Remove async manager from g
+            g.pop("async_manager", None)

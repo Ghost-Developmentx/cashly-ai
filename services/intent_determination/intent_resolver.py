@@ -26,7 +26,7 @@ class AsyncIntentResolver:
             self.embedding_client = await AsyncOpenAIEmbeddingClient.get_instance()
 
         if self.search_service is None:
-            # Use singleton pattern for search service too
+            # Use a singleton pattern for search service too
             self.search_service = await AsyncVectorSearchService.get_instance()
 
     async def resolve_intent(

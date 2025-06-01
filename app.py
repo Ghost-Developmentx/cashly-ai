@@ -1,16 +1,15 @@
 import os
 import logging
 import sys
+import atexit
 from flask import Flask
 from flask_cors import CORS
 
 from routes.api_router import create_api_routes
 from controllers.base_controller import DateTimeEncoder
 from middleware.async_context import AsyncContextMiddleware
-from db.singleton_registry import registry
+from middleware.async_manager import async_manager
 import dotenv
-import atexit
-import asyncio
 
 dotenv.load_dotenv()
 
@@ -20,11 +19,8 @@ def cleanup_on_exit():
     logger = logging.getLogger(__name__)
     logger.info("🛑 Application shutting down...")
 
-    # Run async cleanup
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(registry.cleanup_all())
-    loop.close()
+    # Clean up async manager
+    async_manager.cleanup()
 
 
 def create_app() -> Flask:
@@ -45,13 +41,19 @@ def create_app() -> Flask:
     # Configure logging
     _configure_logging()
 
+    # Initialize async context middleware
     AsyncContextMiddleware(app)
 
     # Register API routes
     api_routes = create_api_routes()
     app.register_blueprint(api_routes)
 
+    # Register cleanup handler
     atexit.register(cleanup_on_exit)
+
+    # Log startup
+    logger = logging.getLogger(__name__)
+    logger.info("✅ Application initialized with async manager")
 
     return app
 
@@ -84,7 +86,7 @@ def _configure_logging():
 
 
 if __name__ == "__main__":
-    # Create a model directory
+    # Create model directory
     MODEL_DIR = "models"
     os.makedirs(MODEL_DIR, exist_ok=True)
 
