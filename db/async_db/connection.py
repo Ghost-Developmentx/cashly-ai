@@ -23,22 +23,6 @@ logger = logging.getLogger(__name__)
 class AsyncDatabaseConnection:
     """
     Manages asynchronous database connections and operations.
-
-    This class provides functionality to work with asynchronous database connections,
-    including the creation and management of an async engine, session factory, and
-    connection pool. It supports executing queries, leveraging asyncpg for raw query
-    operations, and ensures proper cleanup of resources.
-
-    Attributes
-    ----------
-    config : AsyncDatabaseConfig
-        Configuration object for database connection settings.
-    _engine : Optional[AsyncEngine]
-        Internal async database engine instance, lazily created.
-    _session_factory : Optional[async_sessionmaker]
-        Internal async session factory instance, lazily created.
-    _asyncpg_pool : Optional[asyncpg.Pool]
-        Internal asyncpg connection pool for raw queries, lazily created.
     """
 
     def __init__(self, config: Optional[AsyncDatabaseConfig] = None):
@@ -48,6 +32,7 @@ class AsyncDatabaseConnection:
         self._asyncpg_pool: Optional[asyncpg.Pool] = None
         self._loop_id: Optional[int] = None
         self._creation_time = asyncio.get_event_loop().time()
+        self._closing = False
 
     async def is_valid(self) -> bool:
         """Check if this connection is valid for the current event loop."""
@@ -62,7 +47,7 @@ class AsyncDatabaseConnection:
             return False
 
         # Test the connection
-        if self._asyncpg_pool:
+        if self._asyncpg_pool and not self._closing:
             try:
                 async with self._asyncpg_pool.acquire() as conn:
                     await conn.fetchval("SELECT 1")
@@ -114,10 +99,6 @@ class AsyncDatabaseConnection:
     async def get_session(self) -> AsyncGenerator[AsyncSession, None]:
         """
         Async context manager for database sessions.
-
-        Usage:
-            async with db.get_session() as session:
-                result = await session.execute(query)
         """
         factory = await self.session_factory
         async with factory() as session:
@@ -136,7 +117,7 @@ class AsyncDatabaseConnection:
 
         if self._asyncpg_pool is None or self._loop_id != current_loop_id:
             if self._asyncpg_pool:
-                await self._asyncpg_pool.close()
+                await self._close_asyncpg_pool()
 
             logger.info(f"🚰 Creating asyncpg pool for loop {current_loop_id}")
             self._asyncpg_pool = await asyncpg.create_pool(
@@ -156,28 +137,44 @@ class AsyncDatabaseConnection:
             logger.error(f"Database connection test failed: {e}")
             return False
 
-    async def close(self):
-        """Close all database connections."""
-        logger.info("🔒 Closing database connections...")
-
+    async def _close_asyncpg_pool(self):
+        """Close asyncpg pool with proper cleanup."""
         if self._asyncpg_pool:
             try:
+                # Close all connections gracefully
                 await self._asyncpg_pool.close()
+                # Wait for connections to close
+                await asyncio.sleep(0.1)
                 logger.info("🔒 Closed asyncpg pool")
             except Exception as e:
                 logger.error(f"Error closing asyncpg pool: {e}")
-            self._asyncpg_pool = None
+            finally:
+                self._asyncpg_pool = None
 
+    async def close(self):
+        """Close all database connections."""
+        if self._closing:
+            return
+
+        self._closing = True
+        logger.info("🔒 Closing database connections...")
+
+        # Close asyncpg pool first
+        await self._close_asyncpg_pool()
+
+        # Then close SQLAlchemy engine
         if self._engine:
             try:
                 await self._engine.dispose()
                 logger.info("🔒 Disposed SQLAlchemy async engine")
             except Exception as e:
                 logger.error(f"Error disposing engine: {e}")
-            self._engine = None
+            finally:
+                self._engine = None
 
         self._session_factory = None
         self._loop_id = None
+        self._closing = False
 
     async def __aenter__(self):
         """Async context manager entry."""

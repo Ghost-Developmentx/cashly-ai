@@ -1,7 +1,7 @@
 import os
 import logging
 import sys
-import atexit
+import time
 from flask import Flask
 from flask_cors import CORS
 
@@ -9,18 +9,27 @@ from routes.api_router import create_api_routes
 from controllers.base_controller import DateTimeEncoder
 from middleware.async_context import AsyncContextMiddleware
 from middleware.async_manager import async_manager
+from util.shutdown_handler import shutdown_handler
 import dotenv
 
 dotenv.load_dotenv()
 
 
-def cleanup_on_exit():
+def cleanup_resources():
     """Clean up resources on application exit."""
     logger = logging.getLogger(__name__)
-    logger.info("🛑 Application shutting down...")
+    logger.info("🛑 Starting resource cleanup...")
+
+    # Give pending requests time to complete
+    time.sleep(0.5)
 
     # Clean up async manager
-    async_manager.cleanup()
+    try:
+        async_manager.cleanup()
+    except Exception as e:
+        logger.error(f"Error during async manager cleanup: {e}")
+
+    logger.info("✅ Resource cleanup complete")
 
 
 def create_app() -> Flask:
@@ -48,8 +57,9 @@ def create_app() -> Flask:
     api_routes = create_api_routes()
     app.register_blueprint(api_routes)
 
-    # Register cleanup handler
-    atexit.register(cleanup_on_exit)
+    # Register cleanup handlers
+    shutdown_handler.register(cleanup_resources)
+    shutdown_handler.install_signal_handlers()
 
     # Log startup
     logger = logging.getLogger(__name__)
@@ -92,4 +102,12 @@ if __name__ == "__main__":
 
     # Create and run the app
     app = create_app()
-    app.run(debug=True, host="0.0.0.0", port=5000)
+
+    try:
+        app.run(debug=True, host="0.0.0.0", port=5000, use_reloader=False)
+    except KeyboardInterrupt:
+        logger = logging.getLogger(__name__)
+        logger.info("Received keyboard interrupt")
+    finally:
+        # Ensure cleanup runs
+        cleanup_resources()

@@ -87,7 +87,7 @@ class AsyncManager:
         if self._loop is None or self._stopping:
             raise RuntimeError("Async manager is not running")
 
-        # Create future to get result
+        # Create a future to get a result
         future = Future()
 
         async def _wrapper():
@@ -100,8 +100,8 @@ class AsyncManager:
         # Schedule coroutine on the event loop
         asyncio.run_coroutine_threadsafe(_wrapper(), self._loop)
 
-        # Wait for result (with timeout)
-        return future.result(timeout=300)  # 5 minute timeout
+        # Wait for a result (with timeout)
+        return future.result(timeout=300)  # 5-minute timeout
 
     def cleanup(self):
         """Clean up the event loop and resources."""
@@ -114,14 +114,34 @@ class AsyncManager:
         if self._loop and not self._loop.is_closed():
             # Schedule cleanup on the event loop
             async def _cleanup():
-                from db.singleton_registry import registry
+                try:
+                    from db.singleton_registry import registry
 
-                await registry.cleanup_all()
+                    await registry.cleanup_all()
+                except Exception as e:
+                    logger.error(f"Registry cleanup error: {e}")
 
+                # Give tasks time to complete
+                await asyncio.sleep(0.1)
+
+                # Cancel all remaining tasks
+                tasks = [
+                    t
+                    for t in asyncio.all_tasks(self._loop)
+                    if not t.done() and t != asyncio.current_task()
+                ]
+
+                for task in tasks:
+                    task.cancel()
+
+                if tasks:
+                    await asyncio.gather(*tasks, return_exceptions=True)
+
+            # Run cleanup
             future = asyncio.run_coroutine_threadsafe(_cleanup(), self._loop)
 
             try:
-                future.result(timeout=10)
+                future.result(timeout=5)
             except Exception as e:
                 logger.error(f"Cleanup error: {e}")
 
@@ -130,7 +150,7 @@ class AsyncManager:
 
         # Wait for the thread to finish
         if self._thread and self._thread.is_alive():
-            self._thread.join(timeout=5)
+            self._thread.join(timeout=3)
 
         logger.info("✅ Async manager shutdown complete")
 

@@ -2,10 +2,7 @@
 Database initialization module with async support.
 """
 
-import asyncio
-import atexit
 import logging
-import signal
 from typing import Optional
 
 from config.database import DatabaseConfig
@@ -27,27 +24,6 @@ async def get_async_db_connection() -> AsyncDatabaseConnection:
         return AsyncDatabaseConnection(config)
 
     return await registry.get_or_create("async_db_connection", create_connection)
-
-
-def cleanup_handler(signum=None, frame=None):
-    """Handle cleanup on shutdown."""
-    logger.info("🛑 Shutdown signal received, cleaning up...")
-
-    # Run async cleanup in a new event loop if needed
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
-    loop.run_until_complete(registry.cleanup_all())
-    logger.info("✅ Cleanup complete")
-
-
-# Register cleanup handlers
-atexit.register(cleanup_handler)
-signal.signal(signal.SIGINT, cleanup_handler)
-signal.signal(signal.SIGTERM, cleanup_handler)
 
 
 class AsyncDatabaseInitializer:
