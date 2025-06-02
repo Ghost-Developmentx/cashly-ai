@@ -97,8 +97,8 @@ async def forecast_scenario(
 ) -> ForecastResponse:
     """Generate scenario-based forecast."""
     try:
-        transactions = [t.dict() for t in request.transactions]
-        adjustments = request.adjustments.dict(exclude_none=True)
+        transactions = [t.model_dump() for t in request.transactions]
+        adjustments = request.adjustments.model_dump(exclude_none=True)
 
         logger.info(f"Generating scenario forecast with adjustments: {adjustments}")
 

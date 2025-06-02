@@ -7,7 +7,7 @@ import time
 import logging
 from uuid import uuid4
 from typing import Callable
-
+from fastapi.responses import JSONResponse
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -57,8 +57,7 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
             return response
         except Exception as e:
             logger.error(f"Unhandled error: {e}", exc_info=True)
-            return Response(
+            return JSONResponse(
                 content={"detail": "Internal server error"},
                 status_code=500,
-                media_type="application/json",
             )

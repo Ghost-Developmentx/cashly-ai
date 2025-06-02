@@ -120,7 +120,3 @@ prompts/fin_system_prompt.txt
 
 # OS-specific
 desktop.ini
-
-# VSCode
-.vscode/
-*.code-workspace

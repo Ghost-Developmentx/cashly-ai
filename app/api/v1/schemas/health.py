@@ -19,7 +19,7 @@ class HealthResponse(BaseModel):
     """Basic health check response."""
 
     status: str = Field(..., pattern="^(healthy|degraded|unhealthy)$")
-    service: str = "cashly-ai-service"
+    service: str = "Cashly AI Service"
     version: str = "2.0.0"
     timestamp: datetime = Field(default_factory=datetime.now)
 
@@ -28,7 +28,7 @@ class DetailedHealthResponse(BaseModel):
     """Detailed health check with components."""
 
     status: str = Field(..., pattern="^(healthy|degraded|unhealthy)$")
-    service: str = "cashly-ai-service"
+    service: str = "Cashly AI Service"
     version: str = "2.0.0"
     timestamp: datetime = Field(default_factory=datetime.now)
     components: Dict[str, ComponentHealth]

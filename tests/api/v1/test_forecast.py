@@ -3,12 +3,11 @@ Forecast endpoint tests.
 """
 
 import pytest
-from httpx import AsyncClient
 from datetime import datetime, timedelta
 
 
 @pytest.mark.asyncio
-async def test_cash_flow_forecast(client: AsyncClient):
+async def test_cash_flow_forecast(client):
     """Test basic cash flow forecast."""
     transactions = []
     base_date = datetime.now() - timedelta(days=30)
@@ -59,7 +58,7 @@ async def test_cash_flow_forecast(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_scenario_forecast(client: AsyncClient):
+async def test_scenario_forecast(client):
     """Test scenario-based forecast."""
     transactions = [
         {

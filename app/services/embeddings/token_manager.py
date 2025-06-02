@@ -32,13 +32,13 @@ class TokenManager:
 
     def __init__(self, config: Settings):
         self.config = config
-        self.max_tokens = config.max_tokens
+        self.max_tokens = config.openai_max_tokens
 
         try:
-            self.encoding = tiktoken.encoding_for_model(config.embedding_model)
+            self.encoding = tiktoken.encoding_for_model(config.openai_embedding_model)
         except Exception as e:
             logger.warning(
-                f"Failed to load tokenizer for {config.embedding_model}: {e}"
+                f"Failed to load tokenizer for {config.openai_embedding_model}: {e}"
             )
             # Fallback to cl100k_base encoding
             self.encoding = tiktoken.get_encoding("cl100k_base")

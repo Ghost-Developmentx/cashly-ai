@@ -3,11 +3,10 @@ Fin conversational AI endpoint tests.
 """
 
 import pytest
-from httpx import AsyncClient
 
 
 @pytest.mark.asyncio
-async def test_process_query(client: AsyncClient):
+async def test_process_query(client):
     """Test natural language query processing."""
     request_data = {
         "user_id": "test_user",
@@ -39,7 +38,7 @@ async def test_process_query(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_query_with_conversation_history(client: AsyncClient):
+async def test_query_with_conversation_history(client):
     """Test query with conversation history."""
     request_data = {
         "user_id": "test_user",
@@ -63,7 +62,7 @@ async def test_query_with_conversation_history(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_fin_health_check(client: AsyncClient):
+async def test_fin_health_check(client):
     """Test OpenAI Assistant health check."""
     response = await client.get("/api/v1/fin/health")
 
@@ -77,7 +76,7 @@ async def test_fin_health_check(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_get_analytics(client: AsyncClient):
+async def test_get_analytics(client):
     """Test analytics endpoint."""
     request_data = {
         "user_id": "test_user",
@@ -100,7 +99,7 @@ async def test_get_analytics(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_clear_conversation(client: AsyncClient):
+async def test_clear_conversation(client):
     """Test clearing conversation history."""
     response = await client.delete("/api/v1/fin/conversations/test_user")
 

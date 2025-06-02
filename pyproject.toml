@@ -1,11 +1,12 @@
 [tool.poetry]
-name = "cashly-fastapi"
+name = "cashly-ai"
 version = "2.0.0"
 description = "Cashly AI Financial Service - FastAPI"
 authors = ["Cashly Team"]
+package-mode = false
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = ">=3.12,<3.14"
 fastapi = "^0.104.1"
 uvicorn = { extras = ["standard"], version = "^0.34.2" }
 pydantic = "^2.5.0"
@@ -26,6 +27,14 @@ joblib = "^1.4.2"
 tiktoken = "^0.9.0"
 aiohttp = "^3.12.3"
 psutil = "^7.0.0"
+prophet = "^1.1.7"
+matplotlib = "^3.10.3"
+statsmodels = "^0.14.4"
+spacy = "^3.8.7"
+transformers = "^4.52.4"
+huggingface-hub = "^0.32.3"
+torch = "^2.7.0"
+requests = "^2.32.3"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.3"

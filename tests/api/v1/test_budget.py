@@ -3,12 +3,11 @@ Budget endpoint tests.
 """
 
 import pytest
-from httpx import AsyncClient
 from datetime import datetime, timedelta
 
 
 @pytest.mark.asyncio
-async def test_generate_budget(client: AsyncClient):
+async def test_generate_budget(client):
     """Test budget generation."""
     # Create test transactions
     transactions = []
@@ -53,7 +52,7 @@ async def test_generate_budget(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_budget_validation(client: AsyncClient):
+async def test_budget_validation(client):
     """Test budget data validation."""
     # Test with no transactions
     response = await client.post(

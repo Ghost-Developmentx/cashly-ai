@@ -3,12 +3,11 @@ Insights endpoint tests.
 """
 
 import pytest
-from httpx import AsyncClient
 from datetime import datetime, timedelta
 
 
 @pytest.mark.asyncio
-async def test_analyze_trends(client: AsyncClient):
+async def test_analyze_trends(client):
     """Test trend analysis endpoint."""
     # Create test transactions
     transactions = []
@@ -42,7 +41,7 @@ async def test_analyze_trends(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_financial_summary(client: AsyncClient):
+async def test_financial_summary(client):
     """Test financial summary endpoint."""
     transactions = [
         {

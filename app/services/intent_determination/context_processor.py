@@ -176,7 +176,8 @@ class ContextProcessor:
 
         # Transaction count
         if "transactions" in user_context:
-            info["transaction_count"] = len(user_context["transactions"])
+            transactions = user_context.get("transactions") or []
+            info["transaction_count"] = len(transactions)
 
         return info
 

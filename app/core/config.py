@@ -111,7 +111,7 @@ class Settings(BaseSettings):
 
     @property
     def asyncpg_dsn(self) -> str:
-        """DSN for asyncpg, without SQLAlchemy-specific scheme."""
+        """DSN for asyncpg, without an SQLAlchemy-specific scheme."""
         return (
             f"postgresql://{self.postgres_user}:{self.postgres_password}@"
             f"{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"

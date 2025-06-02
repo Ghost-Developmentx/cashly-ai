@@ -4,6 +4,8 @@ Test configuration and fixtures.
 
 import pytest
 from typing import AsyncGenerator
+
+import pytest_asyncio
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,9 +13,8 @@ from app.main import app
 from app.core.dependencies import get_db
 
 
-@pytest.fixture
-async def client() -> AsyncGenerator[AsyncClient, None]:
-    """Create a test client."""
+@pytest_asyncio.fixture
+async def client():
     async with AsyncClient(app=app, base_url="http://test") as ac:
         yield ac
 

@@ -3,11 +3,10 @@ Account management endpoint tests.
 """
 
 import pytest
-from httpx import AsyncClient
 
 
 @pytest.mark.asyncio
-async def test_get_account_status(client: AsyncClient):
+async def test_get_account_status(client):
     """Test account status endpoint."""
     request_data = {
         "user_id": "test_user",
@@ -43,7 +42,7 @@ async def test_get_account_status(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_initiate_plaid_connection(client: AsyncClient):
+async def test_initiate_plaid_connection(client):
     """Test Plaid connection initiation."""
     request_data = {"user_id": "test_user", "institution_preference": "major_bank"}
 
@@ -59,7 +58,7 @@ async def test_initiate_plaid_connection(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_disconnect_account(client: AsyncClient):
+async def test_disconnect_account(client):
     """Test account disconnection."""
     request_data = {
         "user_id": "test_user",
@@ -78,7 +77,7 @@ async def test_disconnect_account(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_list_accounts(client: AsyncClient):
+async def test_list_accounts(client):
     """Test listing all accounts."""
     response = await client.get(
         "/api/v1/fin/accounts/", params={"user_id": "test_user"}

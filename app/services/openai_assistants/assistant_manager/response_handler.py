@@ -204,7 +204,7 @@ class ResponseHandler(BaseManager):
                 metadata={
                     "run_id": run_id,
                     "thread_id": thread_id,
-                    "completed_at": datetime.utcnow().isoformat()
+                    "completed_at": datetime.now().isoformat()
                 },
                 success=True
             )

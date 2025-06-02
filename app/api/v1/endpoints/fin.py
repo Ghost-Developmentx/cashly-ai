@@ -4,7 +4,8 @@ Replaces Flask FinController.
 """
 
 from typing import Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi.exceptions import RequestValidationError
 from logging import getLogger
 from datetime import datetime
 
@@ -36,51 +37,46 @@ router = APIRouter()
     description="Process financial queries using OpenAI Assistants",
 )
 async def process_query(
+    request: QueryRequest,
     background_tasks: BackgroundTasks,
-    req: Request,
     service: OpenAIIntegrationService = Depends(get_openai_service),
-):
-    raw = await req.body()
-    logger.debug("🔍 RAW BODY: %s", raw)
-
+) -> QueryResponse:
+    """Process a natural language query using OpenAI Assistants."""
     try:
-        data = await req.json()
-        logger.debug("🔍 PARSED JSON: %s", data)
-
-        # Extract required fields
-        query = data.get("query", "").strip()
-        user_id = data.get("user_id", "")
-        if not query or not user_id:
-            raise HTTPException(status_code=422, detail="Missing 'query' or 'user_id'")
-
         # Prepare user context
-        user_context = data.get("user_context", {}) or {}
+        user_context = request.user_context.model_dump() if request.user_context else {}
+
+        # Ensure user_id is in context
         if "user_id" not in user_context:
-            user_context["user_id"] = user_id
-        if "conversation_id" not in user_context:
+            user_context["user_id"] = request.user_id
+
+        # Add conversation_id if not present
+        if not user_context.get("conversation_id"):
             user_context["conversation_id"] = (
-                f"conv_{user_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+                f"conv_{request.user_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}"
             )
 
         # Convert conversation history
-        raw_history = data.get("conversation_history", [])
-        conversation_history = []
-        for msg in raw_history:
-            conversation_history.append(
+        conversation_history = None
+        if request.conversation_history:
+            conversation_history = [
                 {
-                    "role": msg.get("role", "user"),
-                    "content": msg.get("content", ""),
-                    "timestamp": msg.get("timestamp"),
-                    "metadata": msg.get("metadata", {}),
+                    "role": msg.role.value,
+                    "content": msg.content,
+                    "timestamp": msg.timestamp.isoformat() if msg.timestamp else None,
+                    "metadata": msg.metadata,
                 }
-            )
+                for msg in request.conversation_history
+            ]
 
-        logger.info(f"📥 Processing query for user {user_id}: {query[:50]}...")
+        logger.info(
+            f"📥 Processing query for user {request.user_id}: {request.query[:50]}..."
+        )
 
-        # Call service
+        # Process query
         result = await service.process_financial_query(
-            query=query,
-            user_id=user_id,
+            query=request.query,
+            user_id=request.user_id,
             user_context=user_context,
             conversation_history=conversation_history,
         )
@@ -90,7 +86,7 @@ async def process_query(
                 "OpenAI", result.get("error", "Processing failed")
             )
 
-        # Build response
+        # Format response
         response = QueryResponse(
             message=result["message"],
             response_text=result["response_text"],
@@ -105,11 +101,12 @@ async def process_query(
             conversation_id=user_context.get("conversation_id"),
         )
 
+        # Log analytics in background
         if response.success:
             background_tasks.add_task(
                 _log_query_analytics,
-                user_id=user_id,
-                query=query,
+                user_id=request.user_id,
+                query=request.query,
                 intent=response.classification.intent,
                 assistant=response.classification.assistant_used,
                 success=True,
@@ -122,6 +119,10 @@ async def process_query(
         )
 
         return response
+
+    except RequestValidationError as e:
+        logger.warning(f"❌ Request validation failed: {e.errors()}")
+        raise HTTPException(status_code=422, detail=e.errors())
 
     except ValidationError as e:
         logger.warning(f"Validation error: {e}")

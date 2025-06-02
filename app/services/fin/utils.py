@@ -1,5 +1,6 @@
 import logging
-from typing import Any, Dict, List
+from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -24,26 +25,14 @@ def parse_date(date_val: Any) -> str:
     raise ValueError(f"Unrecognized date value: {date_val!r}")
 
 
-def normalize_transaction_dates(
-    transactions: List[Dict[str, Any]],
-) -> List[Dict[str, Any]]:
-    """
-    Ensure all transactions have a normalized 'date' field (YYYY-MM-DD).
+def normalize_transaction_dates(transactions: Optional[List[dict]]) -> List[dict]:
+    if not transactions:
+        return []
 
-    Args:
-        transactions: List of transaction dictionaries.
-
-    Returns:
-        A new list of transactions with normalized 'date' fields.
-    """
-    normalized = []
     for txn in transactions:
-        if "date" not in txn:
-            continue
-        try:
-            txn_copy = dict(txn)
-            txn_copy["date"] = parse_date(txn_copy["date"])
-            normalized.append(txn_copy)
-        except Exception as e:
-            logger.warning(f"Skipping transaction with invalid date: {e}")
-    return normalized
+        if "date" in txn and isinstance(txn["date"], str):
+            try:
+                txn["date"] = datetime.fromisoformat(txn["date"])
+            except Exception:
+                pass  # silently fail if invalid
+    return transactions
