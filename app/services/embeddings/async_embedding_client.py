@@ -8,7 +8,7 @@ import asyncio
 import httpx
 from openai import AsyncOpenAI
 
-from config.openai import OpenAIConfig
+from app.core.config import Settings
 from app.db.singleton_registry import registry
 from .embedding_processor import EmbeddingProcessor
 from .token_manager import TokenManager
@@ -22,8 +22,8 @@ class AsyncOpenAIEmbeddingClient:
     Asynchronous client for OpenAI embeddings with event loop management.
     """
 
-    def __init__(self, config: Optional[OpenAIConfig] = None):
-        self.config = config or OpenAIConfig.from_env()
+    def __init__(self, config: Optional[Settings] = None):
+        self.config = config or Settings()
         self._loop_id: Optional[int] = None
         self._client: Optional[AsyncOpenAI] = None
         self._httpx_client: Optional[httpx.AsyncClient] = None

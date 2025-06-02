@@ -5,8 +5,8 @@ Database initialization module with async support.
 import logging
 from typing import Optional
 
-from config.database import DatabaseConfig
-from app.db.async_db import AsyncDatabaseConnection, AsyncDatabaseConfig
+from app.core.config import Settings
+from app.db.async_db import AsyncDatabaseConnection
 from app.db.singleton_registry import registry
 from app.db.migrations.m001_create_conversation_embeddings import upgrade
 
@@ -20,8 +20,8 @@ async def get_async_db_connection() -> AsyncDatabaseConnection:
     """
 
     async def create_connection():
-        config = AsyncDatabaseConfig.from_env()
-        return AsyncDatabaseConnection(config)
+        settings = Settings()
+        return AsyncDatabaseConnection.from_settings(settings)
 
     return await registry.get_or_create("async_db_connection", create_connection)
 
@@ -29,9 +29,9 @@ async def get_async_db_connection() -> AsyncDatabaseConnection:
 class AsyncDatabaseInitializer:
     """Handles asynchronous initialization of a database."""
 
-    def __init__(self, config: Optional[AsyncDatabaseConfig] = None):
-        self.config = config or AsyncDatabaseConfig.from_env()
-        self.connection: Optional[AsyncDatabaseConnection] = None
+    def __init__(self, settings: Optional[Settings] = None):
+        self.settings = settings or Settings()
+        self.connection: Optional[Settings] = None
 
     async def initialize(self) -> bool:
         """Initialize a database with all required tables and extensions."""
@@ -58,8 +58,7 @@ class AsyncDatabaseInitializer:
             logger.info("Running database migrations...")
             from app.db.connection import DatabaseConnection
 
-            sync_config = DatabaseConfig.from_env()
-            sync_conn = DatabaseConnection(sync_config)
+            sync_conn = DatabaseConnection.from_settings(self.settings)
             upgrade(sync_conn)
             sync_conn.close()
 
@@ -72,5 +71,5 @@ class AsyncDatabaseInitializer:
             return True
 
         except Exception as e:
-            logger.error(f"Database initialization failed: {e}")
+            logger.error(f"Database initialization failed: {e}", exc_info=True)
             return False

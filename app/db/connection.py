@@ -11,7 +11,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import QueuePool
 
-from config.database import DatabaseConfig
+from app.core.config import Settings
 
 logger = logging.getLogger(__name__)
 
@@ -19,10 +19,14 @@ logger = logging.getLogger(__name__)
 class DatabaseConnection:
     """Manages database connections with pooling."""
 
-    def __init__(self, config: DatabaseConfig):
-        self.config = config
+    def __init__(self, settings: Settings):
+        self.config = settings
         self._engine: Optional[Engine] = None
         self._session_factory: Optional[sessionmaker] = None
+
+    @classmethod
+    def from_settings(cls, settings: Settings) -> "DatabaseConnection":
+        return cls(settings)
 
     @property
     def engine(self) -> Engine:
@@ -31,8 +35,8 @@ class DatabaseConnection:
             self._engine = create_engine(
                 self.config.connection_string,
                 poolclass=QueuePool,
-                pool_size=self.config.pool_size,
-                max_overflow=self.config.max_overflow,
+                pool_size=self.config.db_pool_size,
+                max_overflow=self.config.db_max_overflow,
                 pool_pre_ping=True,
                 echo=False,
             )

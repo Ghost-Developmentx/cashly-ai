@@ -6,7 +6,8 @@ import asyncio
 import logging
 from typing import Callable, Optional, TypeVar, Awaitable
 import openai
-from config.openai import OpenAIConfig
+from app.core.config import Settings
+
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +37,7 @@ class AsyncRetryHandler:
         The base value used for calculating exponential backoff delay.
     """
 
-    def __init__(self, config: OpenAIConfig):
+    def __init__(self, config: Settings):
         self.max_retries = config.max_retries
         self.base_delay = 1.0
         self.max_delay = 60.0

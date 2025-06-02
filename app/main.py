@@ -67,6 +67,14 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    print(f"📥 Incoming request: {request.method} {request.url}")
+    response = await call_next(request)
+    return response
+
+
 # Add middleware
 app.add_middleware(ErrorHandlingMiddleware)
 app.add_middleware(TimingMiddleware)

@@ -161,7 +161,7 @@ class QueryHandler:
             assistant_response.function_calls
         )
 
-        # Return complete result
+        # Return a complete result
         return ProcessingResult(
             assistant_response=assistant_response,
             actions=actions,

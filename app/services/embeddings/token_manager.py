@@ -5,7 +5,8 @@ Manages token counting and text truncation for embeddings.
 import logging
 import tiktoken
 from typing import List
-from config.openai import OpenAIConfig
+from app.core.config import Settings
+
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +30,7 @@ class TokenManager:
         Tokenizer encoding object used for tokenizing and decoding text.
     """
 
-    def __init__(self, config: OpenAIConfig):
+    def __init__(self, config: Settings):
         self.config = config
         self.max_tokens = config.max_tokens
 

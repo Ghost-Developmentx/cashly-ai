@@ -109,6 +109,21 @@ class Settings(BaseSettings):
             f"{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
         )
 
+    @property
+    def asyncpg_dsn(self) -> str:
+        """DSN for asyncpg, without SQLAlchemy-specific scheme."""
+        return (
+            f"postgresql://{self.postgres_user}:{self.postgres_password}@"
+            f"{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
+        )
+
+    @property
+    def connection_string(self) -> str:
+        return (
+            f"postgresql://{self.postgres_user}:{self.postgres_password}@"
+            f"{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
+        )
+
 
 @lru_cache()
 def get_settings() -> Settings:
