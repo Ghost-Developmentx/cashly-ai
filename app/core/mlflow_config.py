@@ -10,6 +10,9 @@ import mlflow
 from mlflow.tracking import MlflowClient
 import boto3
 from botocore.exceptions import ClientError
+import logging
+
+logger = logging.getLogger(__name__)
 
 @dataclass
 class MLflowConfig:
@@ -31,14 +34,18 @@ class MLflowConfig:
     @classmethod
     def from_env(cls) -> "MLflowConfig":
         """Create config from environment variables."""
+        # Use container name when running in Docker
+        mlflow_host = os.getenv("MLFLOW_HOST", "localhost")
+        if os.getenv("DOCKER_ENV"):
+            mlflow_host = "localhost"
+
         return cls(
             s3_bucket=os.getenv("MLFLOW_S3_BUCKET", "cashly-ai-models"),
             s3_prefix=os.getenv("MLFLOW_S3_PREFIX", "mlflow"),
             aws_region=os.getenv("AWS_DEFAULT_REGION", "us-east-1"),
-            tracking_uri=os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000"),
+            tracking_uri=f"http://{mlflow_host}:5000",
             experiment_name=os.getenv("MLFLOW_EXPERIMENT_NAME", "cashly-ai-models"),
-            registry_uri=os.getenv("MLFLOW_REGISTRY_URI"),
-            model_stage=os.getenv("MLFLOW_MODEL_STAGE", "Production")
+            registry_uri=os.getenv("MLFLOW_REGISTRY_URI")
         )
 
     @property
@@ -52,7 +59,20 @@ class MLflowManager:
     def __init__(self, config: Optional[MLflowConfig] = None):
         self.config = config or MLflowConfig.from_env()
         self.client = None
-        self._setup_mlflow()
+        self._initialized = False
+
+    def initialize(self):
+        """Initialize MLflow connection (lazy loading)."""
+        if self._initialized:
+            return
+
+        try:
+            self._setup_mlflow()
+            self._initialized = True
+            logger.info("MLflow initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize MLflow: {e}")
+            # Don't raise - allow the app to start without MLflow
 
     def _setup_mlflow(self):
         """Initialize MLflow with S3 backend."""
@@ -65,13 +85,14 @@ class MLflowManager:
 
         # Create experiment if it doesn't exist
         try:
-            mlflow.create_experiment(
-                self.config.experiment_name,
-                artifact_location=self.config.artifact_location
-            )
-        except mlflow.exceptions.MlflowException:
-            # Experiment already exists
-            pass
+            experiment = mlflow.get_experiment_by_name(self.config.experiment_name)
+            if experiment is None:
+                mlflow.create_experiment(
+                    self.config.experiment_name,
+                    artifact_location=self.config.artifact_location
+                )
+        except Exception as e:
+            logger.warning(f"Could not create experiment: {e}")
 
         # Set experiment as active
         mlflow.set_experiment(self.config.experiment_name)
@@ -103,9 +124,6 @@ class MLflowManager:
         # Map model types to MLflow flavors
         flavor_map = {
             "sklearn": mlflow.sklearn,
-            "prophet": mlflow.prophet,
-            "pytorch": mlflow.pytorch,
-            "tensorflow": mlflow.tensorflow,
             "custom": mlflow.pyfunc
         }
 
@@ -127,42 +145,42 @@ class MLflowManager:
         """Load model from MLflow."""
         flavor_map = {
             "sklearn": mlflow.sklearn,
-            "prophet": mlflow.prophet,
-            "pytorch": mlflow.pytorch,
-            "tensorflow": mlflow.tensorflow,
             "custom": mlflow.pyfunc
         }
 
         flavor = flavor_map.get(model_type, mlflow.pyfunc)
         return flavor.load_model(model_uri)
 
-    def get_latest_model_version(self, model_name: str, stage: Optional[str] = None):
-        """Get latest model version from registry."""
-        stage = stage or self.config.model_stage
+    def get_latest_model_version(self, model_name: str):
+        """Get latest model version (updated for new MLflow API)."""
+        try:
+            # Use search_model_versions instead of deprecated get_latest_versions
+            versions = self.client.search_model_versions(
+                filter_string=f"name='{model_name}'",
+                order_by=["version_number DESC"],
+                max_results=1
+            )
 
-        versions = self.client.get_latest_versions(
-            name=model_name,
-            stages=[stage]
-        )
+            if versions:
+                return versions[0]
+            return None
+        except Exception as e:
+            logger.error(f"Failed to get latest model version: {e}")
+            return None
 
-        if versions:
-            return versions[0]
-        return None
-
-    def transition_model_stage(
-        self,
-        model_name: str,
-        version: int,
-        stage: str,
-        archive_existing: bool = True
-    ):
-        """Transition model to a new stage."""
-        self.client.transition_model_version_stage(
-            name=model_name,
-            version=version,
-            stage=stage,
-            archive_existing_versions=archive_existing
-        )
+    def transition_model_stage(self, model_name: str, version: int, stage: str):
+        """Transition model to a new stage (updated for new API)."""
+        try:
+            # Use set_model_version_tag instead of deprecated transition_model_version_stage
+            self.client.set_model_version_tag(
+                name=model_name,
+                version=str(version),
+                key="stage",
+                value=stage
+            )
+            logger.info(f"Set {model_name} v{version} stage tag to {stage}")
+        except Exception as e:
+            logger.error(f"Failed to transition model stage: {e}")
 
     @staticmethod
     def log_metrics(metrics: dict, step: Optional[int] = None):

@@ -29,7 +29,6 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """
     Handle application lifecycle events.
-    Replaces Flask's before_first_request and teardown handlers.
     """
     logger.info("🚀 Starting Cashly AI Service...")
 
@@ -41,6 +40,14 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"❌ Database initialization failed: {e}")
         raise
+
+    # Initialize MLflow (non-blocking)
+    try:
+        from app.core.mlflow_config import mlflow_manager
+        mlflow_manager.initialize()
+        logger.info("✅ MLflow initialized successfully")
+    except Exception as e:
+        logger.warning(f"⚠️ MLflow initialization failed (non-critical): {e}")
 
     # Startup complete
     logger.info("✅ Cashly AI Service started successfully")

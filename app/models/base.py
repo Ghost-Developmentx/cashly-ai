@@ -62,7 +62,9 @@ class BaseModel(ABC):
             try:
                 # Log parameters
                 self.params.update(kwargs)
-                mlflow_manager.log_params(self.params)
+                # Convert all params to strings for MLflow
+                mlflow_params = {k: str(v) for k, v in self.params.items()}
+                mlflow_manager.log_params(mlflow_params)
 
                 # Preprocess and extract features
                 processed_data = self.preprocess(data)
@@ -70,26 +72,47 @@ class BaseModel(ABC):
 
                 # Train model
                 self.train(feature_data)
-
-                # Log model
-                input_example = feature_data.head(5)
-                signature = infer_signature(input_example, self.predict(input_example))
-
-                model_info = mlflow_manager.log_model(
-                    model=self.model,
-                    artifact_path=self.model_name,
-                    model_type=self.model_type,
-                    input_example=input_example,
-                    signature=signature,
-                    registered_model_name=self.model_name
-                )
-
-                self.model_uri = model_info.model_uri
                 self.is_fitted = True
 
-                # Log metrics
+                # Log model
+                if hasattr(self, 'model') and self.model is not None:
+                    # For sklearn models, log the actual model
+                    if self.model_type == "sklearn" and hasattr(self.model, 'predict'):
+                        model_to_log = self.model
+                    else:
+                        # For custom models, create a wrapper
+                        model_to_log = self._create_pyfunc_wrapper()
+
+                    # Get input example
+                    if len(feature_data) > 0:
+                        if isinstance(feature_data, pd.DataFrame):
+                            input_example = feature_data.head(5)
+                        else:
+                            input_example = None
+                    else:
+                        input_example = None
+
+                    model_info = mlflow_manager.log_model(
+                        model=model_to_log,
+                        artifact_path=self.model_name,
+                        model_type=self.model_type,
+                        input_example=input_example,
+                        registered_model_name=self.model_name
+                    )
+
+                    self.model_uri = model_info.model_uri
+
+                # Log metrics - ensure all metrics are floats
                 if self.metrics:
-                    mlflow_manager.log_metrics(self.metrics)
+                    clean_metrics = {}
+                    for k, v in self.metrics.items():
+                        try:
+                            clean_metrics[k] = float(v)
+                        except (TypeError, ValueError):
+                            logger.warning(f"Skipping metric {k} with non-numeric value: {v}")
+
+                    if clean_metrics:
+                        mlflow_manager.log_metrics(clean_metrics)
 
                 logger.info(f"Model {self.model_name} trained successfully. URI: {self.model_uri}")
 
@@ -100,19 +123,40 @@ class BaseModel(ABC):
 
         return self
 
-    def load_latest(self, stage: str = "Production") -> "BaseModel":
+    def _create_pyfunc_wrapper(self):
+        """Create a PythonModel wrapper for custom models."""
+        import mlflow.pyfunc
+
+        class ModelWrapper(mlflow.pyfunc.PythonModel):
+            def __init__(self, model):
+                self.model = model
+
+            def predict(self, context, model_input):
+                return self.model.predict(model_input)
+
+        return ModelWrapper(self)
+
+    def load_latest(self, stage: Optional[str] = None) -> "BaseModel":
         """Load latest model version from MLflow."""
         try:
-            version_info = mlflow_manager.get_latest_model_version(
-                self.model_name,
-                stage=stage
-            )
+            version_info = mlflow_manager.get_latest_model_version(self.model_name)
 
             if not version_info:
-                raise ValueError(f"No {stage} model found for {self.model_name}")
+                raise ValueError(f"No model found for {self.model_name}")
 
             model_uri = f"models:/{self.model_name}/{version_info.version}"
-            self.model = mlflow_manager.load_model(model_uri, self.model_type)
+
+            # Load the model based on type
+            if self.model_type == "sklearn":
+                self.model = mlflow_manager.load_model(model_uri, self.model_type)
+            else:
+                # For custom models, load the wrapper
+                loaded_model = mlflow_manager.load_model(model_uri, "custom")
+                if hasattr(loaded_model, 'model'):
+                    self.model = loaded_model.model
+                else:
+                    self.model = loaded_model
+
             self.model_version = version_info.version
             self.model_uri = model_uri
             self.is_fitted = True
@@ -127,7 +171,6 @@ class BaseModel(ABC):
 
     def save_predictions(self, predictions: np.ndarray, metadata: Dict[str, Any]):
         """Save predictions with metadata for analysis."""
-        # This could be extended to save to a database or monitoring system
         timestamp = datetime.now().isoformat()
 
         prediction_data = {

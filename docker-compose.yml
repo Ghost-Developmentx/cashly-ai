@@ -20,6 +20,56 @@ services:
       timeout: 5s
       retries: 5
 
+  postgres-mlflow:
+    image: postgres:16
+    container_name: cashly-ai-mlflow-postgres
+    restart: unless-stopped
+    env_file:
+      - .env.docker
+    environment:
+      POSTGRES_USER: cashly_ml
+      POSTGRES_PASSWORD: qwerT12321
+      POSTGRES_DB: mlflow_tracking
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_mlflow_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U cashly_ml -d mlflow_tracking" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mlflow-server:
+    image: python:3.11-slim
+    container_name: cashly-ai-mlflow
+    restart: unless-stopped
+    depends_on:
+      postgres-mlflow:
+        condition: service_healthy
+    env_file:
+      - .env.docker
+    environment:
+      MLFLOW_BACKEND_STORE_URI: postgresql://cashly_ml:qwerT12321@postgres-mlflow:5432/mlflow_tracking
+      MLFLOW_S3_BUCKET: cashly-ai-models
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./scripts/mlflow:/app
+    working_dir: /app
+    command: >
+      bash -c "pip install mlflow boto3 psycopg2-binary &&
+               mlflow server --host 0.0.0.0 --port 5000
+               --backend-store-uri postgresql://cashly_ml:qwerT12321@postgres-mlflow:5432/mlflow_tracking
+               --default-artifact-root s3://cashly-ai-models/mlflow
+               --serve-artifacts"
+
 volumes:
   postgres_vector_data:
+    driver: local
+  postgres_mlflow_data:
     driver: local

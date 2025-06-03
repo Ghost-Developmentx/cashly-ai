@@ -1,112 +1,146 @@
 """
-Machine-learning-based categorization.
+Machine-learning-based categorization using MLflow models.
 """
 
 import logging
-from typing import Dict, Any, Optional
-import joblib
-import os
+from typing import Dict, Any, Optional, List
+import pandas as pd
+
+from app.services.ml.model_manager import model_manager
 
 logger = logging.getLogger(__name__)
 
 
 class MLCategorizer:
-    """
-    Handles transaction categorization using a machine learning model.
-
-    This class is responsible for categorizing transactions by utilizing
-    a pre-trained machine learning model. If the model is unavailable,
-    categorization may fall back to alternative implementations. It also
-    allows for additional updates to training data for future improvements.
-
-    Attributes
-    ----------
-    model : Any or None
-        Pre-trained machine learning model used for categorization.
-    vectorizer : Any or None
-        Feature vectorizer for preparing input data for the model.
-    model_path : str
-        Path to the saved machine learning model file.
-    vectorizer_path : str
-        Path to the saved feature vectorizer file.
-    """
+    """Handles transaction categorization using ML models."""
 
     def __init__(self):
-        self.model = None
-        self.vectorizer = None
-        self.model_path = "models/categorization_model.pkl"
-        self.vectorizer_path = "models/categorization_vectorizer.pkl"
-        self._load_model()
+        self.min_confidence_threshold = 0.7
 
-    def _load_model(self):
-        """Load pre-trained model if available."""
+    async def categorize(
+            self,
+            description: str,
+            amount: float,
+            additional_features: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """Categorize a single transaction."""
         try:
-            if os.path.exists(self.model_path) and os.path.exists(self.vectorizer_path):
-                self.model = joblib.load(self.model_path)
-                self.vectorizer = joblib.load(self.vectorizer_path)
-                logger.info("Loaded ML categorization model")
-            else:
-                logger.info("No ML model found, using rule-based only")
-        except Exception as e:
-            logger.error(f"Failed to load ML model: {e}")
+            # Get model
+            categorizer = await model_manager.get_model('categorizer')
 
-    async def categorize(self, description: str, amount: float) -> Dict[str, Any]:
-        """
-        Categorize using ML model.
+            if not categorizer.is_fitted:
+                return self._no_model_response()
 
-        Args:
-            description: Transaction description
-            amount: Transaction amount
-
-        Returns:
-            Category prediction with confidence
-        """
-        if not self.model or not self.vectorizer:
-            return {"category": None, "confidence": 0.0, "method": "ml_unavailable"}
-
-        try:
-            # Prepare features
-            features = self._prepare_features(description, amount)
-
-            # Get prediction
-            prediction = self.model.predict([features])[0]
-
-            # Get confidence (probability)
-            probabilities = self.model.predict_proba([features])[0]
-            confidence = max(probabilities)
-
-            return {
-                "category": prediction,
-                "confidence": round(confidence, 2),
-                "method": "ml_model",
+            # Prepare transaction data
+            transaction_data = {
+                'description': description,
+                'amount': amount,
+                'date': pd.Timestamp.now()
             }
+
+            if additional_features:
+                transaction_data.update(additional_features)
+
+            df = pd.DataFrame([transaction_data])
+
+            # Get predictions with confidence
+            results = categorizer.predict_with_confidence(df)
+
+            if results:
+                result = results[0]
+                return {
+                    'category': result['category'],
+                    'confidence': result['confidence'],
+                    'method': 'ml_model',
+                    'alternatives': result.get('alternatives', []),
+                    'is_confident': result.get('is_confident', False)
+                }
+
+            return self._no_prediction_response()
 
         except Exception as e:
             logger.error(f"ML categorization failed: {e}")
-            return {"category": None, "confidence": 0.0, "method": "ml_error"}
+            return self._error_response(str(e))
 
-    def _prepare_features(self, description: str, amount: float) -> str:
-        """Prepare features for ML model."""
-        # Simple feature: combine description with amount range
-        amount_range = self._get_amount_range(amount)
-        return f"{description} {amount_range}"
+    async def categorize_batch(
+            self,
+            transactions: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """Categorize multiple transactions."""
+        try:
+            # Get model
+            categorizer = await model_manager.get_model('categorizer')
+
+            if not categorizer.is_fitted:
+                return [self._no_model_response() for _ in transactions]
+
+            # Prepare data
+            df = pd.DataFrame(transactions)
+
+            # Ensure required columns
+            if 'date' not in df.columns:
+                df['date'] = pd.Timestamp.now()
+
+            # Get predictions
+            results = categorizer.predict_with_confidence(df)
+
+            return results
+
+        except Exception as e:
+            logger.error(f"Batch categorization failed: {e}")
+            return [self._error_response(str(e)) for _ in transactions]
 
     @staticmethod
-    def _get_amount_range(amount: float) -> str:
-        """Get amount range category."""
-        amount = abs(amount)
-        if amount < 10:
-            return "small"
-        elif amount < 50:
-            return "medium"
-        elif amount < 200:
-            return "large"
-        else:
-            return "xlarge"
+    async def update_training(
+            description: str,
+            amount: float,
+            category: str
+    ) -> bool:
+        """Update training data with user feedback."""
+        try:
+            # This would typically save to a training dataset
+            # For now, log it
+            logger.info(
+                f"Training feedback: '{description}' -> '{category}' "
+                f"(amount: {amount})"
+            )
+
+            # In production, you might:
+            # 1. Save to a feedback table
+            # 2. Periodically retrain with feedback data
+            # 3. Use online learning to update immediately
+
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to update training: {e}")
+            return False
 
     @staticmethod
-    async def update_training(description: str, amount: float, category: str) -> bool:
-        """Update training data (for future retraining)."""
-        # In production, this would save to a training dataset
-        logger.info(f"Recording training data: {description} -> {category}")
-        return True
+    def _no_model_response() -> Dict[str, Any]:
+        """Response when no model is available."""
+        return {
+            'category': None,
+            'confidence': 0.0,
+            'method': 'ml_unavailable',
+            'error': 'No trained model available'
+        }
+
+    @staticmethod
+    def _no_prediction_response() -> Dict[str, Any]:
+        """Response when prediction fails."""
+        return {
+            'category': 'Other',
+            'confidence': 0.0,
+            'method': 'ml_failed'
+        }
+
+    @staticmethod
+    def _error_response(error: str) -> Dict[str, Any]:
+        """Response for errors."""
+        return {
+            'category': None,
+            'confidence': 0.0,
+            'method': 'ml_error',
+            'error': error
+        }

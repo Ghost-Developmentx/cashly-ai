@@ -14,49 +14,18 @@ logger = logging.getLogger(__name__)
 
 
 class AsyncCategorizationService:
-    """
-    Asynchronous service for categorizing transactions.
-
-    This service provides functionalities for categorizing single or multiple
-    financial transactions based on various methods, including rule-based
-    matching, machine learning, and pattern matching. It also supports updating
-    its knowledge base through user feedback and generating statistics about
-    categorizations.
-
-    Attributes
-    ----------
-    matcher : CategoryMatcher
-        Instance of `CategoryMatcher` used for pattern matching.
-    ml_categorizer : MLCategorizer
-        Instance of `MLCategorizer` used for machine learning-based
-        transaction categorization.
-    rules : CategoryRules
-        Instance of `CategoryRules` used for rule-based categorization.
-    batch_size : int
-        Number of transactions to process in a single batch when
-        categorizing in bulk.
-    """
+    """Asynchronous service for categorizing transactions."""
 
     def __init__(self):
         self.matcher = CategoryMatcher()
-        self.ml_categorizer = MLCategorizer()
+        self.ml_categorizer = MLCategorizer()  # Updated
         self.rules = CategoryRules()
         self.batch_size = 100
 
     async def categorize_transaction(
         self, description: str, amount: float, merchant: Optional[str] = None
     ) -> Dict[str, Any]:
-        """
-        Categorize a single transaction.
-
-        Args:
-            description: Transaction description
-            amount: Transaction amount
-            merchant: Optional merchant name
-
-        Returns:
-            Category and confidence
-        """
+        """Categorize a single transaction."""
         try:
             # Try rule-based matching first
             rule_category = await self.rules.match_category(description, merchant)
@@ -69,7 +38,9 @@ class AsyncCategorizationService:
                 }
 
             # Try ML categorization
-            ml_result = await self.ml_categorizer.categorize(description, amount)
+            ml_result = await self.ml_categorizer.categorize(
+                description, amount, {'merchant': merchant} if merchant else None
+            )
 
             if ml_result["confidence"] > 0.7:
                 return ml_result
@@ -86,6 +57,7 @@ class AsyncCategorizationService:
         except Exception as e:
             logger.error(f"Categorization failed: {e}")
             return {"category": "Uncategorized", "confidence": 0.0, "error": str(e)}
+
 
     async def categorize_batch(
         self, transactions: List[Dict[str, Any]]

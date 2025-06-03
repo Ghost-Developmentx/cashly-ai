@@ -13,21 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class ForecastCalculator:
-    """
-    A class for calculating financial forecasts.
-
-    This class provides methods to analyze historical financial data and generate
-    forecasts for future income and expenses. It is designed to identify patterns
-    and seasonal trends from historical data, generate daily predictions for a
-    specified period, and calculate confidence scores for the forecast results.
-
-    Attributes
-    ----------
-    min_history_days : int
-        The minimum number of historical days required for creating a forecast.
-    confidence_threshold : float
-        The threshold confidence level required for considering forecasts reliable.
-    """
+    """A class for calculating financial forecasts."""
 
     def __init__(self):
         self.min_history_days = 14
@@ -41,9 +27,7 @@ class ForecastCalculator:
             forecast_days: int,
             transactions: Optional[List[Dict[str, Any]]] = None
     ) -> Dict[str, Any]:
-        """
-        Calculate forecast using ML if available, fallback to statistical.
-        """
+        """Calculate forecast using ML if available, fallback to statistical."""
         # Try ML-based forecast first
         if self.use_ml and transactions and len(transactions) >= self.min_history_days:
             try:
