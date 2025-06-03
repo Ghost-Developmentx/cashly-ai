@@ -55,7 +55,7 @@ class AsyncOpenAIEmbeddingClient:
                 limits=httpx.Limits(max_connections=20, max_keepalive_connections=10),
                 timeout=httpx.Timeout(
                     connect=10.0,
-                    read=self.config.request_timeout,
+                    read=self.config.openai_request_timeout,
                     write=10.0,
                     pool=5.0,
                 ),
@@ -63,8 +63,8 @@ class AsyncOpenAIEmbeddingClient:
 
             # Create OpenAI client
             self._client = AsyncOpenAI(
-                api_key=self.config.api_key,
-                max_retries=0,  # We handle retries ourselves
+                api_key=self.config.openai_api_key,
+                max_retries=0,
                 http_client=self._httpx_client,
             )
 
@@ -128,14 +128,14 @@ class AsyncOpenAIEmbeddingClient:
         """Create a single embedding."""
         async with self._semaphore:
             return await self._client.embeddings.create(
-                input=text, model=self.config.embedding_model
+                input=text, model=self.config.openai_embedding_model
             )
 
     async def _create_batch_embeddings(self, texts: List[str]):
         async with self._semaphore:
             return await self._client.embeddings.create(
                 input=texts,
-                model=self.config.embedding_model,
+                model=self.config.openai_embedding_model,
             )
 
     def _prepare_batch_texts(self, texts: List[str]) -> dict:

@@ -93,7 +93,7 @@ class AsyncRoutingHandler:
 
     @staticmethod
     def get_error_response(query: str) -> Dict[str, Any]:
-        """Get error response when classification fails."""
+        """Get an error response when classification fails."""
         return {
             "classification": {
                 "intent": "transactions",

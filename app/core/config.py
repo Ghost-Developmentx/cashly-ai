@@ -31,6 +31,32 @@ class Settings(BaseSettings):
         env_prefix="",  # no prefix needed
     )
 
+    # ML Model Configuration
+    model_dir: str = Field(
+        default="data/trained_models",
+        validation_alias="MODEL_DIR"
+    )
+    training_data_dir: str = Field(
+        default="data/training_data",
+        validation_alias="TRAINING_DATA_DIR"
+    )
+    use_advanced_features: bool = Field(
+        default=False,
+        validation_alias="USE_ADVANCED_FEATURES"
+    )
+    model_cache_ttl: int = Field(
+        default=3600,  # 1 hour cache
+        validation_alias="MODEL_CACHE_TTL"
+    )
+    enable_ml_forecasting: bool = Field(
+        default=True,
+        validation_alias="ENABLE_ML_FORECASTING"
+    )
+    ml_min_training_samples: int = Field(
+        default=30,  # Minimum transactions for ML
+        validation_alias="ML_MIN_TRAINING_SAMPLES"
+    )
+
     # OpenAI Configuration
     openai_api_key: str = Field(validation_alias="OPENAI_API_KEY")
     openai_model: str = "gpt-4-turbo-preview"

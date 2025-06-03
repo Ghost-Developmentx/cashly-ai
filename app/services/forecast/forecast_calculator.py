@@ -3,9 +3,11 @@ Core forecast calculation logic.
 """
 
 import logging
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 from datetime import datetime, timedelta
 import numpy as np
+
+from app.services.ml.ml_forecast_service import MLForecastService
 
 logger = logging.getLogger(__name__)
 
@@ -30,20 +32,45 @@ class ForecastCalculator:
     def __init__(self):
         self.min_history_days = 14
         self.confidence_threshold = 0.7
+        self.ml_service = MLForecastService()
+        self.use_ml = True
 
     async def calculate_forecast(
-        self, historical_data: Dict[str, Any], forecast_days: int
+            self,
+            historical_data: Dict[str, Any],
+            forecast_days: int,
+            transactions: Optional[List[Dict[str, Any]]] = None
     ) -> Dict[str, Any]:
         """
-        Calculate forecast based on historical data.
-
-        Args:
-            historical_data: Aggregated historical data
-            forecast_days: Number of days to forecast
-
-        Returns:
-            Forecast results
+        Calculate forecast using ML if available, fallback to statistical.
         """
+        # Try ML-based forecast first
+        if self.use_ml and transactions and len(transactions) >= self.min_history_days:
+            try:
+                logger.info("Attempting ML-based forecast")
+                ml_result = await self.ml_service.forecast_with_ml(
+                    transactions=transactions,
+                    forecast_days=forecast_days,
+                    method="ensemble"
+                )
+
+                if ml_result and ml_result.get("daily_predictions"):
+                    logger.info("ML forecast successful")
+                    return ml_result
+
+            except Exception as e:
+                logger.warning(f"ML forecast failed, using statistical: {e}")
+
+        # Fallback to statistical methods
+        logger.info("Using statistical forecast")
+        return await self._statistical_forecast(historical_data, forecast_days)
+
+    async def _statistical_forecast(
+            self,
+            historical_data: Dict[str, Any],
+            forecast_days: int
+    ) -> Dict[str, Any]:
+        """Original statistical forecasting method."""
         # Extract patterns
         patterns = await self._extract_patterns(historical_data)
 

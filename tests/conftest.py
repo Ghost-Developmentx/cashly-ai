@@ -8,9 +8,16 @@ from typing import AsyncGenerator
 import pytest_asyncio
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
+import sys
+from pathlib import Path
+
 
 from app.main import app
 from app.core.dependencies import get_db
+
+root_dir = Path(__file__).parent.parent
+sys.path.insert(0, str(root_dir))
+
 
 
 @pytest_asyncio.fixture
