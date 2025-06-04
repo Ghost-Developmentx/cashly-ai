@@ -26,7 +26,7 @@ class ForecastAggregator:
     """
 
     async def aggregate_transactions(
-        self, transactions: List[Dict[str, Any]]
+            self, transactions: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
         """
         Aggregate transactions for forecasting.
@@ -62,7 +62,7 @@ class ForecastAggregator:
 
     @staticmethod
     async def _group_by_date(
-        transactions: List[Dict[str, Any]],
+            transactions: List[Dict[str, Any]],
     ) -> Dict[str, Dict[str, float]]:
         """Group transactions by date."""
         income_by_day = defaultdict(float)
@@ -82,8 +82,9 @@ class ForecastAggregator:
             "expenses_by_day": dict(expenses_by_day),
         }
 
+
     def _calculate_statistics(
-        self, daily_data: Dict[str, Dict[str, float]]
+            self, daily_data: Dict[str, Dict[str, float]]
     ) -> Dict[str, float]:
         """Calculate statistical measures."""
         income_values = list(daily_data["income_by_day"].values())
@@ -105,14 +106,20 @@ class ForecastAggregator:
         }
 
     async def _find_recurring_transactions(
-        self, transactions: List[Dict[str, Any]]
+            self, transactions: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
         """Identify recurring transactions."""
         # Group by description and amount
         transaction_groups = defaultdict(list)
 
         for txn in transactions:
-            key = (txn.get("description", "").lower(), round(float(txn["amount"]), 2))
+            # Fix: Handle None description properly
+            description = txn.get("description")
+            if description is None or not isinstance(description, str):
+                description = ""
+            description = description.lower()
+
+            key = (description, round(float(txn["amount"]), 2))
             transaction_groups[key].append(txn)
 
         recurring = []
@@ -169,7 +176,7 @@ class ForecastAggregator:
 
         mean = sum(values) / len(values)
         variance = sum((x - mean) ** 2 for x in values) / len(values)
-        return variance**0.5
+        return variance ** 0.5
 
     @staticmethod
     def _detect_frequency(dates: List[datetime.date]) -> Optional[str]:

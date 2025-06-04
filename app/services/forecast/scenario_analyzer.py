@@ -22,7 +22,7 @@ class ScenarioAnalyzer:
     """
 
     async def apply_adjustments(
-        self, base_forecast: Dict[str, Any], adjustments: Dict[str, Any]
+            self, base_forecast: Dict[str, Any], adjustments: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
         Apply scenario adjustments to forecast.
@@ -54,9 +54,10 @@ class ScenarioAnalyzer:
                 adjusted_forecast, adjustments["category_adjustments"]
             )
 
-        # Recalculate summary
+        # Recalculate summary with original confidence score
+        original_confidence = base_forecast.get("summary", {}).get("confidence_score", 0.75)
         adjusted_forecast["summary"] = self._recalculate_summary(
-            adjusted_forecast["daily_forecast"]
+            adjusted_forecast["daily_forecast"], original_confidence
         )
 
         return adjusted_forecast
@@ -77,7 +78,7 @@ class ScenarioAnalyzer:
 
     @staticmethod
     async def _adjust_expenses(
-        forecast: Dict[str, Any], adjustment: float
+            forecast: Dict[str, Any], adjustment: float
     ) -> Dict[str, Any]:
         """Apply expense adjustment."""
         daily_adjustment = adjustment / 30  # Distribute monthly adjustment
@@ -90,7 +91,7 @@ class ScenarioAnalyzer:
         return forecast
 
     async def _adjust_categories(
-        self, forecast: Dict[str, Any], category_adjustments: Dict[str, float]
+            self, forecast: Dict[str, Any], category_adjustments: Dict[str, float]
     ) -> Dict[str, Any]:
         """Apply category-specific adjustments."""
         # This is simplified - would need category breakdown in forecast
@@ -99,7 +100,9 @@ class ScenarioAnalyzer:
         return await self._adjust_expenses(forecast, total_adjustment)
 
     @staticmethod
-    def _recalculate_summary(daily_forecast: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def _recalculate_summary(
+            daily_forecast: List[Dict[str, Any]], confidence_score: float = 0.75
+    ) -> Dict[str, Any]:
         """Recalculate forecast summary."""
         total_income = sum(day["predicted_income"] for day in daily_forecast)
         total_expenses = sum(day["predicted_expenses"] for day in daily_forecast)
@@ -109,4 +112,5 @@ class ScenarioAnalyzer:
             "projected_expenses": round(total_expenses, 2),
             "projected_net": round(total_income - total_expenses, 2),
             "ending_balance": round(total_income - total_expenses, 2),
+            "confidence_score": confidence_score,  # Add missing confidence_score
         }

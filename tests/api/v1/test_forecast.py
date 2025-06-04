@@ -21,6 +21,7 @@ async def test_cash_flow_forecast(client):
                     "date": (base_date + timedelta(days=i)).strftime("%Y-%m-%d"),
                     "amount": 1000.0,
                     "category": "Income",
+                    "description": f"Weekly income payment {i}",
                 }
             )
         # Daily expenses
@@ -29,6 +30,7 @@ async def test_cash_flow_forecast(client):
                 "date": (base_date + timedelta(days=i)).strftime("%Y-%m-%d"),
                 "amount": -50.0 - (i % 20),
                 "category": "Food",
+                "description": f"Daily food expense {i}",
             }
         )
 
@@ -65,6 +67,7 @@ async def test_scenario_forecast(client):
             "date": datetime.now().strftime("%Y-%m-%d"),
             "amount": 1000.0,
             "category": "Income",
+            "description": "Monthly salary",  # Added description
         }
     ]
 

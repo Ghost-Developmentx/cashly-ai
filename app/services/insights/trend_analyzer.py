@@ -229,7 +229,7 @@ class TrendAnalyzer:
     @staticmethod
     def _categorize_income_source(description: str) -> str:
         """Categorize income source from description."""
-        if not description:  # Guard against None/empty
+        if description is None or description == "" or not isinstance(description, str):
             return "Other Income"
 
         description_lower = description.lower()

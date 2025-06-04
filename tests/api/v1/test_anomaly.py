@@ -6,6 +6,8 @@ from unittest.mock import AsyncMock
 import pytest
 from datetime import datetime, timedelta
 
+from app.core.dependencies import get_anomaly_service
+
 
 @pytest.mark.asyncio
 async def test_detect_anomalies(client):
@@ -109,8 +111,10 @@ async def test_mark_anomalies_reviewed(client):
 
 @pytest.mark.asyncio
 async def test_anomaly_response_format(client, mocker):
-    """Test anomaly detection handles response format correctly."""
-    # Mock the AsyncAnomalyService class directly
+    """Test anomaly detection handles a response format correctly."""
+    from app.main import app
+
+    # Create the mock service instance
     mock_service_instance = AsyncMock()
     mock_service_instance.detect_anomalies = AsyncMock(return_value={
         "anomalies": [{
@@ -136,25 +140,28 @@ async def test_anomaly_response_format(client, mocker):
         "threshold": 2.0
     })
 
-    # Mock the service class constructor to return our mock instance
-    mocker.patch('app.services.anomaly.AsyncAnomalyService', return_value=mock_service_instance)
+    # Override the dependency for this test
+    def mock_get_anomaly_service():
+        return mock_service_instance
 
-    # Also clear any cached instances
-    from app.core.dependencies import get_anomaly_service
-    if hasattr(get_anomaly_service, 'cache_clear'):
-        get_anomaly_service.cache_clear()
+    app.dependency_overrides[get_anomaly_service] = mock_get_anomaly_service
 
-    response = await client.post("/api/v1/anomaly/detect", json={
-        "user_id": "test",
-        "transactions": [{
-            "date": "2024-01-01",
-            "amount": -100.0,
-            "description": "Test transaction",
-            "category": "Food"
-        }]
-    })
+    try:
+        response = await client.post("/api/v1/anomaly/detect", json={
+            "user_id": "test",
+            "transactions": [{
+                "date": "2024-01-01",
+                "amount": -100.0,
+                "description": "Test transaction",
+                "category": "Food"
+            }]
+        })
 
-    assert response.status_code == 200
-    data = response.json()
-    assert len(data["anomalies"]) == 1
-    assert data["anomalies"][0]["transaction_date"] == "2024-01-01"
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["anomalies"]) == 1
+        assert data["anomalies"][0]["transaction_date"] == "2024-01-01"
+
+    finally:
+        # Clean up the override
+        app.dependency_overrides.clear()
