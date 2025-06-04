@@ -10,6 +10,7 @@ def test_forecaster_init():
     assert forecaster.forecast_horizon == 30
     assert forecaster.method == "ensemble"
 
+
 def test_forecaster_preprocess(time_series_data):
     """Test preprocessing of time series data."""
     forecaster = CashFlowForecaster()
@@ -22,6 +23,7 @@ def test_forecaster_preprocess(time_series_data):
     # Check data types
     assert pd.api.types.is_datetime64_any_dtype(processed_data['date'])
 
+
 def test_forecaster_feature_extraction(time_series_data):
     """Test feature extraction."""
     forecaster = CashFlowForecaster()
@@ -30,6 +32,7 @@ def test_forecaster_feature_extraction(time_series_data):
 
     # Check feature columns exist
     assert len(features.columns) > 3  # Should have multiple features
+
 
 def test_forecaster_train(time_series_data):
     """Test training the forecaster."""
@@ -51,24 +54,27 @@ def test_forecaster_train(time_series_data):
     assert 'mae' in forecaster.metrics
     assert 'rmse' in forecaster.metrics
 
+
 def test_forecaster_predict(time_series_data):
     """Test cash flow prediction."""
     forecaster = CashFlowForecaster()
     processed_data = forecaster.preprocess(time_series_data)
+    features = forecaster.extract_features(processed_data)
 
     # Create target variable (next day's value)
-    X = processed_data.copy()
+    X = features.copy()
     y = X['daily_sum'].shift(-1).dropna()
     X = X.iloc[:-1]  # Remove last row as it has no target
 
     forecaster.train(X, y)
 
-    # Test on same data
+    # Test on same training data (X) - not the full features
     predictions = forecaster.predict(X)
 
     # Check predictions format
     assert isinstance(predictions, np.ndarray)
     assert len(predictions) == len(X)
+
 
 def test_forecaster_forecast(time_series_data):
     """Test forecasting future cash flows."""
@@ -85,7 +91,11 @@ def test_forecaster_forecast(time_series_data):
     # Test forecasting
     forecast_result = forecaster.forecast(processed_data, horizon=7)
 
-    # Check forecast structure
-    assert 'forecast' in forecast_result
-    assert 'dates' in forecast_result
-    assert len(forecast_result['forecast']) == 7  # 7-day forecast
+    # Check forecast structure - forecast method returns a DataFrame
+    assert isinstance(forecast_result, pd.DataFrame)
+    assert 'date' in forecast_result.columns
+    assert 'predicted_amount' in forecast_result.columns
+    assert 'lower_bound' in forecast_result.columns
+    assert 'upper_bound' in forecast_result.columns
+    assert len(forecast_result) == 7  # 7-day forecast
+

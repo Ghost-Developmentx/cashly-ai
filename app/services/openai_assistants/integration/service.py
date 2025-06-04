@@ -128,7 +128,7 @@ class OpenAIIntegrationService:
         }
 
         # Check configuration
-        config_validation = self.config.validate()
+        config_validation = await self.config.validate()
         health_results["components"]["configuration"] = config_validation
         if not config_validation["is_valid"]:
             health_results["status"] = "degraded"

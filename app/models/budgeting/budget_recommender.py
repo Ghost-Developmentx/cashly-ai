@@ -93,6 +93,7 @@ class BudgetRecommender(BaseModel):
         # Calculate metrics
         self.metrics = self._calculate_budget_metrics()
 
+        self.is_fitted = True
         return self
 
     def _cluster_categories(self):
@@ -255,13 +256,27 @@ class BudgetRecommender(BaseModel):
             savings_rate = 0
             expense_ratio = 0
 
+        # Calculate number of categories
+        num_categories = self.expense_df['category'].nunique() if len(self.expense_df) > 0 else 0
+
+        # Calculate total monthly spend (assuming data covers a period, normalize to monthly)
+        if len(self.expense_df) > 0:
+            # Get date range to calculate monthly average
+            date_range = (self.expense_df['date'].max() - self.expense_df['date'].min()).days
+            months = max(1, date_range / 30.44)  # Average days per month
+            total_monthly_spend = total_expenses / months
+        else:
+            total_monthly_spend = 0
+
         return {
             'savings_rate': float(savings_rate),
             'expense_ratio': float(expense_ratio),
             'budget_variance': float(
                 np.std([c['total_spending'] for c in self.category_clusters.values()])
                 if self.category_clusters else 0
-            )
+            ),
+            'num_categories': int(num_categories),
+            'total_monthly_spend': float(total_monthly_spend)
         }
 
     def evaluate(self, X: pd.DataFrame, y: pd.Series) -> Dict[str, float]:

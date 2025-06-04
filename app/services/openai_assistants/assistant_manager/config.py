@@ -1,71 +1,56 @@
-"""
-Configuration management for the async assistant manager.
-Handles environment variables and default settings.
-"""
+from typing import Dict, Any, Optional
+from pydantic import BaseModel, Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-import os
-from typing import Dict, Optional, Any
-from .types import AssistantType
-
-
-class AssistantConfig:
+class AssistantConfig(BaseSettings):
     """
-    Handles configuration for an AI assistant system.
-
-    This class is responsible for loading, maintaining, and validating the
-    configuration of an AI assistant system. It retrieves settings from
-    environment variables and validates whether the required parameters
-    are configured properly. It also manages assistant-specific IDs used for
-    various functionalities.
-
-    Attributes
-    ----------
-    api_key : str
-        The API key used for authenticating with the OpenAI service.
-    model : str
-        The model identifier to use for assistant operations.
-    timeout : int
-        The request timeout configuration, specified in seconds.
-    max_retries : int
-        The maximum number of retry attempts for requests.
-    retry_delay : float
-        The delay between retry attempts, specified in seconds.
-    assistant_ids : dict
-        A dictionary mapping assistant types to their corresponding IDs.
+    Handles configuration for an AI assistant system using Pydantic BaseSettings.
     """
+    
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_prefix="",
+        extra="ignore"
+    )
 
-    def __init__(self):
-        # API Configuration
-        self.api_key = os.getenv("OPENAI_API_KEY")
-        self.model = os.getenv("OPENAI_MODEL", "gpt-4-turbo-preview")
+    # API Configuration
+    api_key: Optional[str] = Field(default=None, validation_alias="OPENAI_API_KEY")
+    model: str = Field(default="gpt-4-turbo-preview", validation_alias="OPENAI_MODEL")
 
-        # Timeout Configuration
-        self.timeout = int(os.getenv("ASSISTANT_TIMEOUT", "30"))
-        self.max_retries = int(os.getenv("MAX_RETRIES", "3"))
-        self.retry_delay = float(os.getenv("RETRY_DELAY", "1.0"))
+    # Timeout Configuration
+    timeout: int = Field(default=30, validation_alias="ASSISTANT_TIMEOUT")
+    max_retries: int = Field(default=3, validation_alias="MAX_RETRIES")
+    retry_delay: float = Field(default=1.0, validation_alias="RETRY_DELAY")
 
-        # Assistant IDs
-        self.assistant_ids = self._load_assistant_ids()
+    # Assistant IDs
+    transaction_assistant_id: Optional[str] = Field(default=None, validation_alias="TRANSACTION_ASSISTANT_ID")
+    account_assistant_id: Optional[str] = Field(default=None, validation_alias="ACCOUNT_ASSISTANT_ID")
+    bank_connection_assistant_id: Optional[str] = Field(default=None, validation_alias="BANK_CONNECTION_ASSISTANT_ID")
+    payment_processing_assistant_id: Optional[str] = Field(default=None, validation_alias="PAYMENT_PROCESSING_ASSISTANT_ID")
+    invoice_assistant_id: Optional[str] = Field(default=None, validation_alias="INVOICE_ASSISTANT_ID")
+    forecasting_assistant_id: Optional[str] = Field(default=None, validation_alias="FORECASTING_ASSISTANT_ID")
+    budget_assistant_id: Optional[str] = Field(default=None, validation_alias="BUDGET_ASSISTANT_ID")
+    insights_assistant_id: Optional[str] = Field(default=None, validation_alias="INSIGHTS_ASSISTANT_ID")
 
-    @staticmethod
-    def _load_assistant_ids() -> Dict[AssistantType, Optional[str]]:
-        """Load assistant IDs from environment."""
+    def _load_assistant_ids(self) -> Dict[str, Optional[str]]:
+        """Load assistant IDs from the model fields."""
         return {
-            AssistantType.TRANSACTION: os.getenv("TRANSACTION_ASSISTANT_ID"),
-            AssistantType.ACCOUNT: os.getenv("ACCOUNT_ASSISTANT_ID"),
-            AssistantType.BANK_CONNECTION: os.getenv("BANK_CONNECTION_ASSISTANT_ID"),
-            AssistantType.PAYMENT_PROCESSING: os.getenv("PAYMENT_PROCESSING_ASSISTANT_ID"),
-            AssistantType.INVOICE: os.getenv("INVOICE_ASSISTANT_ID"),
-            AssistantType.FORECASTING: os.getenv("FORECASTING_ASSISTANT_ID"),
-            AssistantType.BUDGET: os.getenv("BUDGET_ASSISTANT_ID"),
-            AssistantType.INSIGHTS: os.getenv("INSIGHTS_ASSISTANT_ID"),
+            "TRANSACTION": self.transaction_assistant_id,
+            "ACCOUNT": self.account_assistant_id,
+            "BANK_CONNECTION": self.bank_connection_assistant_id,
+            "PAYMENT_PROCESSING": self.payment_processing_assistant_id,
+            "INVOICE": self.invoice_assistant_id,
+            "FORECASTING": self.forecasting_assistant_id,
+            "BUDGET": self.budget_assistant_id,
+            "INSIGHTS": self.insights_assistant_id,
         }
 
-    def get_assistant_id(self, assistant_type: AssistantType) -> Optional[str]:
+    def get_assistant_id(self, assistant_type: str) -> Optional[str]:
         """Get assistant ID for a given type."""
-        return self.assistant_ids.get(assistant_type)
+        assistant_ids = self._load_assistant_ids()
+        return assistant_ids.get(assistant_type.upper())
 
-    def is_assistant_configured(self, assistant_type: AssistantType) -> bool:
+    def is_assistant_configured(self, assistant_type: str) -> bool:
         """Check if an assistant is configured."""
         return self.get_assistant_id(assistant_type) is not None
 
@@ -77,14 +62,9 @@ class AssistantConfig:
             issues.append("OPENAI_API_KEY not set")
 
         # Check which assistants are configured
-        configured = []
-        missing = []
-
-        for assistant_type in AssistantType:
-            if self.is_assistant_configured(assistant_type):
-                configured.append(assistant_type.value)
-            else:
-                missing.append(assistant_type.value)
+        assistant_ids = self._load_assistant_ids()
+        configured = [key for key, value in assistant_ids.items() if value is not None]
+        missing = [key for key, value in assistant_ids.items() if value is None]
 
         return {
             "valid": len(issues) == 0,

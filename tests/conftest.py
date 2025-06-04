@@ -94,27 +94,38 @@ def mock_external_services(monkeypatch):
                         class MockChoice:
                             class MockMessage:
                                 content = '{"insights": [], "summary": "Test summary"}'
+
                         choices = [MockChoice()]
+
                     return MockResponse()
 
     monkeypatch.setattr("openai.OpenAI", MockOpenAI)
 
-    # Mock MLflow
+    # Mock MLflow with proper return values
+    class MockModelInfo:
+        def __init__(self):
+            self.model_uri = "test://mock_model_uri"
+            self.run_id = "mock_run_id"
+
     class MockMLflow:
         @staticmethod
         def log_model(*args, **kwargs):
-            pass
+            return MockModelInfo()  # Return proper mock object instead of None
+
         @staticmethod
         def load_model(*args, **kwargs):
             return None
 
+    # Mock MLflow modules
     monkeypatch.setattr("mlflow.sklearn.log_model", MockMLflow.log_model)
     monkeypatch.setattr("mlflow.sklearn.load_model", MockMLflow.load_model)
+    monkeypatch.setattr("mlflow.pyfunc.log_model", MockMLflow.log_model)
+    monkeypatch.setattr("mlflow.pyfunc.load_model", MockMLflow.load_model)
 
 
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def db_session() -> AsyncGenerator[AsyncSession, None]:
     """Create a test database session."""
     async for session in get_db():

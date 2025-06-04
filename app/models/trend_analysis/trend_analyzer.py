@@ -97,6 +97,7 @@ class TrendAnalyzer(BaseModel):
             'r_squared': self.trends['overall']['r2'],
             'volatility': X['daily_sum'].std() / X['daily_sum'].mean()
         }
+        self.is_fitted = True
 
         return self
 

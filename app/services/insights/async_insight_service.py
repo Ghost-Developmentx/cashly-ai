@@ -123,53 +123,23 @@ class AsyncInsightService:
                 "direction": "stable",
                 "change_percentage": 0.0,
                 "average_monthly": 0.0,
-                "highest_month": {"month": 0.0, "amount": 0.0},
-                "lowest_month": {"month": 0.0, "amount": 0.0},
+                "highest_month": {"month": "N/A", "amount": 0.0},
+                "lowest_month": {"month": "N/A", "amount": 0.0},
                 "volatility_score": 0.0
             }
-
-        # Handle highest_month - convert month string to numeric representation
-        highest_month = spending_trends.get("highest_month")
-        if isinstance(highest_month, str) and highest_month:
-            # Convert "YYYY-MM" to a float like 202505.0 for 2025-05
-            try:
-                year, month = highest_month.split("-")
-                month_numeric = float(year) * 100 + float(month)
-            except (ValueError, AttributeError):
-                month_numeric = 0.0
-            # Find the amount for this month
-            monthly_data = spending_trends.get("monthly_data", {})
-            highest_amount = monthly_data.get(highest_month, 0.0)
-            highest_month_data = {"month": month_numeric, "amount": highest_amount}
-        elif isinstance(highest_month, dict):
-            highest_month_data = highest_month
-        else:
-            highest_month_data = {"month": 0.0, "amount": 0.0}
-
-        # Handle lowest_month - convert month string to numeric representation
-        lowest_month = spending_trends.get("lowest_month")
-        if isinstance(lowest_month, str) and lowest_month:
-            # Convert "YYYY-MM" to a float like 202505.0 for 2025-05
-            try:
-                year, month = lowest_month.split("-")
-                month_numeric = float(year) * 100 + float(month)
-            except (ValueError, AttributeError):
-                month_numeric = 0.0
-            # Find the amount for this month
-            monthly_data = spending_trends.get("monthly_data", {})
-            lowest_amount = monthly_data.get(lowest_month, 0.0)
-            lowest_month_data = {"month": month_numeric, "amount": lowest_amount}
-        elif isinstance(lowest_month, dict):
-            lowest_month_data = lowest_month
-        else:
-            lowest_month_data = {"month": 0.0, "amount": 0.0}
 
         return {
             "direction": spending_trends.get("trend_direction", "stable"),
             "change_percentage": spending_trends.get("trend_percentage", 0.0),
             "average_monthly": spending_trends.get("monthly_average", 0.0),
-            "highest_month": highest_month_data,
-            "lowest_month": lowest_month_data,
+            "highest_month": {
+                "month": spending_trends.get("highest_month", {}).get("month", "N/A"),
+                "amount": spending_trends.get("highest_month", {}).get("amount", 0.0)
+            },
+            "lowest_month": {
+                "month": spending_trends.get("lowest_month", {}).get("month", "N/A"),
+                "amount": spending_trends.get("lowest_month", {}).get("amount", 0.0)
+            },
             "volatility_score": min(1.0, spending_trends.get("volatility", 0.0) / 100.0)
         }
 
@@ -179,48 +149,18 @@ class AsyncInsightService:
         if not income_trends:
             return None
 
-        # Handle highest_month - convert month string to numeric representation
-        highest_month = income_trends.get("highest_month")
-        if isinstance(highest_month, str) and highest_month:
-            # Convert "YYYY-MM" to a float like 202505.0 for 2025-05
-            try:
-                year, month = highest_month.split("-")
-                month_numeric = float(year) * 100 + float(month)
-            except (ValueError, AttributeError):
-                month_numeric = 0.0
-            # Find the amount for this month
-            monthly_data = income_trends.get("monthly_data", {})
-            highest_amount = monthly_data.get(highest_month, 0.0)
-            highest_month_data = {"month": month_numeric, "amount": highest_amount}
-        elif isinstance(highest_month, dict):
-            highest_month_data = highest_month
-        else:
-            highest_month_data = {"month": 0.0, "amount": 0.0}
-
-        # Handle lowest_month - convert month string to numeric representation
-        lowest_month = income_trends.get("lowest_month")
-        if isinstance(lowest_month, str) and lowest_month:
-            # Convert "YYYY-MM" to a float like 202505.0 for 2025-05
-            try:
-                year, month = lowest_month.split("-")
-                month_numeric = float(year) * 100 + float(month)
-            except (ValueError, AttributeError):
-                month_numeric = 0.0
-            # Find the amount for this month
-            monthly_data = income_trends.get("monthly_data", {})
-            lowest_amount = monthly_data.get(lowest_month, 0.0)
-            lowest_month_data = {"month": month_numeric, "amount": lowest_amount}
-        elif isinstance(lowest_month, dict):
-            lowest_month_data = lowest_month
-        else:
-            lowest_month_data = {"month": 0.0, "amount": 0.0}
-
         return {
             "direction": income_trends.get("trend_direction", "stable"),
             "change_percentage": income_trends.get("trend_percentage", 0.0),
             "average_monthly": income_trends.get("monthly_average", 0.0),
-            "highest_month": highest_month_data,
-            "lowest_month": lowest_month_data,
+            "highest_month": {
+                "month": income_trends.get("highest_month", {}).get("month", "N/A"),
+                "amount": income_trends.get("highest_month", {}).get("amount", 0.0)
+            },
+            "lowest_month": {
+                "month": income_trends.get("lowest_month", {}).get("month", "N/A"),
+                "amount": income_trends.get("lowest_month", {}).get("amount", 0.0)
+            },
             "volatility_score": min(1.0, income_trends.get("volatility", 0.0) / 100.0)
         }
 

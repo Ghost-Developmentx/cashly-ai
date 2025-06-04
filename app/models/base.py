@@ -70,8 +70,9 @@ class BaseModel(ABC):
                 processed_data = self.preprocess(data)
                 feature_data = self.extract_features(processed_data)
 
-                # Train model
-                self.train(feature_data)
+                # Train model - pass the original data, not the feature_data
+                # The train method will handle its own feature extraction
+                self.train(data)  # Changed from self.train(feature_data)
                 self.is_fitted = True
 
                 # Log model based on type
@@ -80,13 +81,14 @@ class BaseModel(ABC):
                     input_example = None
                     signature = None
 
-                    if len(feature_data) > 0 and hasattr(self, 'feature_names'):
-                        # Get numeric features only for sklearn models
-                        numeric_features = feature_data[self.feature_names].select_dtypes(include=[np.number])
-                        if len(numeric_features.columns) > 0:
-                            input_example = numeric_features.head(5)
-                            # Create signature with numeric features only
-                            signature = infer_signature(input_example, self.model.predict(input_example))
+                    if len(feature_data) > 0 and hasattr(self, 'numeric_feature_names'):
+                        # Use numeric_feature_names instead of feature_names
+                        if hasattr(self, 'numeric_feature_names') and self.numeric_feature_names:
+                            numeric_features = feature_data[self.numeric_feature_names]
+                            if len(numeric_features.columns) > 0:
+                                input_example = numeric_features.head(5)
+                                # Create signature with numeric features only
+                                signature = infer_signature(input_example, self.model.predict(input_example))
 
                     model_info = mlflow.sklearn.log_model(
                         self.model,

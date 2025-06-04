@@ -153,6 +153,7 @@ class TransactionCategorizer(BaseModel):
             'f1_weighted': f1_score(y_test, y_pred, average='weighted'),
             'categories': len(self.categories)
         }
+        self.is_fitted = True
 
         return self
 
@@ -161,19 +162,15 @@ class TransactionCategorizer(BaseModel):
         if not self.is_fitted:
             raise ValueError("Model must be fitted before making predictions")
 
-        # Extract features if raw data provided
-        if 'description' in X.columns:
-            X_preprocessed = self.preprocess(X)
-            X_features = self.extract_features(X_preprocessed)[self.numeric_feature_names]
-        else:
-            # Ensure we only use numeric features
-            X_features = X[self.numeric_feature_names]
+        # Extract features
+        X_processed = self.extract_features(X)
+        X_features = X_processed[self.numeric_feature_names]
 
-        # Make predictions
-        y_pred_encoded = self.model.predict(X_features)
-        y_pred = self.label_encoder.inverse_transform(y_pred_encoded)
+        # Get encoded predictions from the model
+        predictions = self.model.predict(X_features)
 
-        return y_pred
+        # Return encoded integers (not category names)
+        return predictions
 
     def predict_proba(self, X: pd.DataFrame) -> np.ndarray:
         """Predict probabilities for each category."""
@@ -190,38 +187,36 @@ class TransactionCategorizer(BaseModel):
         # Get probabilities
         return self.model.predict_proba(X_features)
 
-    def predict_with_confidence(self, X: pd.DataFrame) -> List[Dict[str, Any]]:
-        """Predict categories with confidence scores and alternatives."""
-        # Get predictions and probabilities
-        predictions = self.predict(X)
-        probabilities = self.predict_proba(X)
+    def predict_with_confidence(self, X: pd.DataFrame) -> pd.DataFrame:
+        """
+        Predict categories with confidence scores.
 
-        results = []
+        Returns:
+            DataFrame with columns: category, confidence, and original data
+        """
+        if not self.is_fitted:
+            raise ValueError("Model must be fitted before making predictions")
 
-        for i, (pred, probs) in enumerate(zip(predictions, probabilities)):
-            # Get confidence of predicted category
-            max_prob_idx = np.argmax(probs)
-            confidence = float(probs[max_prob_idx])
+        # Extract features
+        X_processed = self.extract_features(X)
+        X_features = X_processed[self.numeric_feature_names]
 
-            # Get alternative categories
-            sorted_indices = np.argsort(probs)[::-1]
-            alternatives = []
+        # Get encoded predictions and probabilities directly from the model
+        encoded_predictions = self.model.predict(X_features)
+        probabilities = self.model.predict_proba(X_features)
 
-            for idx in sorted_indices[1:4]:  # Top 3 alternatives
-                if probs[idx] > 0.05:  # Only include if > 5% probability
-                    alternatives.append({
-                        'category': self.categories[idx],
-                        'confidence': float(probs[idx])
-                    })
+        # Convert encoded predictions back to category names
+        predicted_categories = self.label_encoder.inverse_transform(encoded_predictions)
 
-            results.append({
-                'category': pred,
-                'confidence': confidence,
-                'is_confident': confidence >= self.confidence_threshold,
-                'alternatives': alternatives
-            })
+        # Get confidence scores (max probability for each prediction)
+        confidence_scores = np.max(probabilities, axis=1)
 
-        return results
+        # Create result DataFrame
+        result = X.copy()
+        result['category'] = predicted_categories
+        result['confidence'] = confidence_scores
+
+        return result
 
     def evaluate(self, X: pd.DataFrame, y: pd.Series) -> Dict[str, Any]:
         """Evaluate model performance."""

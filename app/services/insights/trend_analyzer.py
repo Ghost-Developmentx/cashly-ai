@@ -116,8 +116,8 @@ class TrendAnalyzer:
                 "average": 0,
                 "trend_percentage": 0,
                 "direction": "stable",
-                "highest_month": None,
-                "lowest_month": None,
+                "highest_month": {"month": "", "amount": 0.0},
+                "lowest_month": {"month": "", "amount": 0.0},
             }
 
         sorted_months = sorted(monthly_data.items())
@@ -155,8 +155,14 @@ class TrendAnalyzer:
             "average": round(average, 2),
             "trend_percentage": round(trend_percentage, 1),
             "direction": direction,
-            "highest_month": highest_month[0],
-            "lowest_month": lowest_month[0],
+            "highest_month": {
+                "month": highest_month[0],
+                "amount": round(highest_month[1], 2)
+            },
+            "lowest_month": {
+                "month": lowest_month[0],
+                "amount": round(lowest_month[1], 2)
+            },
         }
 
     @staticmethod
@@ -284,8 +290,8 @@ class TrendAnalyzer:
             "trend_direction": "stable",
             "volatility": 0.0,
             "top_categories": [],
-            "highest_month": {"month": "", "value": 0.0},
-            "lowest_month": {"month": "", "value": 0.0},
+            "highest_month": {"month": "", "amount": 0.0},
+            "lowest_month": {"month": "", "amount": 0.0},
             "volatility_score": 0.0,
             "direction": TrendDirection.STABLE,
             "change_percentage": 0.0,

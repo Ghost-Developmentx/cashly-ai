@@ -7,6 +7,10 @@ from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
 from enum import Enum
 
+class MonthData(BaseModel):
+    """Represents data for a specific month."""
+    month: str = Field(..., description="Month in YYYY-MM format")
+    amount: float = Field(..., description="Amount for this month")
 
 class AnalysisPeriod(str, Enum):
     """Valid analysis periods."""
@@ -68,12 +72,11 @@ class TrendDirection(str, Enum):
 
 class SpendingTrend(BaseModel):
     """Spending trend information."""
-
     direction: TrendDirection
     change_percentage: float = Field(..., description="Percentage change")
     average_monthly: float = Field(..., ge=0)
-    highest_month: Dict[str, float]
-    lowest_month: Dict[str, float]
+    highest_month: MonthData
+    lowest_month: MonthData
     volatility_score: float = Field(..., ge=0, le=1)
 
 

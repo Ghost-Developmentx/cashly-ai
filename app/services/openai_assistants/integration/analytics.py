@@ -98,7 +98,7 @@ class IntegrationAnalytics:
                 "total_queries": len(recent_queries),
             }
 
-    def _analyze_intents(self, queries: List[str]) -> Dict[str, Any]:
+    async def _analyze_intents(self, queries: List[str]) -> Dict[str, Any]:
         """Analyze intent distribution in queries."""
         if not queries:
             return {"message": "No queries to analyze"}
@@ -108,7 +108,7 @@ class IntegrationAnalytics:
 
         for query in queries:
             try:
-                result = self.intent_service.classify_and_route(query)
+                result = await self.intent_service.classify_and_route(query)
                 intent = result["classification"]["intent"]
                 confidence = result["classification"]["confidence"]
 
@@ -132,7 +132,7 @@ class IntegrationAnalytics:
             "unique_intents": len(intent_counts),
         }
 
-    def _calculate_assistant_usage(
+    async def _calculate_assistant_usage(
         self, queries: List[str], user_id: str
     ) -> Dict[str, int]:
         """Calculate assistant usage statistics."""
@@ -141,7 +141,7 @@ class IntegrationAnalytics:
         # From recent queries
         for query in queries:
             try:
-                routing = self.intent_service.classify_and_route(query)
+                routing = await self.intent_service.classify_and_route(query)
                 intent = routing["classification"]["intent"]
                 assistant = self.intent_mapper.get_default_assistant(intent)
                 assistant_usage[assistant.value] += 1

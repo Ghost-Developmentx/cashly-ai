@@ -42,26 +42,25 @@ class CashFlowForecaster(BaseModel):
         self.ensemble_weights = {}
 
     def preprocess(self, data: pd.DataFrame) -> pd.DataFrame:
-        """Preprocess transaction data for forecasting."""
-        required_cols = ['date', 'amount']
+        """Preprocess time series data for forecasting."""
+        required_cols = ['date']
         if not all(col in data.columns for col in required_cols):
             raise ValueError(f"Data must contain columns: {required_cols}")
 
         df = data.copy()
         df['date'] = pd.to_datetime(df['date'])
+        df = df.sort_values('date')
 
-        # Group by date and sum amounts - ensure 'daily_sum' exists
-        daily = df.groupby('date')['amount'].sum().reset_index()
-        daily.columns = ['date', 'daily_sum']  # Explicitly name columns
+        # Ensure we have an amount column for feature extraction
+        if 'amount' not in df.columns and 'daily_sum' in df.columns:
+            df['amount'] = df['daily_sum']
+        elif 'amount' not in df.columns:
+            raise ValueError("Data must contain either 'amount' or 'daily_sum' column")
 
-        # Add other aggregations
-        counts = df.groupby('date').size().reset_index(name='transaction_count')
-        daily = daily.merge(counts, on='date', how='left')
+        # Remove rows with missing target values
+        df = df.dropna(subset=['amount'])
 
-        # Fill missing values
-        daily = daily.fillna(0)
-
-        return daily
+        return df
 
     def extract_features(self, data: pd.DataFrame) -> pd.DataFrame:
         """Extract features for forecasting."""
@@ -85,20 +84,47 @@ class CashFlowForecaster(BaseModel):
 
     def train(self, X: pd.DataFrame, y: Optional[pd.Series] = None) -> "CashFlowForecaster":
         """Train the forecasting model."""
-        # Extract target
-        if y is None:
-            y = X['amount']
-            # Remove the date column before training
-            feature_cols = [col for col in self.feature_names if col != 'date']
-            X = X[feature_cols]
+        # Preprocess and extract features first
+        X_processed = self.preprocess(X)
+        X_features = self.extract_features(X_processed)
 
-        datetime_cols = X.select_dtypes(include=['datetime64']).columns
-        if len(datetime_cols) > 0:
-            X = X.drop(columns=datetime_cols)
+        # Extract target after feature extraction to ensure alignment
+        if y is None:
+            if 'amount' in X_features.columns:
+                y = X_features['amount'].shift(-1).dropna()
+                X_features = X_features.iloc[:-1]  # Remove last row as it has no target
+            elif 'daily_sum' in X_features.columns:
+                y = X_features['daily_sum'].shift(-1).dropna()
+                X_features = X_features.iloc[:-1]  # Remove last row as it has no target
+            else:
+                raise ValueError("No target variable found. Provide 'y' or ensure 'amount'/'daily_sum' is in X")
+        else:
+            # Ensure X and y have the same length after feature extraction
+            min_length = min(len(X_features), len(y))
+            X_features = X_features.iloc[:min_length]
+            y = y.iloc[:min_length]
+
+        # Remove datetime columns and target columns
+        datetime_cols = X_features.select_dtypes(include=['datetime64']).columns
+        target_cols = ['amount', 'daily_sum']
+        cols_to_drop = list(datetime_cols) + [col for col in target_cols if col in X_features.columns]
+
+        if len(cols_to_drop) > 0:
+            X_features = X_features.drop(columns=cols_to_drop)
+
+        # Update feature_names to match what we actually use for training
+        self.feature_names = [col for col in X_features.columns if
+                              col not in ['date', 'amount', 'daily_sum', 'category']]
+        X_train_features = X_features[self.feature_names]
+
+        # Ensure X and y have the same length before splitting
+        min_length = min(len(X_train_features), len(y))
+        X_train_features = X_train_features.iloc[:min_length]
+        y = y.iloc[:min_length]
 
         # Split data
         X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.2, shuffle=False
+            X_train_features, y, test_size=0.2, shuffle=False
         )
 
         # Scale features
@@ -111,6 +137,35 @@ class CashFlowForecaster(BaseModel):
         else:
             self._train_single_model(X_train_scaled, y_train, X_test_scaled, y_test)
 
+        # Calculate metrics for all models
+        if not hasattr(self, 'metrics'):
+            self.metrics = {}
+
+        # Calculate metrics for each model
+        for name, model in self.models.items():
+            predictions = model.predict(X_test_scaled)
+            mae = mean_absolute_error(y_test, predictions)
+            rmse = np.sqrt(mean_squared_error(y_test, predictions))
+            r2 = r2_score(y_test, predictions)
+
+            self.metrics[f'{name}_mae'] = mae
+            self.metrics[f'{name}_rmse'] = rmse
+            self.metrics[f'{name}_r2'] = r2
+
+        # Add overall/best metrics (using ensemble as the primary model)
+        if 'ensemble_mae' in self.metrics:
+            self.metrics['mae'] = self.metrics['ensemble_mae']
+            self.metrics['rmse'] = self.metrics['ensemble_rmse']
+            self.metrics['r2'] = self.metrics['ensemble_r2']
+        else:
+            # Fallback to the first available model if ensemble doesn't exist
+            available_models = [name for name in self.models.keys()]
+            if available_models:
+                best_model = available_models[0]
+                self.metrics['mae'] = self.metrics[f'{best_model}_mae']
+                self.metrics['rmse'] = self.metrics[f'{best_model}_rmse']
+                self.metrics['r2'] = self.metrics[f'{best_model}_r2']
+
         # Store the composite model for MLflow
         self.model = {
             'models': self.models,
@@ -120,6 +175,7 @@ class CashFlowForecaster(BaseModel):
             'category_extractor': self.category_extractor,
             'feature_names': self.feature_names
         }
+        self.is_fitted = True
 
         return self
 
@@ -198,24 +254,66 @@ class CashFlowForecaster(BaseModel):
         return ensemble_pred
 
     def predict(self, X: pd.DataFrame) -> np.ndarray:
-        """Make predictions on new data."""
+        """Make predictions using the trained models."""
         if not self.is_fitted:
             raise ValueError("Model must be fitted before making predictions")
 
-        # Extract features if raw data provided
-        if 'amount' in X.columns:
-            X_features = X[self.feature_names]
+        # If input data contains raw columns, process it first
+        if 'description' in X.columns or not all(col in X.columns for col in self.feature_names):
+            # Preprocess and extract features
+            X_processed = self.preprocess(X)
+            X_features = self.extract_features(X_processed)
         else:
-            X_features = X
+            # Assume features are already extracted
+            X_features = X.copy()
+
+        # Remove datetime columns and target columns
+        datetime_cols = X_features.select_dtypes(include=['datetime64']).columns
+        target_cols = ['amount', 'daily_sum']
+        cols_to_drop = list(datetime_cols) + [col for col in target_cols if col in X_features.columns]
+
+        if len(cols_to_drop) > 0:
+            X_features = X_features.drop(columns=cols_to_drop)
+
+        # Ensure we only use the features that were trained on
+        available_features = [col for col in self.feature_names if col in X_features.columns]
+
+        if not available_features:
+            raise ValueError(
+                f"No valid features found. Available columns: {list(X_features.columns)}, Expected features: {self.feature_names}")
+
+        # Select only the features that were used during training
+        X_features = X_features[available_features]
+
+        # Handle missing features by adding them with default values
+        missing_features = [col for col in self.feature_names if col not in X_features.columns]
+        for feature in missing_features:
+            X_features[feature] = 0  # Default value for missing features
+
+        # Ensure we have the same feature order as training
+        X_features = X_features.reindex(columns=self.feature_names, fill_value=0)
 
         # Scale features
         X_scaled = self.scaler.transform(X_features)
 
-        # Make predictions
-        if self.method == "ensemble":
-            return self._ensemble_predict(X_scaled)
+        # Make ensemble prediction
+        if len(self.models) == 1:
+            # Single model
+            model_name = list(self.models.keys())[0]
+            return self.models[model_name].predict(X_scaled)
         else:
-            return self.models[self.method].predict(X_scaled)
+            # Ensemble prediction
+            predictions = []
+            weights = []
+
+            for name, model in self.models.items():
+                pred = model.predict(X_scaled)
+                predictions.append(pred)
+                weights.append(self.ensemble_weights.get(name, 1.0))
+
+            # Weighted average
+            weighted_pred = np.average(predictions, axis=0, weights=weights)
+            return weighted_pred
 
     def forecast(self, historical_data: pd.DataFrame, horizon: Optional[int] = None) -> pd.DataFrame:
         """Generate future predictions."""
@@ -249,8 +347,11 @@ class CashFlowForecaster(BaseModel):
             # Create feature row for prediction
             feature_row = self._create_forecast_features(recent_data, date)
 
-            # Make prediction
-            X = pd.DataFrame([feature_row])[self.feature_names]
+            # Make prediction - exclude target columns from features
+            target_cols = ['daily_sum', 'amount']
+            feature_cols = [col for col in self.feature_names if col not in target_cols]
+
+            X = pd.DataFrame([feature_row])[feature_cols]
             X_scaled = self.scaler.transform(X)
 
             if self.method == "ensemble":

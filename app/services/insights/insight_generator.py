@@ -25,11 +25,13 @@ class InsightGenerator:
     asynchronous methods to compute and organize insights.
     """
 
+    PRIORITY_ORDER = {"high": 1, "medium": 2, "low": 3}
+
     async def generate_insights(
-        self,
-        spending_trends: Dict[str, Any],
-        income_trends: Dict[str, Any],
-        patterns: List[Dict[str, Any]],
+            self,
+            spending_trends: Dict[str, Any],
+            income_trends: Dict[str, Any],
+            patterns: List[Dict[str, Any]],
     ) -> List[Dict[str, Any]]:
         """
         Generate actionable insights.
@@ -64,14 +66,14 @@ class InsightGenerator:
         )
         insights.extend(health_insights)
 
-        # Sort by priority
-        insights.sort(key=lambda x: x.get("priority", 999))
+        # Sort by priority using consistent string-to-integer mapping
+        insights.sort(key=lambda x: self.PRIORITY_ORDER.get(x.get("priority", "low"), 999))
 
         return insights[:10]  # Top 10 insights
 
     @staticmethod
     async def _generate_trend_insights(
-        spending_trends: Dict[str, Any], income_trends: Dict[str, Any]
+            spending_trends: Dict[str, Any], income_trends: Dict[str, Any]
     ) -> List[Dict[str, Any]]:
         """Generate insights from trends."""
         insights = []
@@ -83,7 +85,7 @@ class InsightGenerator:
         if spending_direction == "increasing" and spending_change > 10:
             insights.append(
                 {
-                    "type": "spending_trend",  # Use enum value
+                    "type": "spending_trend",
                     "title": "Spending Increase Alert",
                     "description": f"Your spending has increased by {spending_change:.1f}% recently",
                     "impact": "Review your recent expenses to identify areas for reduction",
@@ -97,7 +99,6 @@ class InsightGenerator:
                 }
             )
 
-
         # Income trend insights
         income_direction = income_trends.get("trend_direction", "stable")
         income_change = income_trends.get("trend_percentage", 0)
@@ -105,7 +106,7 @@ class InsightGenerator:
         if income_direction == "decreasing" and income_change < -10:
             insights.append(
                 {
-                    "type": "income_pattern",  # Use enum value
+                    "type": "income_pattern",
                     "title": "Income Decrease Alert",
                     "description": f"Your income has decreased by {abs(income_change):.1f}% recently",
                     "impact": "Consider diversifying income sources or reducing expenses",
@@ -120,35 +121,22 @@ class InsightGenerator:
             )
 
 
-        # Volatility insights
-        if spending_trends.get("volatility", 0) > 50:
-            insights.append(
-                {
-                    "type": "volatility_alert",
-                    "title": "High Spending Volatility",
-                    "description": "Your spending varies significantly from month to month",
-                    "recommendation": "Create a more consistent budget to improve financial stability",
-                    "priority": 2,
-                    "severity": "medium",
-                }
-            )
-
         return insights
 
     @staticmethod
     async def _generate_pattern_insights(
-        patterns: List[Dict[str, Any]],
+            patterns: List[Dict[str, Any]],
     ) -> List[Dict[str, Any]]:
         """Generate insights from detected patterns."""
         insights = []
 
         # Recurring transaction insights
-        recurring = [p for p in patterns if p["type"] == "recurring_transaction"]
+        recurring = [p for p in patterns if p.get("type") == "recurring_transaction"]
         if recurring:
-            total_recurring = sum(abs(p["amount"]) for p in recurring)
+            total_recurring = sum(abs(p.get("amount", 0)) for p in recurring)
             insights.append(
                 {
-                    "type": "recurring_detection",  # Use enum value
+                    "type": "recurring_detection",
                     "title": f"{len(recurring)} Recurring Transactions Detected",
                     "description": f"You have ${total_recurring:.2f} in recurring monthly expenses",
                     "impact": "Review these subscriptions to ensure they're all necessary",
@@ -162,24 +150,27 @@ class InsightGenerator:
                 }
             )
 
-
         # Spending spike insights
-        spikes = [p for p in patterns if p["type"] == "spending_spike"]
+        spikes = [p for p in patterns if p.get("type") == "spending_spike"]
         if spikes:
             recent_spikes = [
                 s
                 for s in spikes
-                if (datetime.now() - datetime.strptime(s["date"], "%Y-%m-%d")).days < 30
+                if (datetime.now() - datetime.strptime(s.get("date", "1900-01-01"), "%Y-%m-%d")).days < 30
             ]
             if recent_spikes:
                 insights.append(
                     {
-                        "type": "spike_alert",
+                        "type": "spending_trend",
                         "title": "Recent Spending Spikes",
                         "description": f"You had {len(recent_spikes)} unusual spending days recently",
-                        "recommendation": "Review these high-spending days to avoid future surprises",
-                        "priority": 2,
-                        "severity": "medium",
+                        "impact": "Review these high-spending days to avoid future surprises",
+                        "priority": "medium",
+                        "action_required": False,
+                        "metadata": {
+                            "spike_count": len(recent_spikes),
+                            "severity": "medium"
+                        }
                     }
                 )
 
@@ -187,7 +178,7 @@ class InsightGenerator:
 
     @staticmethod
     async def _generate_category_insights(
-        spending_trends: Dict[str, Any],
+            spending_trends: Dict[str, Any],
     ) -> List[Dict[str, Any]]:
         """Generate category-based insights."""
         insights = []
@@ -195,14 +186,14 @@ class InsightGenerator:
         top_categories = spending_trends.get("top_categories", [])
         if top_categories:
             top_cat = top_categories[0]
-            if top_cat["percentage"] > 40:
+            if top_cat.get("percentage", 0) > 40:
                 insights.append(
                     {
-                        "type": "category_concentration",  # This matches your enum
+                        "type": "category_concentration",
                         "title": f"High Spending in {top_cat['category']}",
                         "description": f"{top_cat['percentage']:.1f}% of your spending is in {top_cat['category']}",
-                        "impact": f"Medium impact on budget planning",  # Add required field
-                        "priority": "medium",  # Ensure it's a string, not int
+                        "impact": "Medium impact on budget planning",
+                        "priority": "medium",
                         "action_required": False,
                         "metadata": {
                             "category": top_cat['category'],
@@ -212,12 +203,11 @@ class InsightGenerator:
                     }
                 )
 
-
         return insights
 
     @staticmethod
     async def _generate_health_insights(
-        spending_trends: Dict[str, Any], income_trends: Dict[str, Any]
+            spending_trends: Dict[str, Any], income_trends: Dict[str, Any]
     ) -> List[Dict[str, Any]]:
         """Generate financial health insights."""
         insights = []
@@ -231,7 +221,7 @@ class InsightGenerator:
             if savings_rate < 10:
                 insights.append(
                     {
-                        "type": "saving_opportunity",  # Use enum value
+                        "type": "saving_opportunity",
                         "title": "Low Savings Rate",
                         "description": f"You're saving only {savings_rate:.1f}% of your income",
                         "impact": "Aim to save at least 20% of your income for better financial health",
@@ -248,12 +238,16 @@ class InsightGenerator:
             elif savings_rate > 30:
                 insights.append(
                     {
-                        "type": "positive_insight",
+                        "type": "saving_opportunity",
                         "title": "Excellent Savings Rate!",
                         "description": f"You're saving {savings_rate:.1f}% of your income",
-                        "recommendation": "Keep up the great work! Consider investing surplus savings",
-                        "priority": 4,
-                        "severity": "positive",
+                        "impact": "Keep up the great work! Consider investing surplus savings",
+                        "priority": "low",  # Changed from integer 4 to string "low"
+                        "action_required": False,
+                        "metadata": {
+                            "current_rate": savings_rate,
+                            "severity": "positive"
+                        }
                     }
                 )
 

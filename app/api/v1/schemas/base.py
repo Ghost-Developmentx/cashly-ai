@@ -3,7 +3,7 @@ Base schemas for API responses.
 Ensures Rails compatibility and consistent structure.
 """
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict, field_serializer
 from typing import Any, Dict, List, Optional, Generic, TypeVar
 from datetime import datetime
 
@@ -14,16 +14,25 @@ T = TypeVar("T")
 class BaseResponse(BaseModel):
     """Base response model for all API responses."""
 
-    class Config:
-        """Pydantic config for all responses."""
-
-        # Ensure datetime serialization matches Rails
-        json_encoders = {datetime: lambda v: v.isoformat()}
+    model_config = ConfigDict(
         # Allow ORM mode for SQLAlchemy models
-        from_attributes = True
+        from_attributes=True
+    )
+
+class TimestampMixin(BaseModel):
+    """Mixin for models with timestamp fields."""
+
+    timestamp: datetime = Field(default_factory=datetime.now)
+
+    @field_serializer('timestamp', when_used='unless-none')
+    def serialize_datetime(self, value: datetime) -> str:
+        """Ensure datetime serialization matches Rails."""
+        if value:
+            return value.isoformat()
+        return None
 
 
-class SuccessResponse(BaseResponse, Generic[T]):
+class SuccessResponse(BaseResponse, TimestampMixin, Generic[T]):
     """Generic success response wrapper."""
 
     success: bool = True
@@ -32,14 +41,13 @@ class SuccessResponse(BaseResponse, Generic[T]):
     timestamp: datetime = Field(default_factory=datetime.now)
 
 
-class ErrorResponse(BaseResponse):
+class ErrorResponse(BaseResponse, TimestampMixin):
     """Standard error response."""
 
     success: bool = False
     error: str
     detail: Optional[Dict[str, Any]] = None
     timestamp: datetime = Field(default_factory=datetime.now)
-
 
 class PaginatedResponse(BaseResponse, Generic[T]):
     """Paginated list response."""

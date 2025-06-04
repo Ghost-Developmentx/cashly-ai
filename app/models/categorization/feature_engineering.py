@@ -28,8 +28,19 @@ class TextFeatureExtractor(BaseTransformer):
         """Fit the text vectorizer."""
         if 'description' in X.columns:
             cleaned_text = X['description'].apply(self._clean_text)
-            self.vectorizer.fit(cleaned_text)
-            self.feature_names = self.vectorizer.get_feature_names_out().tolist()
+
+            # Check if all text is empty after cleaning
+            non_empty_text = cleaned_text[cleaned_text.str.len() > 0]
+            if len(non_empty_text) == 0:
+                raise ValueError("No features extracted")
+
+            try:
+                self.vectorizer.fit(cleaned_text)
+                self.feature_names = self.vectorizer.get_feature_names_out().tolist()
+            except ValueError as e:
+                if "empty vocabulary" in str(e):
+                    raise ValueError("No features extracted")
+                raise
         return self
 
     def transform(self, X: pd.DataFrame) -> pd.DataFrame:
