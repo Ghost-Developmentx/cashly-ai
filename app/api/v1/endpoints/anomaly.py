@@ -4,7 +4,7 @@ Replaces Flask AnomalyController.
 """
 
 from typing import Dict, Any, List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from logging import getLogger
 from datetime import datetime, timedelta
 
@@ -15,6 +15,8 @@ from app.api.v1.schemas.anomaly import (
     AnomalyDetectionResponse,
     DetectedAnomaly,
     AnomalySummary,
+AnomalyPattern,
+
     AnomalyTrendResponse,
     AnomalyType,
     AnomalySeverity,
@@ -57,19 +59,7 @@ async def detect_anomalies(
 
         # Format detected anomalies
         anomalies = [
-            DetectedAnomaly(
-                transaction_id=a.get("transaction_id"),
-                transaction_date=a["date"],
-                transaction_amount=a["amount"],
-                transaction_description=a["description"],
-                anomaly_type=a["type"],
-                severity=a["severity"],
-                confidence_score=a["confidence"],
-                reason=a["reason"],
-                expected_range=a.get("expected_range"),
-                similar_transactions=a.get("similar_transactions"),
-            )
-            for a in result.get("anomalies", [])
+            _format_anomaly_response(a) for a in result.get("anomalies", [])
         ]
 
         # Generate recommendations
@@ -157,15 +147,15 @@ async def get_anomaly_trends(
         total_anomalies=23,
         anomaly_trend="stable",
         patterns=[
-            {
-                "pattern_type": "recurring_high_amount",
-                "frequency": "monthly",
-                "transactions_affected": 5,
-                "total_amount": 7500.00,
-                "description": "Large purchases around month-end",
-                "first_occurrence": "2023-10-28",
-                "last_occurrence": "2024-01-28",
-            }
+            AnomalyPattern(
+                pattern_type="recurring_high_amount",
+                frequency="monthly",
+                transactions_affected=5,
+                total_amount=7500.00,
+                description="Large purchases around month-end",
+                first_occurrence="2023-10-28",
+                last_occurrence="2024-01-28",
+            )
         ],
         risk_assessment={
             "overall_risk": "medium",
@@ -179,6 +169,7 @@ async def get_anomaly_trends(
     )
 
 
+
 @router.post(
     "/mark_reviewed",
     response_model=SuccessResponse[Dict[str, Any]],
@@ -186,9 +177,9 @@ async def get_anomaly_trends(
     description="Mark detected anomalies as reviewed by user",
 )
 async def mark_anomalies_reviewed(
-    anomaly_ids: List[str],
-    user_id: str,
-    action: str = Query(..., pattern="^(acknowledged|false_positive|legitimate)$"),
+    anomaly_ids: List[str] = Body(...),
+    user_id: str = Body(...),
+    action: str = Body(..., pattern="^(acknowledged|false_positive|legitimate)$")
 ) -> SuccessResponse[Dict[str, Any]]:
     """Mark anomalies as reviewed."""
     try:
@@ -254,3 +245,38 @@ def _generate_anomaly_recommendations(
         )
 
     return recommendations[:5]  # Top 5 recommendations
+
+
+def _format_anomaly_response(anomaly: Dict[str, Any]) -> DetectedAnomaly:
+    """Safely format anomaly response with proper field mapping."""
+    transaction = anomaly.get("transaction", {})
+
+    # Map anomaly types to match enum values
+    anomaly_type_mapping = {
+        "unusual_expense_amount": AnomalyType.UNUSUAL_AMOUNT,
+        "unusual_income_amount": AnomalyType.UNUSUAL_AMOUNT,
+        "high_transaction_frequency": AnomalyType.UNUSUAL_FREQUENCY,
+        "category_outlier": AnomalyType.CATEGORY_SPIKE,
+        "unusual_amount": AnomalyType.UNUSUAL_AMOUNT,
+        "unusual_frequency": AnomalyType.UNUSUAL_FREQUENCY,
+        "new_merchant": AnomalyType.NEW_MERCHANT,
+        "category_spike": AnomalyType.CATEGORY_SPIKE,
+        "duplicate_transaction": AnomalyType.DUPLICATE_TRANSACTION,
+        "time_anomaly": AnomalyType.TIME_ANOMALY,
+    }
+
+    raw_anomaly_type = anomaly.get("anomaly_type", "unusual_amount")
+    mapped_anomaly_type = anomaly_type_mapping.get(raw_anomaly_type, AnomalyType.UNUSUAL_AMOUNT)
+
+    return DetectedAnomaly(
+        transaction_id=transaction.get("id"),
+        transaction_date=transaction.get("date", ""),
+        transaction_amount=float(transaction.get("amount", 0)),
+        transaction_description=transaction.get("description", ""),
+        anomaly_type=mapped_anomaly_type,
+        severity=anomaly.get("severity", AnomalySeverity.MEDIUM),
+        confidence_score=float(anomaly.get("confidence", 0.5)),
+        reason=anomaly.get("reason", "Anomaly detected"),
+        expected_range=anomaly.get("expected_range"),
+        similar_transactions=anomaly.get("similar_transactions", [])
+    )

@@ -74,33 +74,44 @@ class BaseModel(ABC):
                 self.train(feature_data)
                 self.is_fitted = True
 
-                # Log model
-                if hasattr(self, 'model') and self.model is not None:
-                    # For sklearn models, log the actual model
-                    if self.model_type == "sklearn" and hasattr(self.model, 'predict'):
-                        model_to_log = self.model
-                    else:
-                        # For custom models, create a wrapper
-                        model_to_log = self._create_pyfunc_wrapper()
+                # Log model based on type
+                if self.model_type == "sklearn" and hasattr(self.model, 'predict'):
+                    # For sklearn models, log directly
+                    input_example = None
+                    signature = None
+
+                    if len(feature_data) > 0 and hasattr(self, 'feature_names'):
+                        # Get numeric features only for sklearn models
+                        numeric_features = feature_data[self.feature_names].select_dtypes(include=[np.number])
+                        if len(numeric_features.columns) > 0:
+                            input_example = numeric_features.head(5)
+                            # Create signature with numeric features only
+                            signature = infer_signature(input_example, self.model.predict(input_example))
+
+                    model_info = mlflow.sklearn.log_model(
+                        self.model,
+                        artifact_path=self.model_name,
+                        input_example=input_example,
+                        signature=signature,
+                        registered_model_name=self.model_name
+                    )
+                else:
+                    # For custom models, create a proper wrapper
+                    model_wrapper = self._create_mlflow_wrapper()
 
                     # Get input example
+                    input_example = None
                     if len(feature_data) > 0:
-                        if isinstance(feature_data, pd.DataFrame):
-                            input_example = feature_data.head(5)
-                        else:
-                            input_example = None
-                    else:
-                        input_example = None
+                        input_example = feature_data.head(5)
 
-                    model_info = mlflow_manager.log_model(
-                        model=model_to_log,
+                    model_info = mlflow.pyfunc.log_model(
                         artifact_path=self.model_name,
-                        model_type=self.model_type,
+                        python_model=model_wrapper,
                         input_example=input_example,
                         registered_model_name=self.model_name
                     )
 
-                    self.model_uri = model_info.model_uri
+                self.model_uri = model_info.model_uri
 
                 # Log metrics - ensure all metrics are floats
                 if self.metrics:
@@ -123,51 +134,150 @@ class BaseModel(ABC):
 
         return self
 
-    def _create_pyfunc_wrapper(self):
-        """Create a PythonModel wrapper for custom models."""
+    def _create_mlflow_wrapper(self):
+        """Create a proper MLflow PythonModel wrapper for custom models."""
         import mlflow.pyfunc
 
+        model_instance = self
+
         class ModelWrapper(mlflow.pyfunc.PythonModel):
-            def __init__(self, model):
-                self.model = model
+            def __init__(self):
+                self.model = model_instance
 
             def predict(self, context, model_input):
-                return self.model.predict(model_input)
-
-        return ModelWrapper(self)
-
-    def load_latest(self, stage: Optional[str] = None) -> "BaseModel":
-        """Load latest model version from MLflow."""
-        try:
-            version_info = mlflow_manager.get_latest_model_version(self.model_name)
-
-            if not version_info:
-                raise ValueError(f"No model found for {self.model_name}")
-
-            model_uri = f"models:/{self.model_name}/{version_info.version}"
-
-            # Load the model based on type
-            if self.model_type == "sklearn":
-                self.model = mlflow_manager.load_model(model_uri, self.model_type)
-            else:
-                # For custom models, load the wrapper
-                loaded_model = mlflow_manager.load_model(model_uri, "custom")
-                if hasattr(loaded_model, 'model'):
-                    self.model = loaded_model.model
+                """MLflow 2.x compatible predict method."""
+                # Handle both DataFrame and numpy array inputs
+                if isinstance(model_input, pd.DataFrame):
+                    return self.model.predict(model_input)
                 else:
-                    self.model = loaded_model
+                    # Convert numpy array to DataFrame if needed
+                    df = pd.DataFrame(model_input)
+                    return self.model.predict(df)
 
-            self.model_version = version_info.version
-            self.model_uri = model_uri
-            self.is_fitted = True
+        return ModelWrapper()
 
-            logger.info(f"Loaded {self.model_name} version {self.model_version}")
+
+    def load_latest(self, stage: str = "latest") -> bool:
+        """Load the latest model from MLflow with improved strategy."""
+        try:
+            import mlflow
+            from mlflow.tracking import MlflowClient
+
+            client = MlflowClient()
+            loaded = False
+
+            # Strategy 1: Try to load from Model Registry by stage
+            if stage != "latest":
+                try:
+                    model_uri = f"models:/{self.model_name}/{stage}"
+
+                    if self.model_type == "sklearn":
+                        self.model = mlflow.sklearn.load_model(model_uri)
+                    elif self.model_type == "pyfunc":
+                        self.model = mlflow.pyfunc.load_model(model_uri)
+                    else:
+                        self.model = mlflow.pyfunc.load_model(model_uri)
+
+                    self.model_version = stage
+                    loaded = True
+                    logger.info(f"Loaded {self.model_name} from registry stage {stage}")
+
+                except Exception as e:
+                    logger.warning(f"Could not load from registry stage {stage}: {e}")
+
+            # Strategy 2: Try to get latest version from registry
+            if not loaded:
+                try:
+                    versions = client.search_model_versions(
+                        filter_string=f"name='{self.model_name}'",
+                        order_by=["version_number DESC"],
+                        max_results=1
+                    )
+
+                    if versions:
+                        version = versions[0]
+                        model_uri = f"models:/{self.model_name}/{version.version}"
+
+                        if self.model_type == "sklearn":
+                            self.model = mlflow.sklearn.load_model(model_uri)
+                        elif self.model_type == "pyfunc":
+                            self.model = mlflow.pyfunc.load_model(model_uri)
+                        else:
+                            self.model = mlflow.pyfunc.load_model(model_uri)
+
+                        self.model_version = version.version
+                        loaded = True
+                        logger.info(f"Loaded {self.model_name} version {version.version} from registry")
+
+                except Exception as e:
+                    logger.warning(f"Could not load from registry: {e}")
+
+            # Strategy 3: Try to load from latest run artifacts
+            if not loaded:
+                try:
+                    # Get the default experiment
+                    experiment = client.get_experiment_by_name("Default")
+                    if not experiment:
+                        # Try to get experiment by ID 1 (often the default)
+                        experiment = client.get_experiment("1")
+
+                    if experiment:
+                        # Search for runs with this model
+                        runs = client.search_runs(
+                            experiment_ids=[experiment.experiment_id],
+                            filter_string=f"tags.model_name = '{self.model_name}'",
+                            order_by=["start_time DESC"],
+                            max_results=1
+                        )
+
+                        if not runs:
+                            # Fallback: search by artifact path pattern
+                            runs = client.search_runs(
+                                experiment_ids=[experiment.experiment_id],
+                                order_by=["start_time DESC"],
+                                max_results=50  # Check more runs
+                            )
+
+                            # Filter runs that have our model as an artifact
+                            for run in runs:
+                                artifacts = client.list_artifacts(run.info.run_id)
+                                if any(self.model_name in artifact.path for artifact in artifacts):
+                                    runs = [run]
+                                    break
+                            else:
+                                runs = []
+
+                        if runs:
+                            run = runs[0]
+                            model_uri = f"runs:/{run.info.run_id}/{self.model_name}"
+
+                            try:
+                                if self.model_type == "sklearn":
+                                    self.model = mlflow.sklearn.load_model(model_uri)
+                                elif self.model_type == "pyfunc":
+                                    self.model = mlflow.pyfunc.load_model(model_uri)
+                                else:
+                                    self.model = mlflow.pyfunc.load_model(model_uri)
+
+                                self.model_version = run.info.run_id[:8]
+                                loaded = True
+                                logger.info(f"Loaded {self.model_name} from run {run.info.run_id}")
+
+                            except Exception as load_error:
+                                logger.warning(f"Failed to load from run {run.info.run_id}: {load_error}")
+
+                except Exception as e:
+                    logger.warning(f"Could not load from runs: {e}")
+
+            if not loaded:
+                raise Exception(f"No model found for {self.model_name}")
+
+            return True
 
         except Exception as e:
             logger.error(f"Error loading model {self.model_name}: {e}")
-            raise
+            return False
 
-        return self
 
     def save_predictions(self, predictions: np.ndarray, metadata: Dict[str, Any]):
         """Save predictions with metadata for analysis."""

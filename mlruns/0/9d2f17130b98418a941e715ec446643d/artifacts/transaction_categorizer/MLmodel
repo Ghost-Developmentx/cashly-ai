@@ -1,0 +1,117 @@
+artifact_path: transaction_categorizer
+flavors:
+  python_function:
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.sklearn
+    model_path: model.pkl
+    predict_fn: predict
+    python_version: 3.12.0
+  sklearn:
+    code: null
+    pickled_model: model.pkl
+    serialization_format: cloudpickle
+    sklearn_version: 1.6.1
+is_signature_from_type_hint: false
+mlflow_version: 2.22.0
+model_size_bytes: 2202427
+model_uuid: c7226aca670246199c10a3dd8d130728
+prompts: null
+run_id: 9d2f17130b98418a941e715ec446643d
+saved_input_example_info:
+  artifact_path: input_example.json
+  pandas_orient: split
+  serving_input_path: serving_input_example.json
+  type: dataframe
+signature:
+  inputs: '[{"type": "integer", "name": "day_of_week", "required": true}, {"type":
+    "integer", "name": "day_of_month", "required": true}, {"type": "integer", "name":
+    "month", "required": true}, {"type": "long", "name": "is_weekend", "required":
+    true}, {"type": "double", "name": "tfidf_957", "required": true}, {"type": "double",
+    "name": "tfidf_amazon", "required": true}, {"type": "double", "name": "tfidf_amazon
+    store", "required": true}, {"type": "double", "name": "tfidf_amc", "required":
+    true}, {"type": "double", "name": "tfidf_amc theater", "required": true}, {"type":
+    "double", "name": "tfidf_best", "required": true}, {"type": "double", "name":
+    "tfidf_best buy", "required": true}, {"type": "double", "name": "tfidf_bill",
+    "required": true}, {"type": "double", "name": "tfidf_buy", "required": true},
+    {"type": "double", "name": "tfidf_buy online", "required": true}, {"type": "double",
+    "name": "tfidf_chevron", "required": true}, {"type": "double", "name": "tfidf_chevron
+    online", "required": true}, {"type": "double", "name": "tfidf_chevron store",
+    "required": true}, {"type": "double", "name": "tfidf_chipotle", "required": true},
+    {"type": "double", "name": "tfidf_costco", "required": true}, {"type": "double",
+    "name": "tfidf_costco store", "required": true}, {"type": "double", "name": "tfidf_deposit",
+    "required": true}, {"type": "double", "name": "tfidf_depot", "required": true},
+    {"type": "double", "name": "tfidf_depot online", "required": true}, {"type": "double",
+    "name": "tfidf_foods", "required": true}, {"type": "double", "name": "tfidf_freelance",
+    "required": true}, {"type": "double", "name": "tfidf_freelance deposit", "required":
+    true}, {"type": "double", "name": "tfidf_gas", "required": true}, {"type": "double",
+    "name": "tfidf_generic", "required": true}, {"type": "double", "name": "tfidf_generic
+    store", "required": true}, {"type": "double", "name": "tfidf_gym", "required":
+    true}, {"type": "double", "name": "tfidf_gym membership", "required": true}, {"type":
+    "double", "name": "tfidf_home", "required": true}, {"type": "double", "name":
+    "tfidf_home depot", "required": true}, {"type": "double", "name": "tfidf_hut",
+    "required": true}, {"type": "double", "name": "tfidf_hut online", "required":
+    true}, {"type": "double", "name": "tfidf_hut store", "required": true}, {"type":
+    "double", "name": "tfidf_internet", "required": true}, {"type": "double", "name":
+    "tfidf_internet bill", "required": true}, {"type": "double", "name": "tfidf_investment",
+    "required": true}, {"type": "double", "name": "tfidf_investment deposit", "required":
+    true}, {"type": "double", "name": "tfidf_joes", "required": true}, {"type": "double",
+    "name": "tfidf_joes online", "required": true}, {"type": "double", "name": "tfidf_joes
+    store", "required": true}, {"type": "double", "name": "tfidf_kroger", "required":
+    true}, {"type": "double", "name": "tfidf_kroger store", "required": true}, {"type":
+    "double", "name": "tfidf_lyft", "required": true}, {"type": "double", "name":
+    "tfidf_lyft online", "required": true}, {"type": "double", "name": "tfidf_mcdonalds",
+    "required": true}, {"type": "double", "name": "tfidf_mcdonalds online", "required":
+    true}, {"type": "double", "name": "tfidf_mcdonalds store", "required": true},
+    {"type": "double", "name": "tfidf_membership", "required": true}, {"type": "double",
+    "name": "tfidf_metro", "required": true}, {"type": "double", "name": "tfidf_metro
+    transit", "required": true}, {"type": "double", "name": "tfidf_netflix", "required":
+    true}, {"type": "double", "name": "tfidf_netflix subscription", "required": true},
+    {"type": "double", "name": "tfidf_online", "required": true}, {"type": "double",
+    "name": "tfidf_payment", "required": true}, {"type": "double", "name": "tfidf_pizza",
+    "required": true}, {"type": "double", "name": "tfidf_pizza hut", "required": true},
+    {"type": "double", "name": "tfidf_playstation", "required": true}, {"type": "double",
+    "name": "tfidf_playstation store", "required": true}, {"type": "double", "name":
+    "tfidf_premium", "required": true}, {"type": "double", "name": "tfidf_rent", "required":
+    true}, {"type": "double", "name": "tfidf_rent payment", "required": true}, {"type":
+    "double", "name": "tfidf_safeway", "required": true}, {"type": "double", "name":
+    "tfidf_salary", "required": true}, {"type": "double", "name": "tfidf_salary deposit",
+    "required": true}, {"type": "double", "name": "tfidf_shell", "required": true},
+    {"type": "double", "name": "tfidf_shell gas", "required": true}, {"type": "double",
+    "name": "tfidf_spotify", "required": true}, {"type": "double", "name": "tfidf_spotify
+    premium", "required": true}, {"type": "double", "name": "tfidf_starbucks", "required":
+    true}, {"type": "double", "name": "tfidf_starbucks store", "required": true},
+    {"type": "double", "name": "tfidf_steam", "required": true}, {"type": "double",
+    "name": "tfidf_steam store", "required": true}, {"type": "double", "name": "tfidf_store",
+    "required": true}, {"type": "double", "name": "tfidf_store 957", "required": true},
+    {"type": "double", "name": "tfidf_store online", "required": true}, {"type": "double",
+    "name": "tfidf_store store", "required": true}, {"type": "double", "name": "tfidf_subscription",
+    "required": true}, {"type": "double", "name": "tfidf_subway", "required": true},
+    {"type": "double", "name": "tfidf_subway store", "required": true}, {"type": "double",
+    "name": "tfidf_target", "required": true}, {"type": "double", "name": "tfidf_target
+    online", "required": true}, {"type": "double", "name": "tfidf_target store", "required":
+    true}, {"type": "double", "name": "tfidf_theater", "required": true}, {"type":
+    "double", "name": "tfidf_theater online", "required": true}, {"type": "double",
+    "name": "tfidf_trader", "required": true}, {"type": "double", "name": "tfidf_trader
+    joes", "required": true}, {"type": "double", "name": "tfidf_transit", "required":
+    true}, {"type": "double", "name": "tfidf_transit online", "required": true}, {"type":
+    "double", "name": "tfidf_transit store", "required": true}, {"type": "double",
+    "name": "tfidf_uber", "required": true}, {"type": "double", "name": "tfidf_walmart",
+    "required": true}, {"type": "double", "name": "tfidf_whole", "required": true},
+    {"type": "double", "name": "tfidf_whole foods", "required": true}, {"type": "long",
+    "name": "merchant_restaurant", "required": true}, {"type": "long", "name": "merchant_grocery",
+    "required": true}, {"type": "long", "name": "merchant_gas", "required": true},
+    {"type": "long", "name": "merchant_online", "required": true}, {"type": "long",
+    "name": "merchant_subscription", "required": true}, {"type": "long", "name": "merchant_travel",
+    "required": true}, {"type": "long", "name": "merchant_retail", "required": true},
+    {"type": "long", "name": "merchant_utility", "required": true}, {"type": "long",
+    "name": "merchant_frequency", "required": true}, {"type": "double", "name": "amount_abs",
+    "required": true}, {"type": "double", "name": "amount_log", "required": true},
+    {"type": "long", "name": "is_expense", "required": true}, {"type": "long", "name":
+    "is_income", "required": true}, {"type": "long", "name": "is_round_amount", "required":
+    true}, {"type": "long", "name": "is_round_hundred", "required": true}]'
+  outputs: '[{"type": "tensor", "tensor-spec": {"dtype": "int64", "shape": [-1]}}]'
+  params: null
+type_hint_from_example: false
+utc_time_created: '2025-06-04 02:18:48.347644'

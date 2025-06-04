@@ -1,3 +1,4 @@
+# app/core/config.py
 """
 Centralized configuration using Pydantic Settings.
 Replaces: config/database.py, config/openai.py
@@ -27,8 +28,8 @@ class Settings(BaseSettings):
     backend_cors_origins: list[str] = ["*"]
 
     model_config = SettingsConfigDict(
-        env_file=".env",  # load .env automatically
-        env_prefix="",  # no prefix needed
+        env_file=".env",
+        env_prefix="",
     )
 
     # ML Model Configuration
@@ -45,7 +46,7 @@ class Settings(BaseSettings):
         validation_alias="USE_ADVANCED_FEATURES"
     )
     model_cache_ttl: int = Field(
-        default=3600,  # 1 hour cache
+        default=3600,
         validation_alias="MODEL_CACHE_TTL"
     )
     enable_ml_forecasting: bool = Field(
@@ -53,55 +54,61 @@ class Settings(BaseSettings):
         validation_alias="ENABLE_ML_FORECASTING"
     )
     ml_min_training_samples: int = Field(
-        default=30,  # Minimum transactions for ML
+        default=30,
         validation_alias="ML_MIN_TRAINING_SAMPLES"
     )
 
     # OpenAI Configuration
-    openai_api_key: str = Field(validation_alias="OPENAI_API_KEY")
+    openai_api_key: str = Field(default="sk-test", validation_alias="OPENAI_API_KEY")
     openai_model: str = "gpt-4-turbo-preview"
     openai_embedding_model: str = "text-embedding-3-small"
     openai_embedding_dimensions: int = 1536
     openai_max_tokens: int = 8191
     openai_request_timeout: int = 60
     openai_max_retries: int = 3
-    openai_organization: str = Field(validation_alias="OPENAI_ORGANIZATION")
+    openai_organization: str = Field(default="", validation_alias="OPENAI_ORGANIZATION")
     assistant_timeout: int = Field(
         default=30, validation_alias="ASSISTANT_TIMEOUT", ge=1
     )
     max_retries: int = Field(default=3, validation_alias="MAX_RETRIES", ge=0)
-    insights_assistant_id: str | None = Field(
+    insights_assistant_id: Optional[str] = Field(
         default=None, validation_alias="INSIGHTS_ASSISTANT_ID"
     )
-    bank_connection_assistant_id: str | None = Field(
+    bank_connection_assistant_id: Optional[str] = Field(
         default=None, validation_alias="BANK_CONNECTION_ASSISTANT_ID"
     )
-    payment_processing_assistant_id: str | None = Field(
+    payment_processing_assistant_id: Optional[str] = Field(
         default=None, validation_alias="PAYMENT_PROCESSING_ASSISTANT_ID"
     )
 
     # Database Configuration
-    postgres_host: str = "localhost"
-    postgres_port: int = 5432
-    postgres_db: str = "cashly_ai_vectors"
-    postgres_user: str = "cashly_ai"
-    postgres_password: str = Field(validation_alias="POSTGRES_PASSWORD")
+    postgres_host: str = Field(default="localhost", validation_alias="POSTGRES_HOST")
+    postgres_port: int = Field(default=5432, validation_alias="POSTGRES_PORT")
+    postgres_db: str = Field(default="cashly_ai_vectors", validation_alias="POSTGRES_DB")
+    postgres_user: str = Field(default="cashly_ai", validation_alias="POSTGRES_USER")
+    postgres_password: str = Field(default="password", validation_alias="POSTGRES_PASSWORD")
 
     # Connection Pool Settings
     db_pool_size: int = 20
     db_max_overflow: int = 10
     db_pool_pre_ping: bool = True
 
-    # Async Database Settings
-    async_db_min_pool_size: int = 10
-    async_db_max_pool_size: int = 20
-    async_db_command_timeout: float = 10.0
+    # Async Database Settings - Just simple fields, no circular properties!
+    async_db_min_pool_size: int = Field(default=10, validation_alias="ASYNC_DB_MIN_POOL_SIZE")
+    async_db_max_pool_size: int = Field(default=20, validation_alias="ASYNC_DB_MAX_POOL_SIZE")
+    async_db_command_timeout: float = Field(default=10.0, validation_alias="ASYNC_DB_COMMAND_TIMEOUT")
+    async_db_max_queries: int = Field(default=50000, validation_alias="ASYNC_DB_MAX_QUERIES")
+    async_db_max_inactive_lifetime: float = Field(default=300.0, validation_alias="ASYNC_DB_MAX_INACTIVE_LIFETIME")
+    async_db_statement_cache_size: int = Field(default=1024, validation_alias="ASYNC_DB_STATEMENT_CACHE_SIZE")
+
+    # Testing flag
+    testing: bool = Field(default=False, validation_alias="TESTING")
 
     # Redis Configuration (Future)
     redis_url: Optional[str] = None
 
     # Rails API Configuration
-    rails_api_url: Optional[str] = Field(validation_alias="RAILS_API_URL")
+    rails_api_url: Optional[str] = Field(default=None, validation_alias="RAILS_API_URL")
     internal_api_key: str = "your-secure-internal-api-key"
 
     # Assistant IDs
@@ -145,10 +152,18 @@ class Settings(BaseSettings):
 
     @property
     def connection_string(self) -> str:
-        return (
-            f"postgresql://{self.postgres_user}:{self.postgres_password}@"
-            f"{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
-        )
+        """Alias for database_url."""
+        return self.database_url
+
+    def get_pool_kwargs(self) -> dict:
+        """Get asyncpg pool configuration."""
+        return {
+            "min_size": self.async_db_min_pool_size,
+            "max_size": self.async_db_max_pool_size,
+            "max_queries": self.async_db_max_queries,
+            "max_inactive_connection_lifetime": self.async_db_max_inactive_lifetime,
+            "command_timeout": self.async_db_command_timeout,
+        }
 
 
 @lru_cache()

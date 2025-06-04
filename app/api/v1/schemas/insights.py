@@ -25,6 +25,7 @@ class InsightType(str, Enum):
     CATEGORY_CHANGE = "category_change"
     SAVING_OPPORTUNITY = "saving_opportunity"
     RECURRING_DETECTION = "recurring_detection"
+    CATEGORY_CONCENTRATION = "category_concentration"
 
 
 class TransactionForAnalysis(BaseModel):

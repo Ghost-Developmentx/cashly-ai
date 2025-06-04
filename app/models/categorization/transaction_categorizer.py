@@ -36,6 +36,7 @@ class TransactionCategorizer(BaseModel):
         self.merchant_extractor = MerchantFeatureExtractor()
         self.amount_extractor = AmountFeatureExtractor()
         self.categories = []
+        self.numeric_feature_names = []  # Track numeric features only
 
     def preprocess(self, data: pd.DataFrame) -> pd.DataFrame:
         """Preprocess transaction data."""
@@ -70,6 +71,10 @@ class TransactionCategorizer(BaseModel):
         """Extract all features for categorization."""
         df = data.copy()
 
+        # Ensure we have the required columns
+        if 'description' not in df.columns:
+            raise ValueError("Data must contain 'description' column")
+
         # Extract text features
         df = self.text_extractor.fit_transform(df)
 
@@ -79,25 +84,44 @@ class TransactionCategorizer(BaseModel):
         # Extract amount features
         df = self.amount_extractor.transform(df)
 
-        # Store feature names
+        # Store feature names - ensure we have features
         self.feature_names = [
             col for col in df.columns
             if col not in ['description', 'amount', 'date', 'category',
-                           'merchant_name', 'amount_category']
+                           'merchant_name', 'amount_category', 'type']
+               and not col.startswith('Unnamed')  # Skip index columns
         ]
+
+        # FIXED: Populate numeric_feature_names with actual numeric features
+        # Check each column individually, not the whole DataFrame
+        self.numeric_feature_names = []
+        for col in self.feature_names:
+            if col in df.columns:  # Ensure column exists
+                col_dtype = df[col].dtype
+                if col_dtype in ['int64', 'float64', 'int32', 'float32', 'bool', 'int8', 'int16', 'float16']:
+                    self.numeric_feature_names.append(col)
+
+        if not self.feature_names:
+            raise ValueError("No features extracted from data")
+
+        if not self.numeric_feature_names:
+            raise ValueError("No numeric features extracted from data")
 
         return df
 
     def train(self, X: pd.DataFrame, y: Optional[pd.Series] = None) -> "TransactionCategorizer":
         """Train the categorization model."""
+        # Extract features first to populate numeric_feature_names
+        X_processed = self.extract_features(X)
+
         # Extract target
         if y is None:
             if 'category' not in X.columns:
                 raise ValueError("Training data must include 'category' column")
             y = X['category']
-            X_features = X[self.feature_names]
-        else:
-            X_features = X
+
+        # Use only numeric features for training
+        X_features = X_processed[self.numeric_feature_names]
 
         # Encode labels
         y_encoded = self.label_encoder.fit_transform(y)
@@ -130,17 +154,6 @@ class TransactionCategorizer(BaseModel):
             'categories': len(self.categories)
         }
 
-        # Store model components
-        self.model = {
-            'classifier': self.model,
-            'label_encoder': self.label_encoder,
-            'text_extractor': self.text_extractor,
-            'merchant_extractor': self.merchant_extractor,
-            'amount_extractor': self.amount_extractor,
-            'feature_names': self.feature_names,
-            'categories': self.categories
-        }
-
         return self
 
     def predict(self, X: pd.DataFrame) -> np.ndarray:
@@ -151,17 +164,14 @@ class TransactionCategorizer(BaseModel):
         # Extract features if raw data provided
         if 'description' in X.columns:
             X_preprocessed = self.preprocess(X)
-            X_features = self.extract_features(X_preprocessed)[self.feature_names]
+            X_features = self.extract_features(X_preprocessed)[self.numeric_feature_names]
         else:
-            X_features = X
-
-        # Get model components
-        classifier = self.model['classifier']
-        label_encoder = self.model['label_encoder']
+            # Ensure we only use numeric features
+            X_features = X[self.numeric_feature_names]
 
         # Make predictions
-        y_pred_encoded = classifier.predict(X_features)
-        y_pred = label_encoder.inverse_transform(y_pred_encoded)
+        y_pred_encoded = self.model.predict(X_features)
+        y_pred = self.label_encoder.inverse_transform(y_pred_encoded)
 
         return y_pred
 
@@ -173,15 +183,12 @@ class TransactionCategorizer(BaseModel):
         # Extract features if raw data provided
         if 'description' in X.columns:
             X_preprocessed = self.preprocess(X)
-            X_features = self.extract_features(X_preprocessed)[self.feature_names]
+            X_features = self.extract_features(X_preprocessed)[self.numeric_feature_names]
         else:
-            X_features = X
-
-        # Get classifier
-        classifier = self.model['classifier']
+            X_features = X[self.numeric_feature_names]
 
         # Get probabilities
-        return classifier.predict_proba(X_features)
+        return self.model.predict_proba(X_features)
 
     def predict_with_confidence(self, X: pd.DataFrame) -> List[Dict[str, Any]]:
         """Predict categories with confidence scores and alternatives."""
@@ -240,19 +247,18 @@ class TransactionCategorizer(BaseModel):
 
         return metrics
 
+
     def get_feature_importance(self, top_n: int = 20) -> pd.DataFrame:
         """Get feature importance scores."""
         if not self.is_fitted:
             raise ValueError("Model must be fitted first")
 
-        classifier = self.model['classifier']
-
         # Get feature importances
-        importances = classifier.feature_importances_
+        importances = self.model.feature_importances_
 
         # Create DataFrame
         importance_df = pd.DataFrame({
-            'feature': self.feature_names,
+            'feature': self.numeric_feature_names,
             'importance': importances
         }).sort_values('importance', ascending=False)
 

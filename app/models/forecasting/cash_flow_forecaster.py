@@ -43,18 +43,25 @@ class CashFlowForecaster(BaseModel):
 
     def preprocess(self, data: pd.DataFrame) -> pd.DataFrame:
         """Preprocess transaction data for forecasting."""
-        # Ensure required columns
         required_cols = ['date', 'amount']
         if not all(col in data.columns for col in required_cols):
             raise ValueError(f"Data must contain columns: {required_cols}")
 
-        # Prepare time series data (resample to daily)
-        df = prepare_timeseries_data(data, freq='D')
+        df = data.copy()
+        df['date'] = pd.to_datetime(df['date'])
 
-        # Handle missing values
-        df = df.fillna(method='ffill').fillna(0)
+        # Group by date and sum amounts - ensure 'daily_sum' exists
+        daily = df.groupby('date')['amount'].sum().reset_index()
+        daily.columns = ['date', 'daily_sum']  # Explicitly name columns
 
-        return df
+        # Add other aggregations
+        counts = df.groupby('date').size().reset_index(name='transaction_count')
+        daily = daily.merge(counts, on='date', how='left')
+
+        # Fill missing values
+        daily = daily.fillna(0)
+
+        return daily
 
     def extract_features(self, data: pd.DataFrame) -> pd.DataFrame:
         """Extract features for forecasting."""
@@ -81,7 +88,13 @@ class CashFlowForecaster(BaseModel):
         # Extract target
         if y is None:
             y = X['amount']
-            X = X[self.feature_names]
+            # Remove the date column before training
+            feature_cols = [col for col in self.feature_names if col != 'date']
+            X = X[feature_cols]
+
+        datetime_cols = X.select_dtypes(include=['datetime64']).columns
+        if len(datetime_cols) > 0:
+            X = X.drop(columns=datetime_cols)
 
         # Split data
         X_train, X_test, y_train, y_test = train_test_split(
@@ -92,7 +105,7 @@ class CashFlowForecaster(BaseModel):
         X_train_scaled = self.scaler.fit_transform(X_train)
         X_test_scaled = self.scaler.transform(X_test)
 
-        # Train based on method
+        # Train based on a method
         if self.method == "ensemble":
             self._train_ensemble(X_train_scaled, y_train, X_test_scaled, y_test)
         else:

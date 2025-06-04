@@ -72,14 +72,78 @@ class ModelManager:
         model_instance = model_class()
 
         try:
-            # Try to load from MLflow
-            model_instance.load_latest(stage="Production")
-            logger.info(f"Loaded {model_type} from MLflow")
+            # Try to load from MLflow with different strategies
+            loaded = False
+
+            # Strategy 1: Try production stage
+            try:
+                model_instance.load_latest(stage="Production")
+                loaded = True
+                logger.info(f"Loaded {model_type} from MLflow (Production)")
+            except:
+                pass
+
+            # Strategy 2: Try latest version
+            if not loaded:
+                try:
+                    model_instance.load_latest(stage="latest")
+                    loaded = True
+                    logger.info(f"Loaded {model_type} from MLflow (latest)")
+                except:
+                    pass
+
+            # Strategy 3: Try loading from latest run
+            if not loaded:
+                try:
+                    from mlflow.tracking import MlflowClient
+                    client = MlflowClient()
+
+                    # Map model_type to actual model names
+                    model_name_mapping = {
+                        'forecaster': 'cash_flow_forecaster_ensemble',
+                        'categorizer': 'transaction_categorizer',
+                        'trend_analyzer': 'trend_analyzer',
+                        'budget_recommender': 'budget_recommender',
+                        'anomaly_detector': 'anomaly_detector'
+                    }
+
+                    model_name = model_name_mapping.get(model_type, model_type)
+
+                    # Get latest run for this model
+                    experiment = client.get_experiment_by_name("Default")
+                    if experiment:
+                        runs = client.search_runs(
+                            experiment_ids=[experiment.experiment_id],
+                            filter_string=f"tags.model_name = '{model_name}' OR artifact_uri LIKE '%{model_name}%'",
+                            order_by=["start_time DESC"],
+                            max_results=1
+                        )
+
+                        if runs:
+                            run = runs[0]
+                            model_uri = f"runs:/{run.info.run_id}/{model_name}"
+
+                            import mlflow
+                            if hasattr(model_instance, 'model_type') and model_instance.model_type == "sklearn":
+                                model_instance.model = mlflow.sklearn.load_model(model_uri)
+                            else:
+                                model_instance.model = mlflow.pyfunc.load_model(model_uri)
+
+                            model_instance.model_version = run.info.run_id[:8]
+                            loaded = True
+                            logger.info(f"Loaded {model_type} from MLflow run {run.info.run_id}")
+                except Exception as e:
+                    logger.warning(f"Could not load {model_type} from runs: {e}")
+
+            if not loaded:
+                raise Exception(f"No model found for {model_type}")
+
         except Exception as e:
             logger.warning(f"Could not load {model_type} from MLflow: {e}")
             logger.info(f"Using new {model_type} instance")
 
         return model_instance
+
 
     async def train_model(
             self,

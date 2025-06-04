@@ -198,15 +198,19 @@ class ForecastCalculator:
         day_counts = {}
 
         for date_str, amount in daily_data.items():
-            date = datetime.strptime(date_str, "%Y-%m-%d").date()
-            day_name = date.strftime("%A")
+            if date_str and isinstance(date_str, str):  # Add None check
+                try:
+                    date = datetime.strptime(date_str, "%Y-%m-%d").date()
+                    day_name = date.strftime("%A")
 
-            if day_name not in day_totals:
-                day_totals[day_name] = 0
-                day_counts[day_name] = 0
+                    if day_name not in day_totals:
+                        day_totals[day_name] = 0
+                        day_counts[day_name] = 0
 
-            day_totals[day_name] += amount
-            day_counts[day_name] += 1
+                    day_totals[day_name] += amount
+                    day_counts[day_name] += 1
+                except (ValueError, AttributeError):
+                    continue
 
         # Calculate multipliers
         overall_avg = sum(day_totals.values()) / sum(day_counts.values())

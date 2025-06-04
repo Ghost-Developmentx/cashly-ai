@@ -30,9 +30,8 @@ class AnomalySeverity(str, Enum):
 
 class TransactionForAnomaly(BaseModel):
     """Transaction data for anomaly detection."""
-
     id: Optional[str] = None
-    date: str = Field(..., description="YYYY-MM-DD format")
+    date: str = Field(..., description="YYYY-MM-DD format")  # Make required
     amount: float
     description: str
     category: str = "Uncategorized"
@@ -40,6 +39,8 @@ class TransactionForAnomaly(BaseModel):
 
     @field_validator("date")
     def validate_date_format(cls, v):
+        if not v:  # Guard against empty strings
+            raise ValueError("Date cannot be empty")
         try:
             datetime.strptime(v, "%Y-%m-%d")
             return v

@@ -1,0 +1,15 @@
+artifact_uri: file:///home/ghost/projects/cashly-ai/mlruns/0/e3bc9a71f55f4a2bb6effa92a940af91/artifacts
+end_time: 1749040576558
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: e3bc9a71f55f4a2bb6effa92a940af91
+run_name: transaction_categorizer_training
+run_uuid: e3bc9a71f55f4a2bb6effa92a940af91
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1749040576501
+status: 4
+tags: []
+user_id: ghost

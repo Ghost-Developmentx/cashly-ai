@@ -5,10 +5,9 @@ Database initialization module with async support.
 import logging
 from typing import Optional
 
-from app.core.config import Settings
-from app.db.async_db import AsyncDatabaseConnection
+from app.core.config import Settings, get_settings
+from app.db.async_db.connection import AsyncDatabaseConnection
 from app.db.singleton_registry import registry
-from app.db.migrations.m001_create_conversation_embeddings import upgrade
 
 logger = logging.getLogger(__name__)
 
@@ -20,8 +19,8 @@ async def get_async_db_connection() -> AsyncDatabaseConnection:
     """
 
     async def create_connection():
-        settings = Settings()
-        return AsyncDatabaseConnection.from_settings(settings)
+        settings = get_settings()
+        return AsyncDatabaseConnection(settings)
 
     return await registry.get_or_create("async_db_connection", create_connection)
 
@@ -30,8 +29,8 @@ class AsyncDatabaseInitializer:
     """Handles asynchronous initialization of a database."""
 
     def __init__(self, settings: Optional[Settings] = None):
-        self.settings = settings or Settings()
-        self.connection: Optional[Settings] = None
+        self.settings = settings or get_settings()
+        self.connection: Optional[AsyncDatabaseConnection] = None
 
     async def initialize(self) -> bool:
         """Initialize a database with all required tables and extensions."""
@@ -59,6 +58,7 @@ class AsyncDatabaseInitializer:
             from app.db.connection import DatabaseConnection
 
             sync_conn = DatabaseConnection.from_settings(self.settings)
+            from app.db.migrations.m001_create_conversation_embeddings import upgrade
             upgrade(sync_conn)
             sync_conn.close()
 

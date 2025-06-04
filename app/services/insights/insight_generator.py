@@ -83,14 +83,20 @@ class InsightGenerator:
         if spending_direction == "increasing" and spending_change > 10:
             insights.append(
                 {
-                    "type": "spending_alert",
+                    "type": "spending_trend",  # Use enum value
                     "title": "Spending Increase Alert",
                     "description": f"Your spending has increased by {spending_change:.1f}% recently",
-                    "recommendation": "Review your recent expenses to identify areas for reduction",
-                    "priority": 1,
-                    "severity": "high" if spending_change > 20 else "medium",
+                    "impact": "Review your recent expenses to identify areas for reduction",
+                    "priority": "high" if spending_change > 20 else "medium",
+                    "action_required": True,
+                    "metadata": {
+                        "change_percentage": spending_change,
+                        "direction": spending_direction,
+                        "severity": "high" if spending_change > 20 else "medium"
+                    }
                 }
             )
+
 
         # Income trend insights
         income_direction = income_trends.get("trend_direction", "stable")
@@ -99,14 +105,20 @@ class InsightGenerator:
         if income_direction == "decreasing" and income_change < -10:
             insights.append(
                 {
-                    "type": "income_alert",
+                    "type": "income_pattern",  # Use enum value
                     "title": "Income Decrease Alert",
                     "description": f"Your income has decreased by {abs(income_change):.1f}% recently",
-                    "recommendation": "Consider diversifying income sources or reducing expenses",
-                    "priority": 1,
-                    "severity": "high",
+                    "impact": "Consider diversifying income sources or reducing expenses",
+                    "priority": "high",
+                    "action_required": True,
+                    "metadata": {
+                        "change_percentage": income_change,
+                        "direction": income_direction,
+                        "severity": "high"
+                    }
                 }
             )
+
 
         # Volatility insights
         if spending_trends.get("volatility", 0) > 50:
@@ -136,14 +148,20 @@ class InsightGenerator:
             total_recurring = sum(abs(p["amount"]) for p in recurring)
             insights.append(
                 {
-                    "type": "recurring_summary",
+                    "type": "recurring_detection",  # Use enum value
                     "title": f"{len(recurring)} Recurring Transactions Detected",
                     "description": f"You have ${total_recurring:.2f} in recurring monthly expenses",
-                    "recommendation": "Review these subscriptions to ensure they're all necessary",
-                    "priority": 3,
-                    "metadata": {"count": len(recurring), "total": total_recurring},
+                    "impact": "Review these subscriptions to ensure they're all necessary",
+                    "priority": "medium",
+                    "action_required": False,
+                    "metadata": {
+                        "count": len(recurring),
+                        "total": total_recurring,
+                        "severity": "medium"
+                    },
                 }
             )
+
 
         # Spending spike insights
         spikes = [p for p in patterns if p["type"] == "spending_spike"]
@@ -180,14 +198,20 @@ class InsightGenerator:
             if top_cat["percentage"] > 40:
                 insights.append(
                     {
-                        "type": "category_concentration",
+                        "type": "category_concentration",  # This matches your enum
                         "title": f"High Spending in {top_cat['category']}",
                         "description": f"{top_cat['percentage']:.1f}% of your spending is in {top_cat['category']}",
-                        "recommendation": f"Look for ways to reduce {top_cat['category']} expenses",
-                        "priority": 2,
-                        "severity": "medium",
+                        "impact": f"Medium impact on budget planning",  # Add required field
+                        "priority": "medium",  # Ensure it's a string, not int
+                        "action_required": False,
+                        "metadata": {
+                            "category": top_cat['category'],
+                            "percentage": top_cat['percentage'],
+                            "severity": "medium"
+                        },
                     }
                 )
+
 
         return insights
 
@@ -207,14 +231,20 @@ class InsightGenerator:
             if savings_rate < 10:
                 insights.append(
                     {
-                        "type": "savings_alert",
+                        "type": "saving_opportunity",  # Use enum value
                         "title": "Low Savings Rate",
                         "description": f"You're saving only {savings_rate:.1f}% of your income",
-                        "recommendation": "Aim to save at least 20% of your income",
-                        "priority": 1,
-                        "severity": "high" if savings_rate < 5 else "medium",
+                        "impact": "Aim to save at least 20% of your income for better financial health",
+                        "priority": "high" if savings_rate < 5 else "medium",
+                        "action_required": True,
+                        "metadata": {
+                            "current_rate": savings_rate,
+                            "target_rate": 20,
+                            "severity": "high" if savings_rate < 5 else "medium"
+                        }
                     }
                 )
+
             elif savings_rate > 30:
                 insights.append(
                     {

@@ -1,6 +1,4 @@
 import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
 import re
 from sklearn.preprocessing import StandardScaler
 
@@ -25,6 +23,7 @@ def clean_transaction_description(description):
     desc = re.sub(r"\s+", " ", desc).strip()
 
     return desc
+
 
 
 def extract_transaction_features(transactions_df):
@@ -110,9 +109,13 @@ def prepare_timeseries_data(transactions_df, freq="D", fill_method="ffill"):
     # Group by date and sum amounts
     daily_amounts = df["amount"].resample(freq).sum()
 
-    # Fill missing values
-    if fill_method:
-        daily_amounts = daily_amounts.fillna(method=fill_method)
+    # Fill missing values using pandas 2.x methods
+    if fill_method == "ffill":
+        daily_amounts = daily_amounts.ffill()
+    elif fill_method == "bfill":
+        daily_amounts = daily_amounts.bfill()
+    else:
+        daily_amounts = daily_amounts.fillna(0)
 
     # Reset index to get date as a column
     daily_amounts = daily_amounts.reset_index()

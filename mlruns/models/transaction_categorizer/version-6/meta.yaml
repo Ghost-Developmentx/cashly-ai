@@ -1,0 +1,14 @@
+aliases: []
+creation_timestamp: 1749040889303
+current_stage: None
+description: null
+last_updated_timestamp: 1749040889303
+name: transaction_categorizer
+run_id: fda88eab170f4c5dae765549628c986b
+run_link: null
+source: file:///home/ghost/projects/cashly-ai/mlruns/0/fda88eab170f4c5dae765549628c986b/artifacts/transaction_categorizer
+status: READY
+status_message: null
+storage_location: file:///home/ghost/projects/cashly-ai/mlruns/0/fda88eab170f4c5dae765549628c986b/artifacts/transaction_categorizer
+user_id: null
+version: 6

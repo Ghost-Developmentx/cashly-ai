@@ -4,11 +4,10 @@ Anomaly detection model using Isolation Forest and statistical methods.
 
 import pandas as pd
 import numpy as np
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Any, Optional
 import logging
 from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import StandardScaler
-from scipy import stats
 
 from app.models.base import BaseModel
 from app.models.anomaly.feature_engineering import (
@@ -33,19 +32,30 @@ class AnomalyDetector(BaseModel):
         self.thresholds = {}
 
     def preprocess(self, data: pd.DataFrame) -> pd.DataFrame:
-        """Preprocess transaction data for anomaly detection."""
-        required_cols = ['date', 'amount']
-        if not all(col in data.columns for col in required_cols):
-            raise ValueError(f"Data must contain columns: {required_cols}")
-
+        """Preprocess data for anomaly detection."""
         df = data.copy()
-        df['date'] = pd.to_datetime(df['date'])
-        df = df.sort_values('date')
 
-        # Add transaction index
-        df['transaction_id'] = range(len(df))
+        # Handle categorical columns like description
+        if 'description' in df.columns:
+            # Use label encoding or drop the column if not needed
+            from sklearn.preprocessing import LabelEncoder
+            le = LabelEncoder()
+            df['description_encoded'] = le.fit_transform(df['description'].fillna('unknown'))
+            df = df.drop('description', axis=1)
+
+        # Ensure all columns are numeric
+        for col in df.columns:
+            if df[col].dtype == 'object':
+                try:
+                    df[col] = pd.to_numeric(df[col], errors='coerce')
+                except:
+                    df = df.drop(col, axis=1)
+
+        # Fill any remaining NaN values
+        df = df.fillna(0)
 
         return df
+
 
     def extract_features(self, data: pd.DataFrame) -> pd.DataFrame:
         """Extract anomaly detection features."""
@@ -65,6 +75,60 @@ class AnomalyDetector(BaseModel):
 
         return df
 
+
+
+    def _calculate_anomaly_scores(self, X: pd.DataFrame) -> np.ndarray:
+        """Calculate anomaly scores for the input data."""
+        # Handle both direct model and dictionary storage
+        if isinstance(self.model, dict):
+            # Model is stored as dictionary (after training)
+            detector = self.model.get('detector')
+            if detector is None and self.model.get('method') == 'statistical':
+                # Statistical method - use thresholds
+                scores = []
+                thresholds = self.model.get('thresholds', {})
+                for i, feature in enumerate(self.model.get('feature_names', [])):
+                    if feature in thresholds:
+                        feature_data = X[:, i] if isinstance(X, np.ndarray) else X.iloc[:, i]
+                        threshold_info = thresholds[feature]
+                        # Calculate deviation from median in MAD units
+                        deviation = np.abs(feature_data - threshold_info['median']) / (threshold_info['mad'] + 1e-8)
+                        scores.append(deviation)
+                return np.mean(scores, axis=0) if scores else np.zeros(len(X))
+            elif detector is not None:
+                # Use the stored detector
+                model_to_use = detector
+            else:
+                raise ValueError("No trained detector found in model")
+        else:
+            # Direct model (during training)
+            model_to_use = self.model
+
+        if model_to_use is None:
+            raise ValueError("Model must be fitted before calculating scores")
+
+        # Use the model to predict anomaly scores
+        if hasattr(model_to_use, 'decision_function'):
+            # For models like IsolationForest, OneClassSVM
+            scores = model_to_use.decision_function(X)
+            # Convert to positive anomaly scores (higher = more anomalous)
+            scores = -scores
+        elif hasattr(model_to_use, 'score_samples'):
+            # For models like LocalOutlierFactor
+            scores = -model_to_use.score_samples(X)
+        else:
+            # Fallback: use predict_proba if available
+            if hasattr(model_to_use, 'predict_proba'):
+                proba = model_to_use.predict_proba(X)
+                # Assume binary classification: anomaly score = P(anomaly)
+                scores = proba[:, 1] if proba.shape[1] > 1 else proba[:, 0]
+            else:
+                # Last resort: distance-based scoring
+                scores = np.linalg.norm(X - X.mean(), axis=1)
+
+        return scores
+
+
     def train(self, X: pd.DataFrame, y: Optional[pd.Series] = None) -> "AnomalyDetector":
         """Train the anomaly detection model."""
         # Extract features if needed
@@ -78,24 +142,28 @@ class AnomalyDetector(BaseModel):
         X_scaled = self.scaler.fit_transform(feature_data)
 
         # Train model based on method
+        trained_detector = None
         if self.method == "isolation_forest":
-            self.model = IsolationForest(
+            trained_detector = IsolationForest(
                 contamination=self.contamination,
                 random_state=42,
                 n_estimators=100
             )
-            self.model.fit(X_scaled)
+            trained_detector.fit(X_scaled)
+
+            # Temporarily set the model for score calculation
+            self.model = trained_detector
 
         elif self.method == "statistical":
             # Calculate statistical thresholds
             self._calculate_statistical_thresholds(X_scaled)
 
-        # Calculate anomaly scores for training data
+        # Calculate anomaly scores for training data (now model is set)
         anomaly_scores = self._calculate_anomaly_scores(X_scaled)
 
-        # Store components
+        # Now store all components in the model dictionary
         self.model = {
-            'detector': self.model if self.method == "isolation_forest" else None,
+            'detector': trained_detector,
             'scaler': self.scaler,
             'thresholds': self.thresholds,
             'transaction_extractor': self.transaction_extractor,
@@ -104,11 +172,16 @@ class AnomalyDetector(BaseModel):
             'method': self.method
         }
 
+        # Mark as fitted
+        self.is_fitted = True
+
         # Calculate metrics
         self.metrics = {
             'contamination_rate': self.contamination,
             'num_features': len(self.feature_names),
-            'training_samples': len(X_scaled)
+            'training_samples': len(X_scaled),
+            'mean_anomaly_score': float(np.mean(anomaly_scores)),
+            'std_anomaly_score': float(np.std(anomaly_scores))
         }
 
         return self

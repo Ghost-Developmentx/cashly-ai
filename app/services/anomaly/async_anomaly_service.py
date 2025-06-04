@@ -22,10 +22,10 @@ class AsyncAnomalyService:
         self.default_threshold = 2.5  # Standard deviations
 
     async def detect_anomalies(
-        self,
-        user_id: str,
-        transactions: List[Dict[str, Any]],
-        threshold: Optional[float] = None,
+            self,
+            user_id: str,
+            transactions: List[Dict[str, Any]],
+            threshold: Optional[float] = None,
     ) -> Dict[str, Any]:
         """
         Detect anomalous transactions.
@@ -58,7 +58,7 @@ class AsyncAnomalyService:
             return {
                 "anomalies": classified_anomalies,
                 "summary": summary,
-                "threshold_used": threshold,
+                "threshold": threshold,
                 "total_transactions": len(transactions),
                 "detection_method": "statistical_analysis",
             }
@@ -67,37 +67,62 @@ class AsyncAnomalyService:
             logger.error(f"Anomaly detection failed: {e}")
             return {"error": f"Failed to detect anomalies: {str(e)}", "anomalies": []}
 
+    @staticmethod
     def _generate_summary(
-        self, anomalies: List[Dict[str, Any]], total_transactions: int
+            anomalies: List[Dict[str, Any]], total_transactions: int
     ) -> Dict[str, Any]:
-        """Generate anomaly detection summary."""
+        """Generate anomaly detection summary matching AnomalySummary schema."""
         if not anomalies:
             return {
-                "anomaly_count": 0,
-                "anomaly_rate": 0,
-                "categories": {},
-                "risk_level": "low",
+                "total_transactions": total_transactions,
+                "anomalies_detected": 0,
+                "anomaly_rate": 0.0,
+                "by_type": {},
+                "by_severity": {},
+                "highest_risk_categories": [],
             }
 
-        # Count by category
-        categories = {}
-        total_risk_score = 0
+        # Count by type
+        by_type = {}
+        by_severity = {}
+        categories_risk = {}
 
         for anomaly in anomalies:
-            category = anomaly.get("anomaly_type", "unknown")
-            categories[category] = categories.get(category, 0) + 1
-            total_risk_score += anomaly.get("risk_score", 1)
+            # Count by anomaly type
+            anomaly_type = anomaly.get("anomaly_type", "unknown")
+            by_type[anomaly_type] = by_type.get(anomaly_type, 0) + 1
 
-        # Calculate risk level
-        avg_risk = total_risk_score / len(anomalies)
-        risk_level = self._determine_risk_level(avg_risk, len(anomalies))
+            # Count by severity
+            severity = anomaly.get("severity", "medium")
+            by_severity[severity] = by_severity.get(severity, 0) + 1
+
+            # Track category risk
+            transaction = anomaly.get("transaction", {})
+            category = transaction.get("category", "Other")
+            risk_score = anomaly.get("risk_score", 1)
+
+            if category not in categories_risk:
+                categories_risk[category] = {"count": 0, "total_risk": 0}
+            categories_risk[category]["count"] += 1
+            categories_risk[category]["total_risk"] += risk_score
+
+        # Find highest risk categories
+        highest_risk_categories = []
+        if categories_risk:
+            sorted_categories = sorted(
+                categories_risk.items(),
+                key=lambda x: x[1]["total_risk"] / x[1]["count"],
+                reverse=True
+            )
+            highest_risk_categories = [cat[0] for cat in sorted_categories[:3]]
 
         return {
-            "anomaly_count": len(anomalies),
-            "anomaly_rate": (len(anomalies) / total_transactions * 100),
-            "categories": categories,
-            "risk_level": risk_level,
-            "average_risk_score": round(avg_risk, 2),
+            "total_transactions": total_transactions,
+            "anomalies_detected": len(anomalies),
+            "anomaly_rate": round((len(anomalies) / total_transactions * 100), 2),
+            "by_type": by_type,
+            "by_severity": by_severity,
+            "highest_risk_categories": highest_risk_categories,
         }
 
     @staticmethod
@@ -118,5 +143,12 @@ class AsyncAnomalyService:
         return {
             "message": "No transaction data available for anomaly detection",
             "anomalies": [],
-            "summary": {"anomaly_count": 0, "anomaly_rate": 0, "risk_level": "low"},
+            "summary": {
+                "total_transactions": 0,
+                "anomalies_detected": 0,
+                "anomaly_rate": 0.0,
+                "by_type": {},
+                "by_severity": {},
+                "highest_risk_categories": [],
+            },
         }

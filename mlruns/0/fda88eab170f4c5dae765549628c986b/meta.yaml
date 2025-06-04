@@ -1,0 +1,15 @@
+artifact_uri: file:///home/ghost/projects/cashly-ai/mlruns/0/fda88eab170f4c5dae765549628c986b/artifacts
+end_time: 1749040889316
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: fda88eab170f4c5dae765549628c986b
+run_name: transaction_categorizer_training
+run_uuid: fda88eab170f4c5dae765549628c986b
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1749040879291
+status: 3
+tags: []
+user_id: ghost

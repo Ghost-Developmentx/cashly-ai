@@ -112,28 +112,37 @@ class AnomalyClassifier:
         severity = anomaly.get("severity", "medium")
 
         recommendations = {
-            "unusual_expense_amount": {
+            "unusual_amount": {  # Fixed: Changed from "unusual_expense_amount"
                 "critical": "Immediately review this transaction for potential fraud",
                 "high": "Verify this large transaction with your bank",
                 "medium": "Check if this transaction was authorized",
                 "low": "Monitor similar transactions",
             },
-            "unusual_income_amount": {
-                "critical": "Verify this large deposit is legitimate",
-                "high": "Confirm the source of this income",
-                "medium": "Track this unusual income for tax purposes",
-                "low": "No action needed",
-            },
-            "high_transaction_frequency": {
+            "unusual_frequency": {  # Fixed: Changed from "high_transaction_frequency"
                 "high": "Review all transactions from this day for duplicates",
                 "medium": "Check for any unauthorized transactions",
                 "low": "Monitor transaction frequency",
             },
-            "category_outlier": {
+            "category_spike": {  # Fixed: Changed from "category_outlier"
                 "critical": "Investigate this unusual spending immediately",
                 "high": "Review recent purchases in this category",
                 "medium": "Consider if this was a one-time expense",
                 "low": "Track spending in this category",
+            },
+            "new_merchant": {  # Added missing type
+                "critical": "Verify this new merchant is legitimate",
+                "high": "Check if this merchant is trustworthy",
+                "medium": "Monitor transactions from this merchant",
+                "low": "No action needed",
+            },
+            "duplicate_transaction": {  # Added missing type
+                "high": "Contact your bank about potential duplicate charges",
+                "medium": "Verify if both transactions are legitimate",
+                "low": "Monitor for additional duplicates",
+            },
+            "time_anomaly": {  # Added missing type
+                "medium": "Review why this transaction occurred at an unusual time",
+                "low": "Monitor for similar timing patterns",
             },
         }
 

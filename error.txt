@@ -1,0 +1,2277 @@
+                                                                                                                           [100%]
+                                                                                                                          ======================================================================================================= FAILURES ========================================================================================================
+_________________________________________________________________________________________________ test_detect_anomalies _________________________________________________________________________________________________
+
+client = <httpx.AsyncClient object at 0x7f7ec9616450>
+
+    @pytest.mark.asyncio
+    async def test_detect_anomalies(client):
+        """Test anomaly detection."""
+        transactions = []
+
+        # Normal transactions
+        for i in range(20):
+            transactions.append(
+                {
+                    "id": f"txn_{i}",
+                    "date": (datetime.now() - timedelta(days=i)).strftime("%Y-%m-%d"),
+                    "amount": -50.0 - (i % 10),
+                    "description": f"Normal transaction {i}",
+                    "category": "Food",
+                }
+            )
+
+        # Add anomalies once
+        transactions.extend(
+            [
+                {
+                    "id": "txn_anomaly_1",
+                    "date": datetime.now().strftime("%Y-%m-%d"),
+                    "amount": -1500.0,
+                    "description": "Large purchase",
+                    "category": "Shopping",
+                },
+                {
+                    "id": "txn_anomaly_2",
+                    "date": datetime.now().strftime("%Y-%m-%d"),
+                    "amount": -50.0,
+                    "description": "Duplicate transaction",
+                    "category": "Food",
+                },
+                {
+                    "id": "txn_anomaly_3",
+                    "date": datetime.now().strftime("%Y-%m-%d"),
+                    "amount": -50.0,
+                    "description": "Duplicate transaction",
+                    "category": "Food",
+                },
+            ]
+        )
+
+        request_data = {
+            "user_id": "test_user",
+            "transactions": transactions,
+            "threshold": 2.0,
+            "check_duplicates": True,
+        }
+
+        response = await client.post("/api/v1/anomaly/detect", json=request_data)
+
+>       assert response.status_code == 200
+E       assert 500 == 200
+E        +  where 500 = <Response [500 Internal Server Error]>.status_code
+
+tests/api/v1/test_anomaly.py:62: AssertionError
+------------------------------------------------------------------------------------------------- Captured stdout call --------------------------------------------------------------------------------------------------
+📥 Incoming request: POST http://test/api/v1/anomaly/detect
+------------------------------------------------------------------------------------------------- Captured stderr call --------------------------------------------------------------------------------------------------
+2025-06-04 10:14:34,503 - app.core.middleware - INFO - Request c301c22e-c98d-4dd1-ab4e-8cf4a00a1461 started: POST /api/v1/anomaly/detect
+2025-06-04 10:14:34,509 - app.api.v1.endpoints.anomaly - INFO - Detecting anomalies for user test_user with 23 transactions
+2025-06-04 10:14:34,510 - app.api.v1.endpoints.anomaly - ERROR - Anomaly detection failed: 'date'
+Traceback (most recent call last):
+  File "/home/ghost/projects/cashly-ai/app/api/v1/endpoints/anomaly.py", line 62, in detect_anomalies
+    transaction_date=a["date"],
+                     ~^^^^^^^^
+KeyError: 'date'
+2025-06-04 10:14:34,511 - app.core.middleware - INFO - Request c301c22e-c98d-4dd1-ab4e-8cf4a00a1461 completed in 0.008s with status 500
+2025-06-04 10:14:34,513 - httpx - INFO - HTTP Request: POST http://test/api/v1/anomaly/detect "HTTP/1.1 500 Internal Server Error"
+--------------------------------------------------------------------------------------------------- Captured log call ---------------------------------------------------------------------------------------------------
+INFO     app.core.middleware:middleware.py:25 Request c301c22e-c98d-4dd1-ab4e-8cf4a00a1461 started: POST /api/v1/anomaly/detect
+INFO     app.api.v1.endpoints.anomaly:anomaly.py:44 Detecting anomalies for user test_user with 23 transactions
+ERROR    app.api.v1.endpoints.anomaly:anomaly.py:96 Anomaly detection failed: 'date'
+Traceback (most recent call last):
+  File "/home/ghost/projects/cashly-ai/app/api/v1/endpoints/anomaly.py", line 62, in detect_anomalies
+    transaction_date=a["date"],
+                     ~^^^^^^^^
+KeyError: 'date'
+INFO     app.core.middleware:middleware.py:43 Request c301c22e-c98d-4dd1-ab4e-8cf4a00a1461 completed in 0.008s with status 500
+INFO     httpx:_client.py:1740 HTTP Request: POST http://test/api/v1/anomaly/detect "HTTP/1.1 500 Internal Server Error"
+_____________________________________________________________________________________________ test_mark_anomalies_reviewed ______________________________________________________________________________________________
+
+client = <httpx.AsyncClient object at 0x7f7ec9667470>
+
+    @pytest.mark.asyncio
+    async def test_mark_anomalies_reviewed(client):
+        """Test marking anomalies as reviewed."""
+        request_data = {
+            "anomaly_ids": ["anomaly_1", "anomaly_2"],
+            "user_id": "test_user",
+        }
+
+        response = await client.post(
+            "/api/v1/anomaly/mark_reviewed",
+            json=request_data,
+            params={"action": "acknowledged"},
+        )
+
+>       assert response.status_code == 200
+E       assert 422 == 200
+E        +  where 422 = <Response [422 Unprocessable Entity]>.status_code
+
+tests/api/v1/test_anomaly.py:101: AssertionError
+------------------------------------------------------------------------------------------------- Captured stdout call --------------------------------------------------------------------------------------------------
+📥 Incoming request: POST http://test/api/v1/anomaly/mark_reviewed?action=acknowledged
+------------------------------------------------------------------------------------------------- Captured stderr call --------------------------------------------------------------------------------------------------
+2025-06-04 10:14:34,775 - app.core.middleware - INFO - Request c394317c-c860-4285-b784-a4c60da0a88e started: POST /api/v1/anomaly/mark_reviewed
+2025-06-04 10:14:34,779 - app.core.middleware - INFO - Request c394317c-c860-4285-b784-a4c60da0a88e completed in 0.003s with status 422
+2025-06-04 10:14:34,780 - httpx - INFO - HTTP Request: POST http://test/api/v1/anomaly/mark_reviewed?action=acknowledged "HTTP/1.1 422 Unprocessable Entity"
+--------------------------------------------------------------------------------------------------- Captured log call ---------------------------------------------------------------------------------------------------
+INFO     app.core.middleware:middleware.py:25 Request c394317c-c860-4285-b784-a4c60da0a88e started: POST /api/v1/anomaly/mark_reviewed
+INFO     app.core.middleware:middleware.py:43 Request c394317c-c860-4285-b784-a4c60da0a88e completed in 0.003s with status 422
+INFO     httpx:_client.py:1740 HTTP Request: POST http://test/api/v1/anomaly/mark_reviewed?action=acknowledged "HTTP/1.1 422 Unprocessable Entity"
+__________________________________________________________________________________________________ test_process_query ___________________________________________________________________________________________________
+
+client = <httpx.AsyncClient object at 0x7f7ec96a1070>
+
+    @pytest.mark.asyncio
+    async def test_process_query(client):
+        """Test natural language query processing."""
+        request_data = {
+            "user_id": "test_user",
+            "query": "Show me my recent transactions",
+            "user_context": {
+                "user_id": "test_user",
+                "accounts": [{"id": "acc_123", "name": "Checking", "balance": 5000.0}],
+                "transactions": [
+                    {
+                        "date": "2024-01-20",
+                        "amount": -50.0,
+                        "description": "Coffee Shop",
+                        "category": "Food",
+                    }
+                ],
+            },
+        }
+
+        response = await client.post("/api/v1/fin/conversations/query", json=request_data)
+
+>       assert response.status_code == 200
+E       assert 503 == 200
+E        +  where 503 = <Response [503 Service Unavailable]>.status_code
+
+tests/api/v1/test_fin.py:30: AssertionError
+------------------------------------------------------------------------------------------------- Captured stdout call --------------------------------------------------------------------------------------------------
+📥 Incoming request: POST http://test/api/v1/fin/conversations/query
+------------------------------------------------------------------------------------------------- Captured stderr call --------------------------------------------------------------------------------------------------
+2025-06-04 10:14:34,818 - app.core.middleware - INFO - Request 8663057d-0e98-413f-9031-8d5a5d75ea34 started: POST /api/v1/fin/conversations/query
+2025-06-04 10:14:35,519 - app.services.openai_assistants.assistant_manager.base - INFO - Initialized base manager with 8 configured assistants
+2025-06-04 10:14:35,525 - app.services.openai_assistants.assistant_manager.base - INFO - Initialized base manager with 8 configured assistants
+2025-06-04 10:14:35,531 - app.services.openai_assistants.assistant_manager.base - INFO - Initialized base manager with 8 configured assistants
+2025-06-04 10:14:35,531 - app.services.openai_assistants.assistant_manager.manager - INFO - ✅ Async Assistant Manager initialized
+2025-06-04 10:14:35,531 - app.services.openai_assistants.assistant_manager.tool_executor - INFO - Tool executor configured: async
+2025-06-04 10:14:35,531 - app.services.openai_assistants.integration.config - INFO - ✅ Async tool executor configured
+2025-06-04 10:14:35,531 - app.services.openai_assistants.integration.config - INFO - ✅ Integration components initialized
+2025-06-04 10:14:35,531 - app.services.openai_assistants.handlers.query_handler.handler - INFO - Query handler initialized
+2025-06-04 10:14:35,532 - app.services.openai_assistants.integration.service - INFO - ✅ OpenAI Integration Service initialized
+2025-06-04 10:14:35,532 - app.api.v1.endpoints.fin - INFO - 📥 Processing query for user test_user: Show me my recent transactions...
+2025-06-04 10:14:35,532 - app.services.openai_assistants.handlers.query_handler.classifier - INFO - 🎯 Classifying query for user test_user
+2025-06-04 10:14:35,532 - app.services.intent_classification.async_intent_service - INFO - 🚀 Async classify_and_route called for: 'Show me my recent transactions'
+2025-06-04 10:14:35,532 - app.services.intent_classification.classification_handler - INFO - 🔍 Attempting vector classification for: 'Show me my recent transactions'
+2025-06-04 10:14:35,532 - app.db.singleton_registry - INFO - 🏗️ Creating new singleton: openai_embedding_client
+2025-06-04 10:14:35,746 - app.db.singleton_registry - INFO - 🏗️ Creating new singleton: vector_search_service
+2025-06-04 10:14:35,746 - app.services.search.async_vector_search - INFO - ✅ AsyncVectorSearchService created
+2025-06-04 10:14:35,747 - app.services.intent_determination.intent_resolver - INFO - Starting intent resolution for query: 'Show me my recent transactions'
+2025-06-04 10:14:35,747 - app.services.intent_determination.context_aggregator - INFO - Processing fresh context for conversation conv_test_user_20250604101435 with 0 messages
+2025-06-04 10:14:35,747 - app.services.intent_determination.intent_resolver - ERROR - Async intent resolution failed: 'NoneType' object has no attribute 'get'
+Traceback (most recent call last):
+  File "/home/ghost/projects/cashly-ai/app/services/intent_determination/intent_resolver.py", line 50, in resolve_intent
+    await self.context_aggregator.process_conversation_async(
+  File "/home/ghost/projects/cashly-ai/app/services/intent_determination/context_aggregator.py", line 73, in process_conversation_async
+    context_data = self._aggregate_context(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ghost/projects/cashly-ai/app/services/intent_determination/context_aggregator.py", line 102, in _aggregate_context
+    key_info = self.processor.extract_key_information(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ghost/projects/cashly-ai/app/services/intent_determination/context_processor.py", line 60, in extract_key_information
+    context_info = self._extract_context_info(user_context)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ghost/projects/cashly-ai/app/services/intent_determination/context_processor.py", line 174, in _extract_context_info
+    info["stripe_connected"] = stripe.get("connected", False)
+                               ^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'get'
+2025-06-04 10:14:35,748 - app.services.intent_classification.classification_handler - INFO - 📊 Vector resolution result:
+2025-06-04 10:14:35,748 - app.services.intent_classification.classification_handler - INFO -    Intent: transactions
+2025-06-04 10:14:35,748 - app.services.intent_classification.classification_handler - INFO -    Confidence: 0.600
+2025-06-04 10:14:35,748 - app.services.intent_classification.classification_handler - INFO -    Method: keyword_fallback
+2025-06-04 10:14:35,748 - app.services.intent_classification.async_intent_service - INFO - ✅ Vector classification successful: transactions (60.0%)
+2025-06-04 10:14:35,748 - app.services.openai_assistants.handlers.query_handler.classifier - INFO - 🎯 Intent: transactions (confidence: 60.00%)
+2025-06-04 10:14:36,193 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/threads "HTTP/1.1 401 Unauthorized"
+2025-06-04 10:14:36,194 - app.services.openai_assistants.assistant_manager.thread_manager - ERROR - Failed to create thread for user test_user: Error code: 401 - {'error': {'message': 'Incorrect API key provided: test-key**2345. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+2025-06-04 10:14:36,195 - app.services.openai_assistants.assistant_manager.manager - ERROR - Error processing query for transaction: Error code: 401 - {'error': {'message': 'Incorrect API key provided: test-key**2345. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+Traceback (most recent call last):
+  File "/home/ghost/projects/cashly-ai/app/services/openai_assistants/assistant_manager/manager.py", line 83, in process_query
+    thread_id = await self.thread_manager.get_or_create_thread(user_id)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ghost/projects/cashly-ai/app/services/openai_assistants/assistant_manager/thread_manager.py", line 57, in get_or_create_thread
+    thread = await self.client.beta.threads.create()
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ghost/.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/openai/resources/beta/threads/threads.py", line 979, in create
+    return await self._post(
+           ^^^^^^^^^^^^^^^^^
+  File "/home/ghost/.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/openai/_base_client.py", line 1742, in post
+    return await self.request(cast_to, opts, stream=stream, stream_cls=stream_cls)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ghost/.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/openai/_base_client.py", line 1549, in request
+    raise self._make_status_error_from_response(err.response) from None
+openai.AuthenticationError: Error code: 401 - {'error': {'message': 'Incorrect API key provided: test-key**2345. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+2025-06-04 10:14:36,196 - app.services.openai_assistants.core.router - INFO - ✅ No re-routing needed - assistant should handle this query
+2025-06-04 10:14:36,196 - app.services.openai_assistants.processors.function_processor - INFO - 🔧 Total actions: []
+2025-06-04 10:14:36,196 - app.services.openai_assistants.core.response_builder - INFO - 🔧 Generated 0 tool_results for Rails
+2025-06-04 10:14:36,196 - app.services.openai_assistants.core.response_builder - INFO - 📤 Final response keys: ['message', 'response_text', 'actions', 'tool_results', 'classification', 'routing', 'success', 'metadata']
+2025-06-04 10:14:36,197 - app.services.openai_assistants.core.response_builder - INFO - 📤 Response has message: True
+2025-06-04 10:14:36,197 - app.services.openai_assistants.core.response_builder - INFO - 📤 Tool results count: 0
+2025-06-04 10:14:36,197 - app.services.openai_assistants.core.response_builder - INFO - 📤 Actions count: 0
+2025-06-04 10:14:36,197 - app.api.v1.endpoints.fin - ERROR - OpenAI service error: ('OpenAI', 'Processing failed')
+2025-06-04 10:14:36,198 - app.core.middleware - INFO - Request 8663057d-0e98-413f-9031-8d5a5d75ea34 completed in 1.380s with status 503
+2025-06-04 10:14:36,200 - httpx - INFO - HTTP Request: POST http://test/api/v1/fin/conversations/query "HTTP/1.1 503 Service Unavailable"
+--------------------------------------------------------------------------------------------------- Captured log call ---------------------------------------------------------------------------------------------------
+INFO     app.core.middleware:middleware.py:25 Request 8663057d-0e98-413f-9031-8d5a5d75ea34 started: POST /api/v1/fin/conversations/query
+INFO     app.services.openai_assistants.assistant_manager.base:base.py:53 Initialized base manager with 8 configured assistants
+INFO     app.services.openai_assistants.assistant_manager.base:base.py:53 Initialized base manager with 8 configured assistants
+INFO     app.services.openai_assistants.assistant_manager.base:base.py:53 Initialized base manager with 8 configured assistants
+INFO     app.services.openai_assistants.assistant_manager.manager:manager.py:51 ✅ Async Assistant Manager initialized
+INFO     app.services.openai_assistants.assistant_manager.tool_executor:tool_executor.py:47 Tool executor configured: async
+INFO     app.services.openai_assistants.integration.config:config.py:100 ✅ Async tool executor configured
+INFO     app.services.openai_assistants.integration.config:config.py:71 ✅ Integration components initialized
+INFO     app.services.openai_assistants.handlers.query_handler.handler:handler.py:59 Query handler initialized
+INFO     app.services.openai_assistants.integration.service:service.py:58 ✅ OpenAI Integration Service initialized
+INFO     app.api.v1.endpoints.fin:fin.py:73 📥 Processing query for user test_user: Show me my recent transactions...
+INFO     app.services.openai_assistants.handlers.query_handler.classifier:classifier.py:48 🎯 Classifying query for user test_user
+INFO     app.services.intent_classification.async_intent_service:async_intent_service.py:72 🚀 Async classify_and_route called for: 'Show me my recent transactions'
+INFO     app.services.intent_classification.classification_handler:classification_handler.py:36 🔍 Attempting vector classification for: 'Show me my recent transactions'
+INFO     app.db.singleton_registry:singleton_registry.py:83 🏗️ Creating new singleton: openai_embedding_client
+INFO     app.db.singleton_registry:singleton_registry.py:83 🏗️ Creating new singleton: vector_search_service
+INFO     app.services.search.async_vector_search:async_vector_search.py:37 ✅ AsyncVectorSearchService created
+INFO     app.services.intent_determination.intent_resolver:intent_resolver.py:46 Starting intent resolution for query: 'Show me my recent transactions'
+INFO     app.services.intent_determination.context_aggregator:context_aggregator.py:67 Processing fresh context for conversation conv_test_user_20250604101435 with 0 messages
+ERROR    app.services.intent_determination.intent_resolver:intent_resolver.py:108 Async intent resolution failed: 'NoneType' object has no attribute 'get'
+Traceback (most recent call last):
+  File "/home/ghost/projects/cashly-ai/app/services/intent_determination/intent_resolver.py", line 50, in resolve_intent
+    await self.context_aggregator.process_conversation_async(
+  File "/home/ghost/projects/cashly-ai/app/services/intent_determination/context_aggregator.py", line 73, in process_conversation_async
+    context_data = self._aggregate_context(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ghost/projects/cashly-ai/app/services/intent_determination/context_aggregator.py", line 102, in _aggregate_context
+    key_info = self.processor.extract_key_information(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ghost/projects/cashly-ai/app/services/intent_determination/context_processor.py", line 60, in extract_key_information
+    context_info = self._extract_context_info(user_context)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ghost/projects/cashly-ai/app/services/intent_determination/context_processor.py", line 174, in _extract_context_info
+    info["stripe_connected"] = stripe.get("connected", False)
+                               ^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'get'
+INFO     app.services.intent_classification.classification_handler:classification_handler.py:88 📊 Vector resolution result:
+INFO     app.services.intent_classification.classification_handler:classification_handler.py:89    Intent: transactions
+INFO     app.services.intent_classification.classification_handler:classification_handler.py:90    Confidence: 0.600
+INFO     app.services.intent_classification.classification_handler:classification_handler.py:91    Method: keyword_fallback
+INFO     app.services.intent_classification.async_intent_service:async_intent_service.py:84 ✅ Vector classification successful: transactions (60.0%)
+INFO     app.services.openai_assistants.handlers.query_handler.classifier:classifier.py:56 🎯 Intent: transactions (confidence: 60.00%)
+INFO     httpx:_client.py:1740 HTTP Request: POST https://api.openai.com/v1/threads "HTTP/1.1 401 Unauthorized"
+ERROR    app.services.openai_assistants.assistant_manager.thread_manager:thread_manager.py:72 Failed to create thread for user test_user: Error code: 401 - {'error': {'message': 'Incorrect API key provided: test-key**2345. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+ERROR    app.services.openai_assistants.assistant_manager.manager:manager.py:124 Error processing query for transaction: Error code: 401 - {'error': {'message': 'Incorrect API key provided: test-key**2345. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+Traceback (most recent call last):
+  File "/home/ghost/projects/cashly-ai/app/services/openai_assistants/assistant_manager/manager.py", line 83, in process_query
+    thread_id = await self.thread_manager.get_or_create_thread(user_id)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ghost/projects/cashly-ai/app/services/openai_assistants/assistant_manager/thread_manager.py", line 57, in get_or_create_thread
+    thread = await self.client.beta.threads.create()
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ghost/.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/openai/resources/beta/threads/threads.py", line 979, in create
+    return await self._post(
+           ^^^^^^^^^^^^^^^^^
+  File "/home/ghost/.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/openai/_base_client.py", line 1742, in post
+    return await self.request(cast_to, opts, stream=stream, stream_cls=stream_cls)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ghost/.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/openai/_base_client.py", line 1549, in request
+    raise self._make_status_error_from_response(err.response) from None
+openai.AuthenticationError: Error code: 401 - {'error': {'message': 'Incorrect API key provided: test-key**2345. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+INFO     app.services.openai_assistants.core.router:router.py:115 ✅ No re-routing needed - assistant should handle this query
+INFO     app.services.openai_assistants.processors.function_processor:function_processor.py:58 🔧 Total actions: []
+INFO     app.services.openai_assistants.core.response_builder:response_builder.py:142 🔧 Generated 0 tool_results for Rails
+INFO     app.services.openai_assistants.core.response_builder:response_builder.py:210 📤 Final response keys: ['message', 'response_text', 'actions', 'tool_results', 'classification', 'routing', 'success', 'metadata']
+INFO     app.services.openai_assistants.core.response_builder:response_builder.py:211 📤 Response has message: True
+INFO     app.services.openai_assistants.core.response_builder:response_builder.py:212 📤 Tool results count: 0
+INFO     app.services.openai_assistants.core.response_builder:response_builder.py:213 📤 Actions count: 0
+ERROR    app.api.v1.endpoints.fin:fin.py:132 OpenAI service error: ('OpenAI', 'Processing failed')
+INFO     app.core.middleware:middleware.py:43 Request 8663057d-0e98-413f-9031-8d5a5d75ea34 completed in 1.380s with status 503
+INFO     httpx:_client.py:1740 HTTP Request: POST http://test/api/v1/fin/conversations/query "HTTP/1.1 503 Service Unavailable"
+_________________________________________________________________________________________ test_query_with_conversation_history __________________________________________________________________________________________
+
+client = <httpx.AsyncClient object at 0x7f7ec96a3f80>
+
+    @pytest.mark.asyncio
+    async def test_query_with_conversation_history(client):
+        """Test query with conversation history."""
+        request_data = {
+            "user_id": "test_user",
+            "query": "What about last month?",
+            "conversation_history": [
+                {"role": "user", "content": "Show me my spending this month"},
+                {
+                    "role": "assistant",
+                    "content": "You've spent $1,500 this month across 45 transactions.",
+                },
+            ],
+        }
+
+        response = await client.post("/api/v1/fin/conversations/query", json=request_data)
+
+>       assert response.status_code == 200
+E       assert 503 == 200
+E        +  where 503 = <Response [503 Service Unavailable]>.status_code
+
+tests/api/v1/test_fin.py:57: AssertionError
+------------------------------------------------------------------------------------------------- Captured stdout call --------------------------------------------------------------------------------------------------
+📥 Incoming request: POST http://test/api/v1/fin/conversations/query
+------------------------------------------------------------------------------------------------- Captured stderr call --------------------------------------------------------------------------------------------------
+2025-06-04 10:14:36,209 - app.core.middleware - INFO - Request 88df96c9-a629-4940-9ecb-ec1e87ee3938 started: POST /api/v1/fin/conversations/query
+2025-06-04 10:14:36,217 - app.services.openai_assistants.assistant_manager.base - INFO - Initialized base manager with 8 configured assistants
+2025-06-04 10:14:36,222 - app.services.openai_assistants.assistant_manager.base - INFO - Initialized base manager with 8 configured assistants
+2025-06-04 10:14:36,228 - app.services.openai_assistants.assistant_manager.base - INFO - Initialized base manager with 8 configured assistants
+2025-06-04 10:14:36,228 - app.services.openai_assistants.assistant_manager.manager - INFO - ✅ Async Assistant Manager initialized
+2025-06-04 10:14:36,228 - app.services.openai_assistants.assistant_manager.tool_executor - INFO - Tool executor configured: async
+2025-06-04 10:14:36,229 - app.services.openai_assistants.integration.config - INFO - ✅ Async tool executor configured
+2025-06-04 10:14:36,229 - app.services.openai_assistants.integration.config - INFO - ✅ Integration components initialized
+2025-06-04 10:14:36,229 - app.services.openai_assistants.handlers.query_handler.handler - INFO - Query handler initialized
+2025-06-04 10:14:36,229 - app.services.openai_assistants.integration.service - INFO - ✅ OpenAI Integration Service initialized
+2025-06-04 10:14:36,229 - app.api.v1.endpoints.fin - INFO - 📥 Processing query for user test_user: What about last month?...
+2025-06-04 10:14:36,229 - app.services.openai_assistants.handlers.query_handler.classifier - INFO - 🎯 Classifying query for user test_user
+2025-06-04 10:14:36,229 - app.services.intent_classification.async_intent_service - INFO - 🚀 Async classify_and_route called for: 'What about last month?'
+2025-06-04 10:14:36,229 - app.services.intent_classification.classification_handler - INFO - 🔍 Attempting vector classification for: 'What about last month?'
+2025-06-04 10:14:36,230 - app.db.singleton_registry - WARNING - 🔄 Event loop changed for openai_embedding_client, recreating...
+2025-06-04 10:14:36,230 - app.db.singleton_registry - INFO - 🏗️ Creating new singleton: openai_embedding_client
+2025-06-04 10:14:36,244 - app.db.singleton_registry - WARNING - 🔄 Event loop changed for vector_search_service, recreating...
+2025-06-04 10:14:36,244 - app.services.search.async_vector_search - INFO - AsyncVectorSearchService.close() called (no-op)
+2025-06-04 10:14:36,244 - app.db.singleton_registry - INFO - 🏗️ Creating new singleton: vector_search_service
+2025-06-04 10:14:36,244 - app.services.search.async_vector_search - INFO - ✅ AsyncVectorSearchService created
+2025-06-04 10:14:36,244 - app.services.intent_determination.intent_resolver - INFO - Starting intent resolution for query: 'What about last month?'
+2025-06-04 10:14:36,244 - app.services.intent_determination.context_aggregator - INFO - Processing fresh context for conversation conv_test_user_20250604101436 with 2 messages
+2025-06-04 10:14:36,245 - app.services.intent_determination.context_processor - INFO - Including 2 messages in embedding context
+2025-06-04 10:14:36,245 - app.services.intent_determination.intent_resolver - INFO - Generating embedding for text (178 chars)
+2025-06-04 10:14:36,245 - app.services.embeddings.async_embedding_client - INFO - 🔄 Creating OpenAI client for loop 140182511514640
+2025-06-04 10:14:36,381 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/2 401 Unauthorized"
+2025-06-04 10:14:36,383 - app.services.embeddings.retry_handler - ERROR - Authentication error: Error code: 401 - {'error': {'message': 'Incorrect API key provided: test-key**2345. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+2025-06-04 10:14:36,383 - app.services.embeddings.async_embedding_client - ERROR - No response from embedding creation
+2025-06-04 10:14:36,383 - app.services.intent_determination.intent_resolver - WARNING - Failed to generate embedding
+2025-06-04 10:14:36,383 - app.services.intent_classification.classification_handler - INFO - 📊 Vector resolution result:
+2025-06-04 10:14:36,383 - app.services.intent_classification.classification_handler - INFO -    Intent: general
+2025-06-04 10:14:36,383 - app.services.intent_classification.classification_handler - INFO -    Confidence: 0.600
+2025-06-04 10:14:36,383 - app.services.intent_classification.classification_handler - INFO -    Method: keyword_fallback
+2025-06-04 10:14:36,383 - app.services.intent_classification.async_intent_service - INFO - ✅ Vector classification successful: general (60.0%)
+2025-06-04 10:14:36,383 - app.services.openai_assistants.handlers.query_handler.classifier - INFO - 🎯 Intent: general (confidence: 60.00%)
+2025-06-04 10:14:36,529 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/threads "HTTP/1.1 401 Unauthorized"
+2025-06-04 10:14:36,530 - app.services.openai_assistants.assistant_manager.thread_manager - ERROR - Failed to create thread for user test_user: Error code: 401 - {'error': {'message': 'Incorrect API key provided: test-key**2345. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+2025-06-04 10:14:36,530 - app.services.openai_assistants.assistant_manager.manager - ERROR - Error processing query for transaction: Error code: 401 - {'error': {'message': 'Incorrect API key provided: test-key**2345. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+Traceback (most recent call last):
+  File "/home/ghost/projects/cashly-ai/app/services/openai_assistants/assistant_manager/manager.py", line 83, in process_query
+    thread_id = await self.thread_manager.get_or_create_thread(user_id)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ghost/projects/cashly-ai/app/services/openai_assistants/assistant_manager/thread_manager.py", line 57, in get_or_create_thread
+    thread = await self.client.beta.threads.create()
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ghost/.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/openai/resources/beta/threads/threads.py", line 979, in create
+    return await self._post(
+           ^^^^^^^^^^^^^^^^^
+  File "/home/ghost/.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/openai/_base_client.py", line 1742, in post
+    return await self.request(cast_to, opts, stream=stream, stream_cls=stream_cls)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ghost/.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/openai/_base_client.py", line 1549, in request
+    raise self._make_status_error_from_response(err.response) from None
+openai.AuthenticationError: Error code: 401 - {'error': {'message': 'Incorrect API key provided: test-key**2345. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+2025-06-04 10:14:36,531 - app.services.openai_assistants.core.router - INFO - ✅ No re-routing needed - assistant should handle this query
+2025-06-04 10:14:36,531 - app.services.openai_assistants.processors.function_processor - INFO - 🔧 Total actions: []
+2025-06-04 10:14:36,531 - app.services.openai_assistants.core.response_builder - INFO - 🔧 Generated 0 tool_results for Rails
+2025-06-04 10:14:36,531 - app.services.openai_assistants.core.response_builder - INFO - 📤 Final response keys: ['message', 'response_text', 'actions', 'tool_results', 'classification', 'routing', 'success', 'metadata']
+2025-06-04 10:14:36,531 - app.services.openai_assistants.core.response_builder - INFO - 📤 Response has message: True
+2025-06-04 10:14:36,531 - app.services.openai_assistants.core.response_builder - INFO - 📤 Tool results count: 0
+2025-06-04 10:14:36,531 - app.services.openai_assistants.core.response_builder - INFO - 📤 Actions count: 0
+2025-06-04 10:14:36,531 - app.api.v1.endpoints.fin - ERROR - OpenAI service error: ('OpenAI', 'Processing failed')
+2025-06-04 10:14:36,532 - app.core.middleware - INFO - Request 88df96c9-a629-4940-9ecb-ec1e87ee3938 completed in 0.324s with status 503
+2025-06-04 10:14:36,534 - httpx - INFO - HTTP Request: POST http://test/api/v1/fin/conversations/query "HTTP/1.1 503 Service Unavailable"
+--------------------------------------------------------------------------------------------------- Captured log call ---------------------------------------------------------------------------------------------------
+INFO     app.core.middleware:middleware.py:25 Request 88df96c9-a629-4940-9ecb-ec1e87ee3938 started: POST /api/v1/fin/conversations/query
+INFO     app.services.openai_assistants.assistant_manager.base:base.py:53 Initialized base manager with 8 configured assistants
+INFO     app.services.openai_assistants.assistant_manager.base:base.py:53 Initialized base manager with 8 configured assistants
+INFO     app.services.openai_assistants.assistant_manager.base:base.py:53 Initialized base manager with 8 configured assistants
+INFO     app.services.openai_assistants.assistant_manager.manager:manager.py:51 ✅ Async Assistant Manager initialized
+INFO     app.services.openai_assistants.assistant_manager.tool_executor:tool_executor.py:47 Tool executor configured: async
+INFO     app.services.openai_assistants.integration.config:config.py:100 ✅ Async tool executor configured
+INFO     app.services.openai_assistants.integration.config:config.py:71 ✅ Integration components initialized
+INFO     app.services.openai_assistants.handlers.query_handler.handler:handler.py:59 Query handler initialized
+INFO     app.services.openai_assistants.integration.service:service.py:58 ✅ OpenAI Integration Service initialized
+INFO     app.api.v1.endpoints.fin:fin.py:73 📥 Processing query for user test_user: What about last month?...
+INFO     app.services.openai_assistants.handlers.query_handler.classifier:classifier.py:48 🎯 Classifying query for user test_user
+INFO     app.services.intent_classification.async_intent_service:async_intent_service.py:72 🚀 Async classify_and_route called for: 'What about last month?'
+INFO     app.services.intent_classification.classification_handler:classification_handler.py:36 🔍 Attempting vector classification for: 'What about last month?'
+WARNING  app.db.singleton_registry:singleton_registry.py:74 🔄 Event loop changed for openai_embedding_client, recreating...
+INFO     app.db.singleton_registry:singleton_registry.py:83 🏗️ Creating new singleton: openai_embedding_client
+WARNING  app.db.singleton_registry:singleton_registry.py:74 🔄 Event loop changed for vector_search_service, recreating...
+INFO     app.services.search.async_vector_search:async_vector_search.py:142 AsyncVectorSearchService.close() called (no-op)
+INFO     app.db.singleton_registry:singleton_registry.py:83 🏗️ Creating new singleton: vector_search_service
+INFO     app.services.search.async_vector_search:async_vector_search.py:37 ✅ AsyncVectorSearchService created
+INFO     app.services.intent_determination.intent_resolver:intent_resolver.py:46 Starting intent resolution for query: 'What about last month?'
+INFO     app.services.intent_determination.context_aggregator:context_aggregator.py:67 Processing fresh context for conversation conv_test_user_20250604101436 with 2 messages
+INFO     app.services.intent_determination.context_processor:context_processor.py:90 Including 2 messages in embedding context
+INFO     app.services.intent_determination.intent_resolver:intent_resolver.py:60 Generating embedding for text (178 chars)
+INFO     app.services.embeddings.async_embedding_client:async_embedding_client.py:50 🔄 Creating OpenAI client for loop 140182511514640
+INFO     httpx:_client.py:1740 HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/2 401 Unauthorized"
+ERROR    app.services.embeddings.retry_handler:retry_handler.py:85 Authentication error: Error code: 401 - {'error': {'message': 'Incorrect API key provided: test-key**2345. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+ERROR    app.services.embeddings.async_embedding_client:async_embedding_client.py:94 No response from embedding creation
+WARNING  app.services.intent_determination.intent_resolver:intent_resolver.py:70 Failed to generate embedding
+INFO     app.services.intent_classification.classification_handler:classification_handler.py:88 📊 Vector resolution result:
+INFO     app.services.intent_classification.classification_handler:classification_handler.py:89    Intent: general
+INFO     app.services.intent_classification.classification_handler:classification_handler.py:90    Confidence: 0.600
+INFO     app.services.intent_classification.classification_handler:classification_handler.py:91    Method: keyword_fallback
+INFO     app.services.intent_classification.async_intent_service:async_intent_service.py:84 ✅ Vector classification successful: general (60.0%)
+INFO     app.services.openai_assistants.handlers.query_handler.classifier:classifier.py:56 🎯 Intent: general (confidence: 60.00%)
+INFO     httpx:_client.py:1740 HTTP Request: POST https://api.openai.com/v1/threads "HTTP/1.1 401 Unauthorized"
+ERROR    app.services.openai_assistants.assistant_manager.thread_manager:thread_manager.py:72 Failed to create thread for user test_user: Error code: 401 - {'error': {'message': 'Incorrect API key provided: test-key**2345. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+ERROR    app.services.openai_assistants.assistant_manager.manager:manager.py:124 Error processing query for transaction: Error code: 401 - {'error': {'message': 'Incorrect API key provided: test-key**2345. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+Traceback (most recent call last):
+  File "/home/ghost/projects/cashly-ai/app/services/openai_assistants/assistant_manager/manager.py", line 83, in process_query
+    thread_id = await self.thread_manager.get_or_create_thread(user_id)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ghost/projects/cashly-ai/app/services/openai_assistants/assistant_manager/thread_manager.py", line 57, in get_or_create_thread
+    thread = await self.client.beta.threads.create()
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ghost/.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/openai/resources/beta/threads/threads.py", line 979, in create
+    return await self._post(
+           ^^^^^^^^^^^^^^^^^
+  File "/home/ghost/.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/openai/_base_client.py", line 1742, in post
+    return await self.request(cast_to, opts, stream=stream, stream_cls=stream_cls)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ghost/.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/openai/_base_client.py", line 1549, in request
+    raise self._make_status_error_from_response(err.response) from None
+openai.AuthenticationError: Error code: 401 - {'error': {'message': 'Incorrect API key provided: test-key**2345. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}
+INFO     app.services.openai_assistants.core.router:router.py:115 ✅ No re-routing needed - assistant should handle this query
+INFO     app.services.openai_assistants.processors.function_processor:function_processor.py:58 🔧 Total actions: []
+INFO     app.services.openai_assistants.core.response_builder:response_builder.py:142 🔧 Generated 0 tool_results for Rails
+INFO     app.services.openai_assistants.core.response_builder:response_builder.py:210 📤 Final response keys: ['message', 'response_text', 'actions', 'tool_results', 'classification', 'routing', 'success', 'metadata']
+INFO     app.services.openai_assistants.core.response_builder:response_builder.py:211 📤 Response has message: True
+INFO     app.services.openai_assistants.core.response_builder:response_builder.py:212 📤 Tool results count: 0
+INFO     app.services.openai_assistants.core.response_builder:response_builder.py:213 📤 Actions count: 0
+ERROR    app.api.v1.endpoints.fin:fin.py:132 OpenAI service error: ('OpenAI', 'Processing failed')
+INFO     app.core.middleware:middleware.py:43 Request 88df96c9-a629-4940-9ecb-ec1e87ee3938 completed in 0.324s with status 503
+INFO     httpx:_client.py:1740 HTTP Request: POST http://test/api/v1/fin/conversations/query "HTTP/1.1 503 Service Unavailable"
+________________________________________________________________________________________________ test_cash_flow_forecast ________________________________________________________________________________________________
+
+client = <httpx.AsyncClient object at 0x7f7ec9667230>
+
+    @pytest.mark.asyncio
+    async def test_cash_flow_forecast(client):
+        """Test basic cash flow forecast."""
+        transactions = []
+        base_date = datetime.now() - timedelta(days=30)
+
+        # Create regular pattern
+        for i in range(30):
+            # Weekly income
+            if i % 7 == 0:
+                transactions.append(
+                    {
+                        "date": (base_date + timedelta(days=i)).strftime("%Y-%m-%d"),
+                        "amount": 1000.0,
+                        "category": "Income",
+                    }
+                )
+            # Daily expenses
+            transactions.append(
+                {
+                    "date": (base_date + timedelta(days=i)).strftime("%Y-%m-%d"),
+                    "amount": -50.0 - (i % 20),
+                    "category": "Food",
+                }
+            )
+
+        request_data = {
+            "user_id": "test_user",
+            "transactions": transactions,
+            "forecast_days": 7,
+        }
+
+        response = await client.post("/api/v1/forecast/cash_flow", json=request_data)
+
+>       assert response.status_code == 200
+E       assert 500 == 200
+E        +  where 500 = <Response [500 Internal Server Error]>.status_code
+
+tests/api/v1/test_forecast.py:43: AssertionError
+------------------------------------------------------------------------------------------------- Captured stdout call --------------------------------------------------------------------------------------------------
+📥 Incoming request: POST http://test/api/v1/forecast/cash_flow
+------------------------------------------------------------------------------------------------- Captured stderr call --------------------------------------------------------------------------------------------------
+2025-06-04 10:14:36,623 - app.core.middleware - INFO - Request c98c14b3-7f24-4a42-9ae5-84e89d254b9c started: POST /api/v1/forecast/cash_flow
+2025-06-04 10:14:36,627 - app.api.v1.endpoints.forecast - INFO - Generating 7-day forecast for user test_user with 35 transactions
+2025-06-04 10:14:36,627 - app.services.forecast.async_forecast_service - ERROR - Forecast generation failed: 'NoneType' object has no attribute 'lower'
+2025-06-04 10:14:36,627 - app.api.v1.endpoints.forecast - ERROR - Forecast generation failed:
+Traceback (most recent call last):
+  File "/home/ghost/projects/cashly-ai/app/api/v1/endpoints/forecast.py", line 54, in forecast_cash_flow
+    raise HTTPException(status_code=400, detail=result["error"])
+fastapi.exceptions.HTTPException
+2025-06-04 10:14:36,629 - app.core.middleware - INFO - Request c98c14b3-7f24-4a42-9ae5-84e89d254b9c completed in 0.006s with status 500
+2025-06-04 10:14:36,630 - httpx - INFO - HTTP Request: POST http://test/api/v1/forecast/cash_flow "HTTP/1.1 500 Internal Server Error"
+--------------------------------------------------------------------------------------------------- Captured log call ---------------------------------------------------------------------------------------------------
+INFO     app.core.middleware:middleware.py:25 Request c98c14b3-7f24-4a42-9ae5-84e89d254b9c started: POST /api/v1/forecast/cash_flow
+INFO     app.api.v1.endpoints.forecast:forecast.py:42 Generating 7-day forecast for user test_user with 35 transactions
+ERROR    app.services.forecast.async_forecast_service:async_forecast_service.py:82 Forecast generation failed: 'NoneType' object has no attribute 'lower'
+ERROR    app.api.v1.endpoints.forecast:forecast.py:82 Forecast generation failed:
+Traceback (most recent call last):
+  File "/home/ghost/projects/cashly-ai/app/api/v1/endpoints/forecast.py", line 54, in forecast_cash_flow
+    raise HTTPException(status_code=400, detail=result["error"])
+fastapi.exceptions.HTTPException
+INFO     app.core.middleware:middleware.py:43 Request c98c14b3-7f24-4a42-9ae5-84e89d254b9c completed in 0.006s with status 500
+INFO     httpx:_client.py:1740 HTTP Request: POST http://test/api/v1/forecast/cash_flow "HTTP/1.1 500 Internal Server Error"
+________________________________________________________________________________________________ test_scenario_forecast _________________________________________________________________________________________________
+
+client = <httpx.AsyncClient object at 0x7f7f29333ec0>
+
+    @pytest.mark.asyncio
+    async def test_scenario_forecast(client):
+        """Test scenario-based forecast."""
+        transactions = [
+            {
+                "date": datetime.now().strftime("%Y-%m-%d"),
+                "amount": 1000.0,
+                "category": "Income",
+            }
+        ]
+
+        request_data = {
+            "user_id": "test_user",
+            "transactions": transactions,
+            "forecast_days": 30,
+            "adjustments": {"income_adjustment": 500.0, "expense_adjustment": -200.0},
+        }
+
+        response = await client.post(
+            "/api/v1/forecast/cash_flow/scenario", json=request_data
+        )
+
+>       assert response.status_code == 200
+E       assert 500 == 200
+E        +  where 500 = <Response [500 Internal Server Error]>.status_code
+
+tests/api/v1/test_forecast.py:82: AssertionError
+------------------------------------------------------------------------------------------------- Captured stdout call --------------------------------------------------------------------------------------------------
+📥 Incoming request: POST http://test/api/v1/forecast/cash_flow/scenario
+------------------------------------------------------------------------------------------------- Captured stderr call --------------------------------------------------------------------------------------------------
+2025-06-04 10:14:36,638 - app.core.middleware - INFO - Request 5cf7a35f-50ce-4549-82f0-56be94221dce started: POST /api/v1/forecast/cash_flow/scenario
+2025-06-04 10:14:36,641 - app.api.v1.endpoints.forecast - INFO - Generating scenario forecast with adjustments: {'income_adjustment': 500.0, 'expense_adjustment': -200.0}
+2025-06-04 10:14:36,641 - app.services.forecast.async_forecast_service - ERROR - Forecast generation failed: 'NoneType' object has no attribute 'lower'
+2025-06-04 10:14:36,641 - app.api.v1.endpoints.forecast - ERROR - Scenario forecast failed:
+2025-06-04 10:14:36,642 - app.core.middleware - INFO - Request 5cf7a35f-50ce-4549-82f0-56be94221dce completed in 0.003s with status 500
+2025-06-04 10:14:36,643 - httpx - INFO - HTTP Request: POST http://test/api/v1/forecast/cash_flow/scenario "HTTP/1.1 500 Internal Server Error"
+--------------------------------------------------------------------------------------------------- Captured log call ---------------------------------------------------------------------------------------------------
+INFO     app.core.middleware:middleware.py:25 Request 5cf7a35f-50ce-4549-82f0-56be94221dce started: POST /api/v1/forecast/cash_flow/scenario
+INFO     app.api.v1.endpoints.forecast:forecast.py:103 Generating scenario forecast with adjustments: {'income_adjustment': 500.0, 'expense_adjustment': -200.0}
+ERROR    app.services.forecast.async_forecast_service:async_forecast_service.py:82 Forecast generation failed: 'NoneType' object has no attribute 'lower'
+ERROR    app.api.v1.endpoints.forecast:forecast.py:135 Scenario forecast failed:
+INFO     app.core.middleware:middleware.py:43 Request 5cf7a35f-50ce-4549-82f0-56be94221dce completed in 0.003s with status 500
+INFO     httpx:_client.py:1740 HTTP Request: POST http://test/api/v1/forecast/cash_flow/scenario "HTTP/1.1 500 Internal Server Error"
+__________________________________________________________________________________________________ test_analyze_trends __________________________________________________________________________________________________
+
+client = <httpx.AsyncClient object at 0x7f7f29387ef0>
+
+    @pytest.mark.asyncio
+    async def test_analyze_trends(client):
+        """Test trend analysis endpoint."""
+        # Create test transactions
+        transactions = []
+        base_date = datetime.now() - timedelta(days=90)
+
+        for i in range(90):
+            transactions.append(
+                {
+                    "date": (base_date + timedelta(days=i)).strftime("%Y-%m-%d"),
+                    "amount": -50.0 - (i % 30),  # Increasing spending
+                    "category": "Food" if i % 3 == 0 else "Transport",
+                    "description": f"Transaction {i}",
+                }
+            )
+
+        request_data = {
+            "user_id": "test_user",
+            "transactions": transactions,
+            "period": "3m",
+        }
+
+        response = await client.post("/api/v1/insights/trends", json=request_data)
+
+>       assert response.status_code == 200
+E       assert 500 == 200
+E        +  where 500 = <Response [500 Internal Server Error]>.status_code
+
+tests/api/v1/test_insights.py:34: AssertionError
+------------------------------------------------------------------------------------------------- Captured stdout call --------------------------------------------------------------------------------------------------
+📥 Incoming request: POST http://test/api/v1/insights/trends
+------------------------------------------------------------------------------------------------- Captured stderr call --------------------------------------------------------------------------------------------------
+2025-06-04 10:14:36,737 - app.core.middleware - INFO - Request 9423c030-bca5-4258-97ac-81917493729d started: POST /api/v1/insights/trends
+2025-06-04 10:14:36,743 - app.api.v1.endpoints.insights - INFO - Analyzing AnalysisPeriod.THREE_MONTHS trends for user test_user with 90 transactions
+2025-06-04 10:14:36,743 - app.api.v1.endpoints.insights - ERROR - Trend analysis failed: 12 validation errors for TrendAnalysisResponse
+spending_trends.direction
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+spending_trends.change_percentage
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+spending_trends.average_monthly
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+spending_trends.highest_month
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+spending_trends.lowest_month
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+spending_trends.volatility_score
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+income_trends.direction
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+income_trends.change_percentage
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+income_trends.average_monthly
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+income_trends.highest_month
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+income_trends.lowest_month
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+income_trends.volatility_score
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+Traceback (most recent call last):
+  File "/home/ghost/projects/cashly-ai/app/api/v1/endpoints/insights.py", line 74, in analyze_trends
+    response = TrendAnalysisResponse(
+               ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ghost/.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/pydantic/main.py", line 253, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pydantic_core._pydantic_core.ValidationError: 12 validation errors for TrendAnalysisResponse
+spending_trends.direction
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+spending_trends.change_percentage
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+spending_trends.average_monthly
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+spending_trends.highest_month
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+spending_trends.lowest_month
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+spending_trends.volatility_score
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+income_trends.direction
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+income_trends.change_percentage
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+income_trends.average_monthly
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+income_trends.highest_month
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+income_trends.lowest_month
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+income_trends.volatility_score
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+2025-06-04 10:14:36,745 - app.core.middleware - INFO - Request 9423c030-bca5-4258-97ac-81917493729d completed in 0.007s with status 500
+2025-06-04 10:14:36,746 - httpx - INFO - HTTP Request: POST http://test/api/v1/insights/trends "HTTP/1.1 500 Internal Server Error"
+--------------------------------------------------------------------------------------------------- Captured log call ---------------------------------------------------------------------------------------------------
+INFO     app.core.middleware:middleware.py:25 Request 9423c030-bca5-4258-97ac-81917493729d started: POST /api/v1/insights/trends
+INFO     app.api.v1.endpoints.insights:insights.py:41 Analyzing AnalysisPeriod.THREE_MONTHS trends for user test_user with 90 transactions
+ERROR    app.api.v1.endpoints.insights:insights.py:93 Trend analysis failed: 12 validation errors for TrendAnalysisResponse
+spending_trends.direction
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+spending_trends.change_percentage
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+spending_trends.average_monthly
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+spending_trends.highest_month
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+spending_trends.lowest_month
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+spending_trends.volatility_score
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+income_trends.direction
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+income_trends.change_percentage
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+income_trends.average_monthly
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+income_trends.highest_month
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+income_trends.lowest_month
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+income_trends.volatility_score
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+Traceback (most recent call last):
+  File "/home/ghost/projects/cashly-ai/app/api/v1/endpoints/insights.py", line 74, in analyze_trends
+    response = TrendAnalysisResponse(
+               ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ghost/.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/pydantic/main.py", line 253, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pydantic_core._pydantic_core.ValidationError: 12 validation errors for TrendAnalysisResponse
+spending_trends.direction
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+spending_trends.change_percentage
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+spending_trends.average_monthly
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+spending_trends.highest_month
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+spending_trends.lowest_month
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+spending_trends.volatility_score
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+income_trends.direction
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+income_trends.change_percentage
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+income_trends.average_monthly
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+income_trends.highest_month
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+income_trends.lowest_month
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+income_trends.volatility_score
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+INFO     app.core.middleware:middleware.py:43 Request 9423c030-bca5-4258-97ac-81917493729d completed in 0.007s with status 500
+INFO     httpx:_client.py:1740 HTTP Request: POST http://test/api/v1/insights/trends "HTTP/1.1 500 Internal Server Error"
+_____________________________________________________________________________________________ test_categorization_pipeline ______________________________________________________________________________________________
+
+    @pytest.mark.asyncio
+    async def test_categorization_pipeline():
+        """Test the full transaction categorization pipeline."""
+        # Generate data with more samples to ensure proper category distribution
+        generator = TransactionGenerator()
+        data = generator.generate_transactions(num_days=90, transactions_per_day=(8, 15))
+
+        # Ensure proper category distribution
+        categories = ['Food', 'Transportation', 'Entertainment', 'Shopping', 'Bills', 'Income']
+        total_rows = len(data)
+        samples_per_category = max(5, total_rows // len(categories))
+
+        category_list = []
+        for i, category in enumerate(categories):
+            start_idx = i * samples_per_category
+            end_idx = min((i + 1) * samples_per_category, total_rows)
+            category_list.extend([category] * (end_idx - start_idx))
+
+        # Fill remaining rows
+        while len(category_list) < total_rows:
+            category_list.append(categories[len(category_list) % len(categories)])
+
+        data['category'] = category_list[:total_rows]
+
+        # Get model
+        categorizer = await model_manager.get_model('categorizer')
+
+        # Process data
+        processed_data = categorizer.preprocess(data)
+
+        # Train model
+>       categorizer.train(processed_data, processed_data['category'])
+
+tests/integration/test_model_pipeline.py:64:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app/models/categorization/transaction_categorizer.py:137: in train
+    self.model.fit(X_train, y_train)
+../../.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/sklearn/base.py:1389: in wrapper
+    return fit_method(estimator, *args, **kwargs)
+../../.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/sklearn/ensemble/_gb.py:658: in fit
+    X, y = validate_data(
+../../.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/sklearn/utils/validation.py:2961: in validate_data
+    X, y = check_X_y(X, y, **check_params)
+../../.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/sklearn/utils/validation.py:1370: in check_X_y
+    X = check_array(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+array = Empty DataFrame
+Columns: []
+Index: [139, 1075, 942, 620, 957, 669, 115, 579, 8, 518, 580, 991, 971, 566, 365, 227, 441..., 130, 939, 1034, 675, 349, 93, 926, 646, 360, 36, 627, 541, 495, 931, 358, 306, 765, 965, ...]
+
+[868 rows x 0 columns]
+accept_sparse = ['csr', 'csc', 'coo']
+
+    def check_array(
+        array,
+        accept_sparse=False,
+        *,
+        accept_large_sparse=True,
+        dtype="numeric",
+        order=None,
+        copy=False,
+        force_writeable=False,
+        force_all_finite="deprecated",
+        ensure_all_finite=None,
+        ensure_non_negative=False,
+        ensure_2d=True,
+        allow_nd=False,
+        ensure_min_samples=1,
+        ensure_min_features=1,
+        estimator=None,
+        input_name="",
+    ):
+        """Input validation on an array, list, sparse matrix or similar.
+
+        By default, the input is checked to be a non-empty 2D array containing
+        only finite values. If the dtype of the array is object, attempt
+        converting to float, raising on failure.
+
+        Parameters
+        ----------
+        array : object
+            Input object to check / convert.
+
+        accept_sparse : str, bool or list/tuple of str, default=False
+            String[s] representing allowed sparse matrix formats, such as 'csc',
+            'csr', etc. If the input is sparse but not in the allowed format,
+            it will be converted to the first listed format. True allows the input
+            to be any format. False means that a sparse matrix input will
+            raise an error.
+
+        accept_large_sparse : bool, default=True
+            If a CSR, CSC, COO or BSR sparse matrix is supplied and accepted by
+            accept_sparse, accept_large_sparse=False will cause it to be accepted
+            only if its indices are stored with a 32-bit dtype.
+
+            .. versionadded:: 0.20
+
+        dtype : 'numeric', type, list of type or None, default='numeric'
+            Data type of result. If None, the dtype of the input is preserved.
+            If "numeric", dtype is preserved unless array.dtype is object.
+            If dtype is a list of types, conversion on the first type is only
+            performed if the dtype of the input is not in the list.
+
+        order : {'F', 'C'} or None, default=None
+            Whether an array will be forced to be fortran or c-style.
+            When order is None (default), then if copy=False, nothing is ensured
+            about the memory layout of the output array; otherwise (copy=True)
+            the memory layout of the returned array is kept as close as possible
+            to the original array.
+
+        copy : bool, default=False
+            Whether a forced copy will be triggered. If copy=False, a copy might
+            be triggered by a conversion.
+
+        force_writeable : bool, default=False
+            Whether to force the output array to be writeable. If True, the returned array
+            is guaranteed to be writeable, which may require a copy. Otherwise the
+            writeability of the input array is preserved.
+
+            .. versionadded:: 1.6
+
+        force_all_finite : bool or 'allow-nan', default=True
+            Whether to raise an error on np.inf, np.nan, pd.NA in array. The
+            possibilities are:
+
+            - True: Force all values of array to be finite.
+            - False: accepts np.inf, np.nan, pd.NA in array.
+            - 'allow-nan': accepts only np.nan and pd.NA values in array. Values
+              cannot be infinite.
+
+            .. versionadded:: 0.20
+               ``force_all_finite`` accepts the string ``'allow-nan'``.
+
+            .. versionchanged:: 0.23
+               Accepts `pd.NA` and converts it into `np.nan`
+
+            .. deprecated:: 1.6
+               `force_all_finite` was renamed to `ensure_all_finite` and will be removed
+               in 1.8.
+
+        ensure_all_finite : bool or 'allow-nan', default=True
+            Whether to raise an error on np.inf, np.nan, pd.NA in array. The
+            possibilities are:
+
+            - True: Force all values of array to be finite.
+            - False: accepts np.inf, np.nan, pd.NA in array.
+            - 'allow-nan': accepts only np.nan and pd.NA values in array. Values
+              cannot be infinite.
+
+            .. versionadded:: 1.6
+               `force_all_finite` was renamed to `ensure_all_finite`.
+
+        ensure_non_negative : bool, default=False
+            Make sure the array has only non-negative values. If True, an array that
+            contains negative values will raise a ValueError.
+
+            .. versionadded:: 1.6
+
+        ensure_2d : bool, default=True
+            Whether to raise a value error if array is not 2D.
+
+        allow_nd : bool, default=False
+            Whether to allow array.ndim > 2.
+
+        ensure_min_samples : int, default=1
+            Make sure that the array has a minimum number of samples in its first
+            axis (rows for a 2D array). Setting to 0 disables this check.
+
+        ensure_min_features : int, default=1
+            Make sure that the 2D array has some minimum number of features
+            (columns). The default value of 1 rejects empty datasets.
+            This check is only enforced when the input data has effectively 2
+            dimensions or is originally 1D and ``ensure_2d`` is True. Setting to 0
+            disables this check.
+
+        estimator : str or estimator instance, default=None
+            If passed, include the name of the estimator in warning messages.
+
+        input_name : str, default=""
+            The data name used to construct the error message. In particular
+            if `input_name` is "X" and the data has NaN values and
+            allow_nan is False, the error message will link to the imputer
+            documentation.
+
+            .. versionadded:: 1.1.0
+
+        Returns
+        -------
+        array_converted : object
+            The converted and validated array.
+
+        Examples
+        --------
+        >>> from sklearn.utils.validation import check_array
+        >>> X = [[1, 2, 3], [4, 5, 6]]
+        >>> X_checked = check_array(X)
+        >>> X_checked
+        array([[1, 2, 3], [4, 5, 6]])
+        """
+        ensure_all_finite = _deprecate_force_all_finite(force_all_finite, ensure_all_finite)
+
+        if isinstance(array, np.matrix):
+            raise TypeError(
+                "np.matrix is not supported. Please convert to a numpy array with "
+                "np.asarray. For more information see: "
+                "https://numpy.org/doc/stable/reference/generated/numpy.matrix.html"
+            )
+
+        xp, is_array_api_compliant = get_namespace(array)
+
+        # store reference to original array to check if copy is needed when
+        # function returns
+        array_orig = array
+
+        # store whether originally we wanted numeric dtype
+        dtype_numeric = isinstance(dtype, str) and dtype == "numeric"
+
+        dtype_orig = getattr(array, "dtype", None)
+        if not is_array_api_compliant and not hasattr(dtype_orig, "kind"):
+            # not a data type (e.g. a column named dtype in a pandas DataFrame)
+            dtype_orig = None
+
+        # check if the object contains several dtypes (typically a pandas
+        # DataFrame), and store them. If not, store None.
+        dtypes_orig = None
+        pandas_requires_conversion = False
+        # track if we have a Series-like object to raise a better error message
+        type_if_series = None
+        if hasattr(array, "dtypes") and hasattr(array.dtypes, "__array__"):
+            # throw warning if columns are sparse. If all columns are sparse, then
+            # array.sparse exists and sparsity will be preserved (later).
+            with suppress(ImportError):
+                from pandas import SparseDtype
+
+                def is_sparse(dtype):
+                    return isinstance(dtype, SparseDtype)
+
+                if not hasattr(array, "sparse") and array.dtypes.apply(is_sparse).any():
+                    warnings.warn(
+                        "pandas.DataFrame with sparse columns found."
+                        "It will be converted to a dense numpy array."
+                    )
+
+            dtypes_orig = list(array.dtypes)
+            pandas_requires_conversion = any(
+                _pandas_dtype_needs_early_conversion(i) for i in dtypes_orig
+            )
+            if all(isinstance(dtype_iter, np.dtype) for dtype_iter in dtypes_orig):
+>               dtype_orig = np.result_type(*dtypes_orig)
+E               ValueError: at least one array or dtype is required
+
+../../.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/sklearn/utils/validation.py:931: ValueError
+------------------------------------------------------------------------------------------------- Captured stderr call --------------------------------------------------------------------------------------------------
+2025/06/04 10:14:39 INFO mlflow.store.db.utils: Creating initial MLflow database tables...
+2025/06/04 10:14:39 INFO mlflow.store.db.utils: Updating database tables
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 451aebb31d03, add metric step
+INFO  [alembic.runtime.migration] Running upgrade 451aebb31d03 -> 90e64c465722, migrate user column to tags
+INFO  [alembic.runtime.migration] Running upgrade 90e64c465722 -> 181f10493468, allow nulls for metric values
+INFO  [alembic.runtime.migration] Running upgrade 181f10493468 -> df50e92ffc5e, Add Experiment Tags Table
+INFO  [alembic.runtime.migration] Running upgrade df50e92ffc5e -> 7ac759974ad8, Update run tags with larger limit
+INFO  [alembic.runtime.migration] Running upgrade 7ac759974ad8 -> 89d4b8295536, create latest metrics table
+INFO  [89d4b8295536_create_latest_metrics_table_py] Migration complete!
+INFO  [alembic.runtime.migration] Running upgrade 89d4b8295536 -> 2b4d017a5e9b, add model registry tables to db
+INFO  [2b4d017a5e9b_add_model_registry_tables_to_db_py] Adding registered_models and model_versions tables to database.
+INFO  [2b4d017a5e9b_add_model_registry_tables_to_db_py] Migration complete!
+INFO  [alembic.runtime.migration] Running upgrade 2b4d017a5e9b -> cfd24bdc0731, Update run status constraint with killed
+INFO  [alembic.runtime.migration] Running upgrade cfd24bdc0731 -> 0a8213491aaa, drop_duplicate_killed_constraint
+INFO  [alembic.runtime.migration] Running upgrade 0a8213491aaa -> 728d730b5ebd, add registered model tags table
+INFO  [alembic.runtime.migration] Running upgrade 728d730b5ebd -> 27a6a02d2cf1, add model version tags table
+INFO  [alembic.runtime.migration] Running upgrade 27a6a02d2cf1 -> 84291f40a231, add run_link to model_version
+INFO  [alembic.runtime.migration] Running upgrade 84291f40a231 -> a8c4a736bde6, allow nulls for run_id
+INFO  [alembic.runtime.migration] Running upgrade a8c4a736bde6 -> 39d1c3be5f05, add_is_nan_constraint_for_metrics_tables_if_necessary
+INFO  [alembic.runtime.migration] Running upgrade 39d1c3be5f05 -> c48cb773bb87, reset_default_value_for_is_nan_in_metrics_table_for_mysql
+INFO  [alembic.runtime.migration] Running upgrade c48cb773bb87 -> bd07f7e963c5, create index on run_uuid
+INFO  [alembic.runtime.migration] Running upgrade bd07f7e963c5 -> 0c779009ac13, add deleted_time field to runs table
+INFO  [alembic.runtime.migration] Running upgrade 0c779009ac13 -> cc1f77228345, change param value length to 500
+INFO  [alembic.runtime.migration] Running upgrade cc1f77228345 -> 97727af70f4d, Add creation_time and last_update_time to experiments table
+INFO  [alembic.runtime.migration] Running upgrade 97727af70f4d -> 3500859a5d39, Add Model Aliases table
+INFO  [alembic.runtime.migration] Running upgrade 3500859a5d39 -> 7f2a7d5fae7d, add datasets inputs input_tags tables
+INFO  [alembic.runtime.migration] Running upgrade 7f2a7d5fae7d -> 2d6e25af4d3e, increase max param val length from 500 to 8000
+INFO  [alembic.runtime.migration] Running upgrade 2d6e25af4d3e -> acf3f17fdcc7, add storage location field to model versions
+INFO  [alembic.runtime.migration] Running upgrade acf3f17fdcc7 -> 867495a8f9d4, add trace tables
+INFO  [alembic.runtime.migration] Running upgrade 867495a8f9d4 -> 5b0e9adcef9c, add cascade deletion to trace tables foreign keys
+INFO  [alembic.runtime.migration] Running upgrade 5b0e9adcef9c -> 4465047574b1, increase max dataset schema size
+INFO  [alembic.runtime.migration] Running upgrade 4465047574b1 -> f5a4f2784254, increase run tag value limit to 8000
+INFO  [alembic.runtime.migration] Running upgrade f5a4f2784254 -> 0584bdc529eb, add cascading deletion to datasets from experiments
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+_____________________________________________________________________________________________ test_budget_recommender_train _____________________________________________________________________________________________
+
+transaction_data =                            date   amount           category                   description       merchant     type
+0   ...14:49.382030  -143.71           Shopping  POS TRANSACTION - Home Depot     Home Depot  expense
+
+[1297 rows x 6 columns]
+
+    def test_budget_recommender_train(transaction_data):
+        """Test training the budget recommender."""
+        recommender = BudgetRecommender()
+        processed_data = recommender.preprocess(transaction_data)
+        recommender.train(processed_data)
+
+        # Check model is fitted
+>       assert recommender.is_fitted
+E       assert False
+E        +  where False = <app.models.budgeting.budget_recommender.BudgetRecommender object at 0x7f7f288eb350>.is_fitted
+
+tests/models/test_budget_recommender.py:42: AssertionError
+__________________________________________________________________________________________ test_forecaster_feature_extraction ___________________________________________________________________________________________
+
+self = Index(['date', 'daily_sum', 'transaction_count', 'day_of_week', 'day_of_month',
+       'month', 'quarter', 'year', 'is...th_end', 'days_in_month', 'day_of_week_sin', 'day_of_week_cos',
+       'month_sin', 'month_cos'],
+      dtype='object')
+key = 'amount'
+
+    def get_loc(self, key):
+        """
+        Get integer location, slice or boolean mask for requested label.
+
+        Parameters
+        ----------
+        key : label
+
+        Returns
+        -------
+        int if unique index, slice if monotonic index, else mask
+
+        Examples
+        --------
+        >>> unique_index = pd.Index(list('abc'))
+        >>> unique_index.get_loc('b')
+        1
+
+        >>> monotonic_index = pd.Index(list('abbc'))
+        >>> monotonic_index.get_loc('b')
+        slice(1, 3, None)
+
+        >>> non_monotonic_index = pd.Index(list('abcb'))
+        >>> non_monotonic_index.get_loc('b')
+        array([False,  True, False,  True])
+        """
+        casted_key = self._maybe_cast_indexer(key)
+        try:
+>           return self._engine.get_loc(casted_key)
+
+../../.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/pandas/core/indexes/base.py:3805:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+index.pyx:167: in pandas._libs.index.IndexEngine.get_loc
+    ???
+index.pyx:196: in pandas._libs.index.IndexEngine.get_loc
+    ???
+pandas/_libs/hashtable_class_helper.pxi:7081: in pandas._libs.hashtable.PyObjectHashTable.get_item
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+>   ???
+E   KeyError: 'amount'
+
+pandas/_libs/hashtable_class_helper.pxi:7089: KeyError
+
+The above exception was the direct cause of the following exception:
+
+time_series_data =          date    daily_sum  transaction_count  avg_amount  amount_std       amount
+0  2025-03-01 -1525.980000         ... -1665.500000
+92 2025-06-04 -1008.700000                  8 -126.087500   89.645044 -1008.700000
+
+[93 rows x 6 columns]
+
+    def test_forecaster_feature_extraction(time_series_data):
+        """Test feature extraction."""
+        forecaster = CashFlowForecaster()
+        processed_data = forecaster.preprocess(time_series_data)
+>       features = forecaster.extract_features(processed_data)
+
+tests/models/test_cash_flow_forecaster.py:29:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app/models/forecasting/cash_flow_forecaster.py:69: in extract_features
+    df = self.time_extractor.transform(data)
+app/models/forecasting/feature_engineering.py:43: in transform
+    df = self._add_trend_features(df)
+app/models/forecasting/feature_engineering.py:124: in _add_trend_features
+    df['trend_7d'] = self._calculate_trend(df['amount'], 7)
+../../.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/pandas/core/frame.py:4102: in __getitem__
+    indexer = self.columns.get_loc(key)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = Index(['date', 'daily_sum', 'transaction_count', 'day_of_week', 'day_of_month',
+       'month', 'quarter', 'year', 'is...th_end', 'days_in_month', 'day_of_week_sin', 'day_of_week_cos',
+       'month_sin', 'month_cos'],
+      dtype='object')
+key = 'amount'
+
+    def get_loc(self, key):
+        """
+        Get integer location, slice or boolean mask for requested label.
+
+        Parameters
+        ----------
+        key : label
+
+        Returns
+        -------
+        int if unique index, slice if monotonic index, else mask
+
+        Examples
+        --------
+        >>> unique_index = pd.Index(list('abc'))
+        >>> unique_index.get_loc('b')
+        1
+
+        >>> monotonic_index = pd.Index(list('abbc'))
+        >>> monotonic_index.get_loc('b')
+        slice(1, 3, None)
+
+        >>> non_monotonic_index = pd.Index(list('abcb'))
+        >>> non_monotonic_index.get_loc('b')
+        array([False,  True, False,  True])
+        """
+        casted_key = self._maybe_cast_indexer(key)
+        try:
+            return self._engine.get_loc(casted_key)
+        except KeyError as err:
+            if isinstance(casted_key, slice) or (
+                isinstance(casted_key, abc.Iterable)
+                and any(isinstance(x, slice) for x in casted_key)
+            ):
+                raise InvalidIndexError(key)
+>           raise KeyError(key) from err
+E           KeyError: 'amount'
+
+../../.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/pandas/core/indexes/base.py:3812: KeyError
+_________________________________________________________________________________________________ test_forecaster_train _________________________________________________________________________________________________
+
+time_series_data =          date    daily_sum  transaction_count  avg_amount  amount_std       amount
+0  2025-03-01 -1525.980000         ... -1665.500000
+92 2025-06-04 -1008.700000                  8 -126.087500   89.645044 -1008.700000
+
+[93 rows x 6 columns]
+
+    def test_forecaster_train(time_series_data):
+        """Test training the forecaster."""
+        forecaster = CashFlowForecaster()
+        processed_data = forecaster.preprocess(time_series_data)
+
+        # Create target variable (next day's value)
+        X = processed_data.copy()
+        y = X['daily_sum'].shift(-1).dropna()
+        X = X.iloc[:-1]  # Remove last row as it has no target
+
+>       forecaster.train(X, y)
+
+tests/models/test_cash_flow_forecaster.py:44:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app/models/forecasting/cash_flow_forecaster.py:99: in train
+    X_train_scaled = self.scaler.fit_transform(X_train)
+../../.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/sklearn/utils/_set_output.py:319: in wrapped
+    data_to_wrap = f(self, X, *args, **kwargs)
+../../.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/sklearn/base.py:918: in fit_transform
+    return self.fit(X, **fit_params).transform(X)
+../../.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/sklearn/preprocessing/_data.py:894: in fit
+    return self.partial_fit(X, y, sample_weight)
+../../.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/sklearn/base.py:1389: in wrapper
+    return fit_method(estimator, *args, **kwargs)
+../../.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/sklearn/preprocessing/_data.py:930: in partial_fit
+    X = validate_data(
+../../.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/sklearn/utils/validation.py:2944: in validate_data
+    out = check_array(X, input_name="X", **check_params)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+array =          date     daily_sum  transaction_count
+0  2025-03-01  -1525.980000                  1
+1  2025-03-05    -49.990... 1
+71 2025-05-14   -834.580000                  1
+72 2025-05-15   2939.150000                  1
+
+[73 rows x 3 columns]
+accept_sparse = ('csr', 'csc')
+
+    def check_array(
+        array,
+        accept_sparse=False,
+        *,
+        accept_large_sparse=True,
+        dtype="numeric",
+        order=None,
+        copy=False,
+        force_writeable=False,
+        force_all_finite="deprecated",
+        ensure_all_finite=None,
+        ensure_non_negative=False,
+        ensure_2d=True,
+        allow_nd=False,
+        ensure_min_samples=1,
+        ensure_min_features=1,
+        estimator=None,
+        input_name="",
+
+        Returns
+        -------
+        array_converted : object
+            The converted and validated array.
+
+        Examples
+        --------
+        >>> from sklearn.utils.validation import check_array
+        >>> X = [[1, 2, 3], [4, 5, 6]]
+        >>> X_checked = check_array(X)
+        >>> X_checked
+        array([[1, 2, 3], [4, 5, 6]])
+        """
+        ensure_all_finite = _deprecate_force_all_finite(force_all_finite, ensure_all_finite)
+
+        if isinstance(array, np.matrix):
+            raise TypeError(
+                "np.matrix is not supported. Please convert to a numpy array with "
+                "np.asarray. For more information see: "
+                "https://numpy.org/doc/stable/reference/generated/numpy.matrix.html"
+            )
+
+        xp, is_array_api_compliant = get_namespace(array)
+
+        # store reference to original array to check if copy is needed when
+        # function returns
+        array_orig = array
+
+        # store whether originally we wanted numeric dtype
+        dtype_numeric = isinstance(dtype, str) and dtype == "numeric"
+
+        dtype_orig = getattr(array, "dtype", None)
+        if not is_array_api_compliant and not hasattr(dtype_orig, "kind"):
+            # not a data type (e.g. a column named dtype in a pandas DataFrame)
+            dtype_orig = None
+
+        # check if the object contains several dtypes (typically a pandas
+        # DataFrame), and store them. If not, store None.
+        dtypes_orig = None
+        pandas_requires_conversion = False
+        # track if we have a Series-like object to raise a better error message
+        type_if_series = None
+        if hasattr(array, "dtypes") and hasattr(array.dtypes, "__array__"):
+            # throw warning if columns are sparse. If all columns are sparse, then
+            # array.sparse exists and sparsity will be preserved (later).
+            with suppress(ImportError):
+                from pandas import SparseDtype
+
+                def is_sparse(dtype):
+                    return isinstance(dtype, SparseDtype)
+
+                if not hasattr(array, "sparse") and array.dtypes.apply(is_sparse).any():
+                    warnings.warn(
+                        "pandas.DataFrame with sparse columns found."
+                        "It will be converted to a dense numpy array."
+                    )
+
+            dtypes_orig = list(array.dtypes)
+            pandas_requires_conversion = any(
+                _pandas_dtype_needs_early_conversion(i) for i in dtypes_orig
+            )
+            if all(isinstance(dtype_iter, np.dtype) for dtype_iter in dtypes_orig):
+>               dtype_orig = np.result_type(*dtypes_orig)
+E               numpy.exceptions.DTypePromotionError: The DType <class 'numpy.dtypes.DateTime64DType'> could not be promoted by <class 'numpy.dtypes.Float64DType'>. This means that no common DType exists for the given inputs. For example they cannot be stored in a single array unless the dtype is `object`. The full list of DTypes is: (<class 'numpy.dtypes.DateTime64DType'>, <class 'numpy.dtypes.Float64DType'>, <class 'numpy.dtypes.Int64DType'>)
+
+../../.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/sklearn/utils/validation.py:931: DTypePromotionError
+________________________________________________________________________________________________ test_forecaster_predict ________________________________________________________________________________________________
+
+time_series_data =          date    daily_sum  transaction_count  avg_amount  amount_std       amount
+0  2025-03-01 -1525.980000         ... -1665.500000
+92 2025-06-04 -1008.700000                  8 -126.087500   89.645044 -1008.700000
+
+[93 rows x 6 columns]
+
+    def test_forecaster_predict(time_series_data):
+        """Test cash flow prediction."""
+        forecaster = CashFlowForecaster()
+        processed_data = forecaster.preprocess(time_series_data)
+
+        # Create target variable (next day's value)
+        X = processed_data.copy()
+        y = X['daily_sum'].shift(-1).dropna()
+        X = X.iloc[:-1]  # Remove last row as it has no target
+
+>       forecaster.train(X, y)
+
+tests/models/test_cash_flow_forecaster.py:64:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app/models/forecasting/cash_flow_forecaster.py:99: in train
+    X_train_scaled = self.scaler.fit_transform(X_train)
+../../.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/sklearn/utils/_set_output.py:319: in wrapped
+    data_to_wrap = f(self, X, *args, **kwargs)
+../../.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/sklearn/base.py:918: in fit_transform
+    return self.fit(X, **fit_params).transform(X)
+../../.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/sklearn/preprocessing/_data.py:894: in fit
+    return self.partial_fit(X, y, sample_weight)
+../../.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/sklearn/base.py:1389: in wrapper
+    return fit_method(estimator, *args, **kwargs)
+../../.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/sklearn/preprocessing/_data.py:930: in partial_fit
+    X = validate_data(
+../../.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/sklearn/utils/validation.py:2944: in validate_data
+    out = check_array(X, input_name="X", **check_params)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+array =          date     daily_sum  transaction_count
+0  2025-03-01  -1525.980000                  1
+1  2025-03-05    -49.990... 1
+71 2025-05-14   -834.580000                  1
+72 2025-05-15   2939.150000                  1
+
+[73 rows x 3 columns]
+accept_sparse = ('csr', 'csc')
+
+    def check_array(
+        array,
+        accept_sparse=False,
+        *,
+        accept_large_sparse=True,
+        dtype="numeric",
+        order=None,
+        copy=False,
+        force_writeable=False,
+        force_all_finite="deprecated",
+        ensure_all_finite=None,
+        ensure_non_negative=False,
+        ensure_2d=True,
+        allow_nd=False,
+        ensure_min_samples=1,
+        ensure_min_features=1,
+        estimator=None,
+        input_name="",
+    ):
+
+        Returns
+        -------
+        array_converted : object
+            The converted and validated array.
+
+        Examples
+        --------
+        >>> from sklearn.utils.validation import check_array
+        >>> X = [[1, 2, 3], [4, 5, 6]]
+        >>> X_checked = check_array(X)
+        >>> X_checked
+        array([[1, 2, 3], [4, 5, 6]])
+        """
+        ensure_all_finite = _deprecate_force_all_finite(force_all_finite, ensure_all_finite)
+
+        if isinstance(array, np.matrix):
+            raise TypeError(
+                "np.matrix is not supported. Please convert to a numpy array with "
+                "np.asarray. For more information see: "
+                "https://numpy.org/doc/stable/reference/generated/numpy.matrix.html"
+            )
+
+        xp, is_array_api_compliant = get_namespace(array)
+
+        # store reference to original array to check if copy is needed when
+        # function returns
+        array_orig = array
+
+        # store whether originally we wanted numeric dtype
+        dtype_numeric = isinstance(dtype, str) and dtype == "numeric"
+
+        dtype_orig = getattr(array, "dtype", None)
+        if not is_array_api_compliant and not hasattr(dtype_orig, "kind"):
+            # not a data type (e.g. a column named dtype in a pandas DataFrame)
+            dtype_orig = None
+
+        # check if the object contains several dtypes (typically a pandas
+        # DataFrame), and store them. If not, store None.
+        dtypes_orig = None
+        pandas_requires_conversion = False
+        # track if we have a Series-like object to raise a better error message
+        type_if_series = None
+        if hasattr(array, "dtypes") and hasattr(array.dtypes, "__array__"):
+            # throw warning if columns are sparse. If all columns are sparse, then
+            # array.sparse exists and sparsity will be preserved (later).
+            with suppress(ImportError):
+                from pandas import SparseDtype
+
+                def is_sparse(dtype):
+                    return isinstance(dtype, SparseDtype)
+
+                if not hasattr(array, "sparse") and array.dtypes.apply(is_sparse).any():
+                    warnings.warn(
+                        "pandas.DataFrame with sparse columns found."
+                        "It will be converted to a dense numpy array."
+                    )
+
+            dtypes_orig = list(array.dtypes)
+            pandas_requires_conversion = any(
+                _pandas_dtype_needs_early_conversion(i) for i in dtypes_orig
+            )
+            if all(isinstance(dtype_iter, np.dtype) for dtype_iter in dtypes_orig):
+>               dtype_orig = np.result_type(*dtypes_orig)
+E               numpy.exceptions.DTypePromotionError: The DType <class 'numpy.dtypes.DateTime64DType'> could not be promoted by <class 'numpy.dtypes.Float64DType'>. This means that no common DType exists for the given inputs. For example they cannot be stored in a single array unless the dtype is `object`. The full list of DTypes is: (<class 'numpy.dtypes.DateTime64DType'>, <class 'numpy.dtypes.Float64DType'>, <class 'numpy.dtypes.Int64DType'>)
+
+../../.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/sklearn/utils/validation.py:931: DTypePromotionError
+_______________________________________________________________________________________________ test_forecaster_forecast ________________________________________________________________________________________________
+
+time_series_data =          date    daily_sum  transaction_count  avg_amount  amount_std       amount
+0  2025-03-01 -1525.980000         ... -1665.500000
+92 2025-06-04 -1008.700000                  8 -126.087500   89.645044 -1008.700000
+
+[93 rows x 6 columns]
+
+    def test_forecaster_forecast(time_series_data):
+        """Test forecasting future cash flows."""
+        forecaster = CashFlowForecaster()
+        processed_data = forecaster.preprocess(time_series_data)
+
+        # Create target variable (next day's value)
+        X = processed_data.copy()
+        y = X['daily_sum'].shift(-1).dropna()
+        X = X.iloc[:-1]  # Remove last row as it has no target
+
+>       forecaster.train(X, y)
+
+tests/models/test_cash_flow_forecaster.py:83:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app/models/forecasting/cash_flow_forecaster.py:99: in train
+    X_train_scaled = self.scaler.fit_transform(X_train)
+../../.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/sklearn/utils/_set_output.py:319: in wrapped
+    data_to_wrap = f(self, X, *args, **kwargs)
+../../.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/sklearn/base.py:918: in fit_transform
+    return self.fit(X, **fit_params).transform(X)
+../../.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/sklearn/preprocessing/_data.py:894: in fit
+    return self.partial_fit(X, y, sample_weight)
+../../.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/sklearn/base.py:1389: in wrapper
+    return fit_method(estimator, *args, **kwargs)
+../../.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/sklearn/preprocessing/_data.py:930: in partial_fit
+    X = validate_data(
+../../.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/sklearn/utils/validation.py:2944: in validate_data
+    out = check_array(X, input_name="X", **check_params)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+array =          date     daily_sum  transaction_count
+0  2025-03-01  -1525.980000                  1
+1  2025-03-05    -49.990... 1
+71 2025-05-14   -834.580000                  1
+72 2025-05-15   2939.150000                  1
+
+[73 rows x 3 columns]
+accept_sparse = ('csr', 'csc')
+
+    def check_array(
+        array,
+        accept_sparse=False,
+        *,
+        accept_large_sparse=True,
+        dtype="numeric",
+        order=None,
+        copy=False,
+        force_writeable=False,
+        force_all_finite="deprecated",
+        ensure_all_finite=None,
+        ensure_non_negative=False,
+        ensure_2d=True,
+        allow_nd=False,
+        ensure_min_samples=1,
+        ensure_min_features=1,
+        estimator=None,
+        input_name="",
+    ):
+        Returns
+        -------
+        array_converted : object
+            The converted and validated array.
+
+        Examples
+        --------
+        >>> from sklearn.utils.validation import check_array
+        >>> X = [[1, 2, 3], [4, 5, 6]]
+        >>> X_checked = check_array(X)
+        >>> X_checked
+        array([[1, 2, 3], [4, 5, 6]])
+        """
+        ensure_all_finite = _deprecate_force_all_finite(force_all_finite, ensure_all_finite)
+
+        if isinstance(array, np.matrix):
+            raise TypeError(
+                "np.matrix is not supported. Please convert to a numpy array with "
+                "np.asarray. For more information see: "
+                "https://numpy.org/doc/stable/reference/generated/numpy.matrix.html"
+            )
+
+        xp, is_array_api_compliant = get_namespace(array)
+
+        # store reference to original array to check if copy is needed when
+        # function returns
+        array_orig = array
+
+        # store whether originally we wanted numeric dtype
+        dtype_numeric = isinstance(dtype, str) and dtype == "numeric"
+
+        dtype_orig = getattr(array, "dtype", None)
+        if not is_array_api_compliant and not hasattr(dtype_orig, "kind"):
+            # not a data type (e.g. a column named dtype in a pandas DataFrame)
+            dtype_orig = None
+
+        # check if the object contains several dtypes (typically a pandas
+        # DataFrame), and store them. If not, store None.
+        dtypes_orig = None
+        pandas_requires_conversion = False
+        # track if we have a Series-like object to raise a better error message
+        type_if_series = None
+        if hasattr(array, "dtypes") and hasattr(array.dtypes, "__array__"):
+            # throw warning if columns are sparse. If all columns are sparse, then
+            # array.sparse exists and sparsity will be preserved (later).
+            with suppress(ImportError):
+                from pandas import SparseDtype
+
+                def is_sparse(dtype):
+                    return isinstance(dtype, SparseDtype)
+
+                if not hasattr(array, "sparse") and array.dtypes.apply(is_sparse).any():
+                    warnings.warn(
+                        "pandas.DataFrame with sparse columns found."
+                        "It will be converted to a dense numpy array."
+                    )
+
+            dtypes_orig = list(array.dtypes)
+            pandas_requires_conversion = any(
+                _pandas_dtype_needs_early_conversion(i) for i in dtypes_orig
+            )
+            if all(isinstance(dtype_iter, np.dtype) for dtype_iter in dtypes_orig):
+>               dtype_orig = np.result_type(*dtypes_orig)
+E               numpy.exceptions.DTypePromotionError: The DType <class 'numpy.dtypes.DateTime64DType'> could not be promoted by <class 'numpy.dtypes.Float64DType'>. This means that no common DType exists for the given inputs. For example they cannot be stored in a single array unless the dtype is `object`. The full list of DTypes is: (<class 'numpy.dtypes.DateTime64DType'>, <class 'numpy.dtypes.Float64DType'>, <class 'numpy.dtypes.Int64DType'>)
+
+../../.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/sklearn/utils/validation.py:931: DTypePromotionError
+________________________________________________________________________________________________ test_categorizer_train _________________________________________________________________________________________________
+
+categorized_data =                            date   amount category                   description       merchant     type
+0    2025-03-0...-06-04 10:14:51.082146  -143.71     Food  POS TRANSACTION - Home Depot     Home Depot  expense
+
+[1297 rows x 6 columns]
+
+    def test_categorizer_train(categorized_data):
+        """Test training the categorizer."""
+        categorizer = TransactionCategorizer()
+
+        # Ensure we have valid text data
+        categorized_data = categorized_data.dropna(subset=['description'])
+        categorized_data = categorized_data[categorized_data['description'].str.len() > 0]
+
+        # Ensure minimum samples per category
+        category_counts = categorized_data['category'].value_counts()
+        valid_categories = category_counts[category_counts >= 3].index
+        categorized_data = categorized_data[categorized_data['category'].isin(valid_categories)]
+
+        processed_data = categorizer.preprocess(categorized_data)
+        target = processed_data['category']
+
+>       categorizer.train(processed_data, target)
+
+tests/models/test_transaction_categorizer.py:47:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app/models/categorization/transaction_categorizer.py:137: in train
+    self.model.fit(X_train, y_train)
+../../.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/sklearn/base.py:1389: in wrapper
+    return fit_method(estimator, *args, **kwargs)
+../../.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/sklearn/ensemble/_gb.py:658: in fit
+    X, y = validate_data(
+../../.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/sklearn/utils/validation.py:2961: in validate_data
+    X, y = check_X_y(X, y, **check_params)
+../../.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/sklearn/utils/validation.py:1370: in check_X_y
+    X = check_array(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+array = Empty DataFrame
+Columns: []
+Index: [695, 234, 962, 666, 569, 98, 78, 314, 619, 1178, 198, 217, 613, 539, 594, 908, 127...6, 1132, 1045, 398, 1027, 987, 492, 1281, 1260, 1294, 183, 1136, 883, 488, 587, 761, 478, ...]
+
+[1037 rows x 0 columns]
+accept_sparse = ['csr', 'csc', 'coo']
+
+    def check_array(
+        array,
+        accept_sparse=False,(cashly-ai-yRLFXMn3-py3.12) ~/projects/cashly-ai git:[main]
+make test
+
+        Returns
+        -------
+        array_converted : object
+            The converted and validated array.
+
+        Examples
+        --------
+        >>> from sklearn.utils.validation import check_array
+        >>> X = [[1, 2, 3], [4, 5, 6]]
+        >>> X_checked = check_array(X)
+        >>> X_checked
+        array([[1, 2, 3], [4, 5, 6]])
+        """
+        ensure_all_finite = _deprecate_force_all_finite(force_all_finite, ensure_all_finite)
+
+        if isinstance(array, np.matrix):
+            raise TypeError(
+                "np.matrix is not supported. Please convert to a numpy array with "
+                "np.asarray. For more information see: "
+                "https://numpy.org/doc/stable/reference/generated/numpy.matrix.html"
+            )
+
+        xp, is_array_api_compliant = get_namespace(array)
+
+        # store reference to original array to check if copy is needed when
+        # function returns
+        array_orig = array
+
+        # store whether originally we wanted numeric dtype
+        dtype_numeric = isinstance(dtype, str) and dtype == "numeric"
+
+        dtype_orig = getattr(array, "dtype", None)
+        if not is_array_api_compliant and not hasattr(dtype_orig, "kind"):
+            # not a data type (e.g. a column named dtype in a pandas DataFrame)
+            dtype_orig = None
+
+        # check if the object contains several dtypes (typically a pandas
+        # DataFrame), and store them. If not, store None.
+        dtypes_orig = None
+        pandas_requires_conversion = False
+        # track if we have a Series-like object to raise a better error message
+        type_if_series = None
+        if hasattr(array, "dtypes") and hasattr(array.dtypes, "__array__"):
+            # throw warning if columns are sparse. If all columns are sparse, then
+            # array.sparse exists and sparsity will be preserved (later).
+            with suppress(ImportError):
+                from pandas import SparseDtype
+
+                def is_sparse(dtype):
+                    return isinstance(dtype, SparseDtype)
+
+                if not hasattr(array, "sparse") and array.dtypes.apply(is_sparse).any():
+                    warnings.warn(
+                        "pandas.DataFrame with sparse columns found."
+                        "It will be converted to a dense numpy array."
+                    )
+
+            dtypes_orig = list(array.dtypes)
+            pandas_requires_conversion = any(
+                _pandas_dtype_needs_early_conversion(i) for i in dtypes_orig
+            )
+            if all(isinstance(dtype_iter, np.dtype) for dtype_iter in dtypes_orig):
+>               dtype_orig = np.result_type(*dtypes_orig)
+E               ValueError: at least one array or dtype is required
+
+../../.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/sklearn/utils/validation.py:931: ValueError
+_______________________________________________________________________________________________ test_categorizer_predict ________________________________________________________________________________________________
+
+categorized_data =                            date   amount category                   description       merchant     type
+0    2025-03-0...-06-04 10:14:51.275593  -143.71     Food  POS TRANSACTION - Home Depot     Home Depot  expense
+
+[1297 rows x 6 columns]
+
+    def test_categorizer_predict(categorized_data):
+        """Test category prediction."""
+        categorizer = TransactionCategorizer()
+        processed_data = categorizer.preprocess(categorized_data)
+
+        # Use categorized data with proper distribution
+        target = processed_data['category']
+
+>       categorizer.train(processed_data, target)
+
+tests/models/test_transaction_categorizer.py:60:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app/models/categorization/transaction_categorizer.py:137: in train
+    self.model.fit(X_train, y_train)
+../../.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/sklearn/base.py:1389: in wrapper
+    return fit_method(estimator, *args, **kwargs)
+../../.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/sklearn/ensemble/_gb.py:658: in fit
+    X, y = validate_data(
+../../.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/sklearn/utils/validation.py:2961: in validate_data
+    X, y = check_X_y(X, y, **check_params)
+../../.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/sklearn/utils/validation.py:1370: in check_X_y
+    X = check_array(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+array = Empty DataFrame
+Columns: []
+Index: [695, 234, 962, 666, 569, 98, 78, 314, 619, 1178, 198, 217, 613, 539, 594, 908, 127...6, 1132, 1045, 398, 1027, 987, 492, 1281, 1260, 1294, 183, 1136, 883, 488, 587, 761, 478, ...]
+
+[1037 rows x 0 columns]
+accept_sparse = ['csr', 'csc', 'coo']
+
+    def check_array(
+        array,
+        accept_sparse=False,
+        *,
+        accept_large_sparse=True,
+        dtype="numeric",
+        order=None,
+        copy=False,
+        force_writeable=False,
+        force_all_finite="deprecated",
+        ensure_all_finite=None,
+        ensure_non_negative=False,
+        ensure_2d=True,
+        allow_nd=False,
+        ensure_min_samples=1,
+        ensure_min_features=1,
+        estimator=None,
+        input_name="",
+    ):
+        """Input validation on an array, list, sparse matrix or similar.
+
+        By default, the input is checked to be a non-empty 2D array containing
+        only finite values. If the dtype of the array is object, attempt
+        converting to float, raising on failure.
+
+        Parameters
+        ----------
+        array : object
+            Input object to check / convert.
+
+        accept_sparse : str, bool or list/tuple of str, default=False
+            String[s] representing allowed sparse matrix formats, such as 'csc',
+            'csr', etc. If the input is sparse but not in the allowed format,
+            it will be converted to the first listed format. True allows the input
+            to be any format. False means that a sparse matrix input will
+            raise an error.
+
+        accept_large_sparse : bool, default=True
+            If a CSR, CSC, COO or BSR sparse matrix is supplied and accepted by
+            accept_sparse, accept_large_sparse=False will cause it to be accepted
+            only if its indices are stored with a 32-bit dtype.
+
+            .. versionadded:: 0.20
+
+        dtype : 'numeric', type, list of type or None, default='numeric'
+            Data type of result. If None, the dtype of the input is preserved.
+            If "numeric", dtype is preserved unless array.dtype is object.
+            If dtype is a list of types, conversion on the first type is only
+            performed if the dtype of the input is not in the list.
+
+        order : {'F', 'C'} or None, default=None
+            Whether an array will be forced to be fortran or c-style.
+            When order is None (default), then if copy=False, nothing is ensured
+            about the memory layout of the output array; otherwise (copy=True)
+            the memory layout of the returned array is kept as close as possible
+            to the original array.
+
+        copy : bool, default=False
+            Whether a forced copy will be triggered. If copy=False, a copy might
+            be triggered by a conversion.
+
+        force_writeable : bool, default=False
+            Whether to force the output array to be writeable. If True, the returned array
+            is guaranteed to be writeable, which may require a copy. Otherwise the
+            writeability of the input array is preserved.
+
+            .. versionadded:: 1.6
+
+        force_all_finite : bool or 'allow-nan', default=True
+            Whether to raise an error on np.inf, np.nan, pd.NA in array. The
+            possibilities are:
+
+            - True: Force all values of array to be finite.
+            - False: accepts np.inf, np.nan, pd.NA in array.
+            - 'allow-nan': accepts only np.nan and pd.NA values in array. Values
+              cannot be infinite.
+
+            .. versionadded:: 0.20
+               ``force_all_finite`` accepts the string ``'allow-nan'``.
+
+            .. versionchanged:: 0.23
+               Accepts `pd.NA` and converts it into `np.nan`
+
+            .. deprecated:: 1.6
+               `force_all_finite` was renamed to `ensure_all_finite` and will be removed
+               in 1.8.
+
+        ensure_all_finite : bool or 'allow-nan', default=True
+            Whether to raise an error on np.inf, np.nan, pd.NA in array. The
+            possibilities are:
+
+            - True: Force all values of array to be finite.
+            - False: accepts np.inf, np.nan, pd.NA in array.
+            - 'allow-nan': accepts only np.nan and pd.NA values in array. Values
+              cannot be infinite.
+
+            .. versionadded:: 1.6
+               `force_all_finite` was renamed to `ensure_all_finite`.
+
+        ensure_non_negative : bool, default=False
+            Make sure the array has only non-negative values. If True, an array that
+            contains negative values will raise a ValueError.
+
+            .. versionadded:: 1.6
+
+        ensure_2d : bool, default=True
+            Whether to raise a value error if array is not 2D.
+
+        allow_nd : bool, default=False
+            Whether to allow array.ndim > 2.
+
+        ensure_min_samples : int, default=1
+            Make sure that the array has a minimum number of samples in its first
+            axis (rows for a 2D array). Setting to 0 disables this check.
+
+        ensure_min_features : int, default=1
+            Make sure that the 2D array has some minimum number of features
+            (columns). The default value of 1 rejects empty datasets.
+            This check is only enforced when the input data has effectively 2
+            dimensions or is originally 1D and ``ensure_2d`` is True. Setting to 0
+            disables this check.
+
+        estimator : str or estimator instance, default=None
+            If passed, include the name of the estimator in warning messages.
+
+        input_name : str, default=""
+            The data name used to construct the error message. In particular
+            if `input_name` is "X" and the data has NaN values and
+            allow_nan is False, the error message will link to the imputer
+            documentation.
+
+            .. versionadded:: 1.1.0
+
+        Returns
+        -------
+        array_converted : object
+            The converted and validated array.
+
+        Examples
+        --------
+        >>> from sklearn.utils.validation import check_array
+        >>> X = [[1, 2, 3], [4, 5, 6]]
+        >>> X_checked = check_array(X)
+        >>> X_checked
+        array([[1, 2, 3], [4, 5, 6]])
+        """
+        ensure_all_finite = _deprecate_force_all_finite(force_all_finite, ensure_all_finite)
+
+        if isinstance(array, np.matrix):
+            raise TypeError(
+                "np.matrix is not supported. Please convert to a numpy array with "
+                "np.asarray. For more information see: "
+                "https://numpy.org/doc/stable/reference/generated/numpy.matrix.html"
+            )
+
+        xp, is_array_api_compliant = get_namespace(array)
+
+        # store reference to original array to check if copy is needed when
+        # function returns
+        array_orig = array
+
+        # store whether originally we wanted numeric dtype
+        dtype_numeric = isinstance(dtype, str) and dtype == "numeric"
+
+        dtype_orig = getattr(array, "dtype", None)
+        if not is_array_api_compliant and not hasattr(dtype_orig, "kind"):
+            # not a data type (e.g. a column named dtype in a pandas DataFrame)
+            dtype_orig = None
+
+        # check if the object contains several dtypes (typically a pandas
+        # DataFrame), and store them. If not, store None.
+        dtypes_orig = None
+        pandas_requires_conversion = False
+        # track if we have a Series-like object to raise a better error message
+        type_if_series = None
+        if hasattr(array, "dtypes") and hasattr(array.dtypes, "__array__"):
+            # throw warning if columns are sparse. If all columns are sparse, then
+            # array.sparse exists and sparsity will be preserved (later).
+            with suppress(ImportError):
+                from pandas import SparseDtype
+
+                def is_sparse(dtype):
+                    return isinstance(dtype, SparseDtype)
+
+                if not hasattr(array, "sparse") and array.dtypes.apply(is_sparse).any():
+                    warnings.warn(
+                        "pandas.DataFrame with sparse columns found."
+                        "It will be converted to a dense numpy array."
+                    )
+
+            dtypes_orig = list(array.dtypes)
+            pandas_requires_conversion = any(
+                _pandas_dtype_needs_early_conversion(i) for i in dtypes_orig
+            )
+            if all(isinstance(dtype_iter, np.dtype) for dtype_iter in dtypes_orig):
+>               dtype_orig = np.result_type(*dtypes_orig)
+E               ValueError: at least one array or dtype is required
+
+../../.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/sklearn/utils/validation.py:931: ValueError
+_______________________________________________________________________________________ test_categorizer_predict_with_confidence ________________________________________________________________________________________
+
+categorized_data =                            date   amount category                   description       merchant     type
+0    2025-03-0...-06-04 10:14:51.610393  -143.71     Food  POS TRANSACTION - Home Depot     Home Depot  expense
+
+[1297 rows x 6 columns]
+
+    def test_categorizer_predict_with_confidence(categorized_data):
+        """Test prediction with confidence scores."""
+        categorizer = TransactionCategorizer()
+        processed_data = categorizer.preprocess(categorized_data)
+
+        # Use categorized data with proper distribution
+        target = processed_data['category']
+
+>       categorizer.train(processed_data, target)
+
+tests/models/test_transaction_categorizer.py:78:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app/models/categorization/transaction_categorizer.py:137: in train
+    self.model.fit(X_train, y_train)
+../../.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/sklearn/base.py:1389: in wrapper
+    return fit_method(estimator, *args, **kwargs)
+../../.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/sklearn/ensemble/_gb.py:658: in fit
+    X, y = validate_data(
+../../.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/sklearn/utils/validation.py:2961: in validate_data
+    X, y = check_X_y(X, y, **check_params)
+../../.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/sklearn/utils/validation.py:1370: in check_X_y
+    X = check_array(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+array = Empty DataFrame
+Columns: []
+Index: [695, 234, 962, 666, 569, 98, 78, 314, 619, 1178, 198, 217, 613, 539, 594, 908, 127...6, 1132, 1045, 398, 1027, 987, 492, 1281, 1260, 1294, 183, 1136, 883, 488, 587, 761, 478, ...]
+
+[1037 rows x 0 columns]
+accept_sparse = ['csr', 'csc', 'coo']
+
+    def check_array(
+        array,
+        accept_sparse=False,
+        *,
+        accept_large_sparse=True,
+        dtype="numeric",
+        order=None,
+        copy=False,
+        force_writeable=False,
+        force_all_finite="deprecated",
+        ensure_all_finite=None,
+        ensure_non_negative=False,
+        ensure_2d=True,
+        allow_nd=False,
+        ensure_min_samples=1,
+        ensure_min_features=1,
+        estimator=None,
+        input_name="",
+    ):
+        """Input validation on an array, list, sparse matrix or similar.
+
+        By default, the input is checked to be a non-empty 2D array containing
+        only finite values. If the dtype of the array is object, attempt
+        converting to float, raising on failure.
+
+        Parameters
+        ----------
+        array : object
+            Input object to check / convert.
+
+        accept_sparse : str, bool or list/tuple of str, default=False
+            String[s] representing allowed sparse matrix formats, such as 'csc',
+            'csr', etc. If the input is sparse but not in the allowed format,
+            it will be converted to the first listed format. True allows the input
+            to be any format. False means that a sparse matrix input will
+            raise an error.
+
+        accept_large_sparse : bool, default=True
+            If a CSR, CSC, COO or BSR sparse matrix is supplied and accepted by
+            accept_sparse, accept_large_sparse=False will cause it to be accepted
+            only if its indices are stored with a 32-bit dtype.
+
+            .. versionadded:: 0.20
+
+        dtype : 'numeric', type, list of type or None, default='numeric'
+            Data type of result. If None, the dtype of the input is preserved.
+            If "numeric", dtype is preserved unless array.dtype is object.
+            If dtype is a list of types, conversion on the first type is only
+            performed if the dtype of the input is not in the list.
+
+        order : {'F', 'C'} or None, default=None
+            Whether an array will be forced to be fortran or c-style.
+            When order is None (default), then if copy=False, nothing is ensured
+            about the memory layout of the output array; otherwise (copy=True)
+            the memory layout of the returned array is kept as close as possible
+            to the original array.
+
+        copy : bool, default=False
+            Whether a forced copy will be triggered. If copy=False, a copy might
+            be triggered by a conversion.
+
+        force_writeable : bool, default=False
+            Whether to force the output array to be writeable. If True, the returned array
+            is guaranteed to be writeable, which may require a copy. Otherwise the
+            writeability of the input array is preserved.
+
+            .. versionadded:: 1.6
+
+        force_all_finite : bool or 'allow-nan', default=True
+            Whether to raise an error on np.inf, np.nan, pd.NA in array. The
+            possibilities are:
+
+            - True: Force all values of array to be finite.
+            - False: accepts np.inf, np.nan, pd.NA in array.
+            - 'allow-nan': accepts only np.nan and pd.NA values in array. Values
+              cannot be infinite.
+
+            .. versionadded:: 0.20
+               ``force_all_finite`` accepts the string ``'allow-nan'``.
+
+            .. versionchanged:: 0.23
+               Accepts `pd.NA` and converts it into `np.nan`
+
+            .. deprecated:: 1.6
+               `force_all_finite` was renamed to `ensure_all_finite` and will be removed
+               in 1.8.
+
+        ensure_all_finite : bool or 'allow-nan', default=True
+            Whether to raise an error on np.inf, np.nan, pd.NA in array. The
+            possibilities are:
+
+            - True: Force all values of array to be finite.
+            - False: accepts np.inf, np.nan, pd.NA in array.
+            - 'allow-nan': accepts only np.nan and pd.NA values in array. Values
+              cannot be infinite.
+
+            .. versionadded:: 1.6
+               `force_all_finite` was renamed to `ensure_all_finite`.
+
+        ensure_non_negative : bool, default=False
+            Make sure the array has only non-negative values. If True, an array that
+            contains negative values will raise a ValueError.
+
+            .. versionadded:: 1.6
+
+        ensure_2d : bool, default=True
+            Whether to raise a value error if array is not 2D.
+
+        allow_nd : bool, default=False
+            Whether to allow array.ndim > 2.
+
+        ensure_min_samples : int, default=1
+            Make sure that the array has a minimum number of samples in its first
+            axis (rows for a 2D array). Setting to 0 disables this check.
+
+        ensure_min_features : int, default=1
+            Make sure that the 2D array has some minimum number of features
+            (columns). The default value of 1 rejects empty datasets.
+            This check is only enforced when the input data has effectively 2
+            dimensions or is originally 1D and ``ensure_2d`` is True. Setting to 0
+            disables this check.
+
+        estimator : str or estimator instance, default=None
+            If passed, include the name of the estimator in warning messages.
+
+        input_name : str, default=""
+            The data name used to construct the error message. In particular
+            if `input_name` is "X" and the data has NaN values and
+            allow_nan is False, the error message will link to the imputer
+            documentation.
+
+            .. versionadded:: 1.1.0
+
+        Returns
+        -------
+        array_converted : object
+            The converted and validated array.
+
+        Examples
+        --------
+        >>> from sklearn.utils.validation import check_array
+        >>> X = [[1, 2, 3], [4, 5, 6]]
+        >>> X_checked = check_array(X)
+        >>> X_checked
+        array([[1, 2, 3], [4, 5, 6]])
+        """
+        ensure_all_finite = _deprecate_force_all_finite(force_all_finite, ensure_all_finite)
+
+        if isinstance(array, np.matrix):
+            raise TypeError(
+                "np.matrix is not supported. Please convert to a numpy array with "
+                "np.asarray. For more information see: "
+                "https://numpy.org/doc/stable/reference/generated/numpy.matrix.html"
+            )
+
+        xp, is_array_api_compliant = get_namespace(array)
+
+        # store reference to original array to check if copy is needed when
+        # function returns
+        array_orig = array
+
+        # store whether originally we wanted numeric dtype
+        dtype_numeric = isinstance(dtype, str) and dtype == "numeric"
+
+        dtype_orig = getattr(array, "dtype", None)
+        if not is_array_api_compliant and not hasattr(dtype_orig, "kind"):
+            # not a data type (e.g. a column named dtype in a pandas DataFrame)
+            dtype_orig = None
+
+        # check if the object contains several dtypes (typically a pandas
+        # DataFrame), and store them. If not, store None.
+        dtypes_orig = None
+        pandas_requires_conversion = False
+        # track if we have a Series-like object to raise a better error message
+        type_if_series = None
+        if hasattr(array, "dtypes") and hasattr(array.dtypes, "__array__"):
+            # throw warning if columns are sparse. If all columns are sparse, then
+            # array.sparse exists and sparsity will be preserved (later).
+            with suppress(ImportError):
+                from pandas import SparseDtype
+
+                def is_sparse(dtype):
+                    return isinstance(dtype, SparseDtype)
+
+                if not hasattr(array, "sparse") and array.dtypes.apply(is_sparse).any():
+                    warnings.warn(
+                        "pandas.DataFrame with sparse columns found."
+                        "It will be converted to a dense numpy array."
+                    )
+
+            dtypes_orig = list(array.dtypes)
+            pandas_requires_conversion = any(
+                _pandas_dtype_needs_early_conversion(i) for i in dtypes_orig
+            )
+            if all(isinstance(dtype_iter, np.dtype) for dtype_iter in dtypes_orig):
+>               dtype_orig = np.result_type(*dtypes_orig)
+E               ValueError: at least one array or dtype is required
+
+../../.cache/pypoetry/virtualenvs/cashly-ai-yRLFXMn3-py3.12/lib/python3.12/site-packages/sklearn/utils/validation.py:931: ValueError
+_______________________________________________________________________________________________ test_trend_analyzer_train _______________________________________________________________________________________________
+
+time_series_data =          date    daily_sum  transaction_count  avg_amount  amount_std       amount
+0  2025-03-01 -1525.980000         ... -1665.500000
+92 2025-06-04 -1008.700000                  8 -126.087500   89.645044 -1008.700000
+
+[93 rows x 6 columns]
+
+    def test_trend_analyzer_train(time_series_data):
+        """Test training the trend analyzer."""
+        analyzer = TrendAnalyzer()
+        processed_data = analyzer.preprocess(time_series_data)
+        analyzer.train(processed_data)
+
+        # Check model is fitted
+>       assert analyzer.is_fitted
+E       assert False
+E        +  where False = <app.models.trend_analysis.trend_analyzer.TrendAnalyzer object at 0x7f7f2846c320>.is_fitted
+
+tests/models/test_trend_analyzer.py:40: AssertionError
+______________________________________________________________________________________________ test_trend_analyzer_predict ______________________________________________________________________________________________
+
+time_series_data =          date    daily_sum  transaction_count  avg_amount  amount_std       amount
+0  2025-03-01 -1525.980000         ... -1665.500000
+92 2025-06-04 -1008.700000                  8 -126.087500   89.645044 -1008.700000
+
+[93 rows x 6 columns]
+
+    def test_trend_analyzer_predict(time_series_data):
+        """Test trend prediction."""
+        analyzer = TrendAnalyzer()
+        processed_data = analyzer.preprocess(time_series_data)
+        analyzer.train(processed_data)
+
+        # Test on same data
+>       predictions = analyzer.predict(processed_data)
+
+tests/models/test_trend_analyzer.py:55:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <app.models.trend_analysis.trend_analyzer.TrendAnalyzer object at 0x7f7f2863da90>
+X =          date    daily_sum  transaction_count   avg_amount  std_amount
+0  2025-03-01 -1525.980000                  1 -... -1665.500000         0.0
+92 2025-06-04 -1008.700000                  1 -1008.700000         0.0
+
+[93 rows x 5 columns]
+
+    def predict(self, X: pd.DataFrame) -> np.ndarray:
+        """Project trend forward."""
+        if not self.is_fitted:
+>           raise ValueError("Model must be fitted first")
+E           ValueError: Model must be fitted first
+
+app/models/trend_analysis/trend_analyzer.py:106: ValueError
+____________________________________________________________________________________________ test_model_manager_train_model _____________________________________________________________________________________________
+
+model_manager_instance = <app.services.ml.model_manager.ModelManager object at 0x7f7ec888ad80>
+transaction_data =                            date   amount           category                   description       merchant     type
+0   ...14:53.160528  -143.71           Shopping  POS TRANSACTION - Home Depot     Home Depot  expense
+
+[1297 rows x 6 columns]
+
+    @pytest.mark.asyncio
+    async def test_model_manager_train_model(model_manager_instance, transaction_data):
+        """Test training a model through the manager."""
+        # Train categorizer
+        result = await model_manager_instance.train_model(
+            'categorizer',
+            transaction_data
+        )
+
+>       assert result['success'] is True
+E       assert False is True
+
+tests/services/ml/test_model_manager.py:59: AssertionError

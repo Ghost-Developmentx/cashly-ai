@@ -25,6 +25,7 @@ from app.api.v1.schemas.fin import (
 )
 from app.api.v1.schemas.base import SuccessResponse
 from app.services.openai_assistants import OpenAIIntegrationService
+from app.services.openai_assistants.integration.config import IntegrationConfig
 
 logger = getLogger(__name__)
 router = APIRouter()

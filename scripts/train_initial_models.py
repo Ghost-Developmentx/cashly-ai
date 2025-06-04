@@ -112,26 +112,26 @@ async def train_all_models():
 
 
 async def verify_models():
-    """Verify all models can be loaded."""
+    """Verify that all models can be loaded properly."""
     logger.info("\n🔍 Verifying models can be loaded...")
 
-    model_types = [
-        'categorizer',
-        'forecaster',
-        'anomaly_detector',
-        'budget_recommender',
-        'trend_analyzer'
-    ]
+    model_types = ['categorizer', 'forecaster', 'anomaly_detector', 'budget_recommender', 'trend_analyzer']
 
     for model_type in model_types:
         try:
-            model = await model_manager.get_model(model_type)
-            if hasattr(model, 'is_fitted') and model.is_fitted:
+            model = await model_manager.get_model(model_type, force_reload=True)
+
+            # Check if the model is actually fitted/loaded
+            if hasattr(model, 'model') and model.model is not None:
+                logger.info(f"✅ {model_type} loaded successfully")
+            elif hasattr(model, 'is_fitted') and model.is_fitted:
                 logger.info(f"✅ {model_type} loaded successfully")
             else:
                 logger.warning(f"⚠️  {model_type} loaded but not fitted")
+
         except Exception as e:
-            logger.error(f"❌ {model_type} failed to load: {e}")
+            logger.error(f"❌ Failed to load {model_type}: {e}")
+
 
 
 async def test_predictions():

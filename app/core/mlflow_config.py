@@ -120,7 +120,12 @@ class MLflowManager:
             signature=None,
             registered_model_name: Optional[str] = None
     ):
-        """Log model to MLflow."""
+        """Log model to MLflow - FIXED version."""
+        # This method is now only used by BaseModel which passes
+        # the model directly for sklearn models
+        # The BaseModel class handles the logging itself
+        # This is kept for backward compatibility
+
         # Map model types to MLflow flavors
         flavor_map = {
             "sklearn": mlflow.sklearn,
@@ -129,9 +134,10 @@ class MLflowManager:
 
         flavor = flavor_map.get(model_type, mlflow.pyfunc)
 
-        # Log the model
+        # Log the model with proper kwargs
         model_info = flavor.log_model(
-            model,
+            sk_model=model if model_type == "sklearn" else None,
+            python_model=model if model_type == "custom" else None,
             artifact_path=artifact_path,
             input_example=input_example,
             signature=signature,
@@ -186,12 +192,21 @@ class MLflowManager:
     def log_metrics(metrics: dict, step: Optional[int] = None):
         """Log metrics to current run."""
         for key, value in metrics.items():
-            mlflow.log_metric(key, value, step=step)
+            try:
+                # Ensure value is numeric
+                numeric_value = float(value)
+                mlflow.log_metric(key, numeric_value, step=step)
+            except (TypeError, ValueError):
+                logger.warning(f"Skipping non-numeric metric {key}: {value}")
 
     @staticmethod
     def log_params(params: dict):
         """Log parameters to current run."""
-        mlflow.log_params(params)
+        # MLflow requires string values
+        string_params = {}
+        for key, value in params.items():
+            string_params[key] = str(value)
+        mlflow.log_params(string_params)
 
     @staticmethod
     def log_artifacts(local_path: str, artifact_path: Optional[str] = None):

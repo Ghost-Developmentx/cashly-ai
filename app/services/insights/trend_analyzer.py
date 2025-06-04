@@ -7,6 +7,8 @@ from typing import Dict, List, Any
 from datetime import datetime
 from collections import defaultdict
 
+from app.api.v1.schemas.insights import TrendDirection
+
 logger = logging.getLogger(__name__)
 
 
@@ -227,6 +229,9 @@ class TrendAnalyzer:
     @staticmethod
     def _categorize_income_source(description: str) -> str:
         """Categorize income source from description."""
+        if not description:  # Guard against None/empty
+            return "Other Income"
+
         description_lower = description.lower()
 
         if "salary" in description_lower or "payroll" in description_lower:
@@ -241,6 +246,7 @@ class TrendAnalyzer:
             return "Transfers"
         else:
             return "Other Income"
+
 
     @staticmethod
     def _summarize_income_sources(
@@ -270,12 +276,18 @@ class TrendAnalyzer:
 
     @staticmethod
     def _empty_trend_result() -> Dict[str, Any]:
-        """Return empty trend result."""
+        """Return complete empty trend result."""
         return {
             "monthly_data": {},
-            "monthly_average": 0,
-            "trend_percentage": 0,
+            "monthly_average": 0.0,
+            "trend_percentage": 0.0,
             "trend_direction": "stable",
-            "volatility": 0,
+            "volatility": 0.0,
             "top_categories": [],
+            "highest_month": {"month": "", "value": 0.0},
+            "lowest_month": {"month": "", "value": 0.0},
+            "volatility_score": 0.0,
+            "direction": TrendDirection.STABLE,
+            "change_percentage": 0.0,
+            "average_monthly": 0.0
         }

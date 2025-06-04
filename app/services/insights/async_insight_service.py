@@ -39,7 +39,7 @@ class AsyncInsightService:
         self.insight_generator = InsightGenerator()
 
     async def analyze_trends(
-        self, user_id: str, transactions: List[Dict[str, Any]], period: str = "3m"
+            self, user_id: str, transactions: List[Dict[str, Any]], period: str = "3m"
     ) -> Dict[str, Any]:
         """
         Analyze financial trends.
@@ -56,9 +56,15 @@ class AsyncInsightService:
             if not transactions:
                 return self._empty_analysis_response()
 
+            # Clean and validate transaction data
+            cleaned_transactions = self._clean_transactions(transactions)
+
+            if not cleaned_transactions:
+                return self._empty_analysis_response()
+
             # Parse period
             days = self._parse_period(period)
-            filtered_transactions = self._filter_by_period(transactions, days)
+            filtered_transactions = self._filter_by_period(cleaned_transactions, days)
 
             # Analyze trends
             spending_trends = await self.trend_analyzer.analyze_spending_trends(
@@ -92,6 +98,48 @@ class AsyncInsightService:
         except Exception as e:
             logger.error(f"Trend analysis failed: {e}")
             return {"error": f"Failed to analyze trends: {str(e)}", "period": period}
+
+    @staticmethod
+    def _clean_transactions(transactions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Clean and validate transaction data."""
+        cleaned = []
+
+        for txn in transactions:
+            try:
+                # Clean and validate required fields
+                cleaned_txn = txn.copy()
+
+                # Ensure category is a string
+                if cleaned_txn.get('category') is None:
+                    cleaned_txn['category'] = 'Other'
+                elif not isinstance(cleaned_txn['category'], str):
+                    cleaned_txn['category'] = str(cleaned_txn['category'])
+                else:
+                    cleaned_txn['category'] = cleaned_txn['category'].strip()
+
+                # Ensure description is a string
+                if cleaned_txn.get('description') is None:
+                    cleaned_txn['description'] = 'Transaction'
+                elif not isinstance(cleaned_txn['description'], str):
+                    cleaned_txn['description'] = str(cleaned_txn['description'])
+                else:
+                    cleaned_txn['description'] = cleaned_txn['description'].strip()
+
+                # Ensure amount is numeric
+                if 'amount' in cleaned_txn:
+                    try:
+                        cleaned_txn['amount'] = float(cleaned_txn['amount'])
+                    except (TypeError, ValueError):
+                        continue  # Skip invalid amounts
+                else:
+                    continue  # Skip transactions without amounts
+
+            except Exception as e:
+                logger.warning(f"Skipping invalid transaction: {e}")
+                continue
+
+        return cleaned
+
 
     def _create_summary(
         self, spending_trends: Dict[str, Any], income_trends: Dict[str, Any]

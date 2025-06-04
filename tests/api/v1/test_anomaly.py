@@ -1,6 +1,7 @@
 """
 Anomaly detection endpoint tests.
 """
+from unittest.mock import AsyncMock
 
 import pytest
 from datetime import datetime, timedelta
@@ -90,12 +91,12 @@ async def test_mark_anomalies_reviewed(client):
     request_data = {
         "anomaly_ids": ["anomaly_1", "anomaly_2"],
         "user_id": "test_user",
+        "action": "acknowledged"
     }
 
     response = await client.post(
         "/api/v1/anomaly/mark_reviewed",
         json=request_data,
-        params={"action": "acknowledged"},
     )
 
     assert response.status_code == 200
@@ -104,3 +105,56 @@ async def test_mark_anomalies_reviewed(client):
     assert data["success"] is True
     assert data["data"]["updated_count"] == 2
     assert data["data"]["action"] == "acknowledged"
+
+
+@pytest.mark.asyncio
+async def test_anomaly_response_format(client, mocker):
+    """Test anomaly detection handles response format correctly."""
+    # Mock the AsyncAnomalyService class directly
+    mock_service_instance = AsyncMock()
+    mock_service_instance.detect_anomalies = AsyncMock(return_value={
+        "anomalies": [{
+            "transaction": {
+                "id": "123",
+                "date": "2024-01-01",
+                "amount": -100.0,
+                "description": "Test"
+            },
+            "anomaly_type": "unusual_amount",
+            "severity": "high",
+            "confidence": 0.9,
+            "reason": "Test reason"
+        }],
+        "summary": {
+            "total_transactions": 1,
+            "anomalies_detected": 1,
+            "anomaly_rate": 100.0,
+            "by_type": {"unusual_amount": 1},
+            "by_severity": {"high": 1},
+            "highest_risk_categories": []
+        },
+        "threshold": 2.0
+    })
+
+    # Mock the service class constructor to return our mock instance
+    mocker.patch('app.services.anomaly.AsyncAnomalyService', return_value=mock_service_instance)
+
+    # Also clear any cached instances
+    from app.core.dependencies import get_anomaly_service
+    if hasattr(get_anomaly_service, 'cache_clear'):
+        get_anomaly_service.cache_clear()
+
+    response = await client.post("/api/v1/anomaly/detect", json={
+        "user_id": "test",
+        "transactions": [{
+            "date": "2024-01-01",
+            "amount": -100.0,
+            "description": "Test transaction",
+            "category": "Food"
+        }]
+    })
+
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["anomalies"]) == 1
+    assert data["anomalies"][0]["transaction_date"] == "2024-01-01"

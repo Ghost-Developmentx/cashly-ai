@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
     async_sessionmaker,
 )
-from ...core.config import Settings
+from app.core.config import Settings, get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -25,8 +25,8 @@ class AsyncDatabaseConnection:
     Manages asynchronous database connections and operations.
     """
 
-    def __init__(self, config: Optional[Settings] = None):
-        self.config = config or Settings()
+    def __init__(self, settings: Optional[Settings] = None):
+        self.settings = settings or get_settings()
         self._engine: Optional[AsyncEngine] = None
         self._session_factory: Optional[async_sessionmaker] = None
         self._asyncpg_pool: Optional[asyncpg.Pool] = None
@@ -69,17 +69,16 @@ class AsyncDatabaseConnection:
 
             logger.debug("🛠 Creating async SQLAlchemy engine...")
             self._engine = create_async_engine(
-                self.config.async_database_url,
+                self.settings.async_database_url,
                 echo=False,
                 pool_pre_ping=True,
-                pool_size=self.config.async_db_min_pool_size,
-                max_overflow=self.config.async_db_max_pool_size
-                - self.config.async_db_min_pool_size,
+                pool_size=self.settings.async_db_min_pool_size,
+                max_overflow=self.settings.async_db_max_pool_size - self.settings.async_db_min_pool_size,
                 pool_recycle=3600,
                 connect_args={
                     "server_settings": {"jit": "off"},
-                    "timeout": self.config.async_db_command_timeout,
-                    "command_timeout": self.config.async_db_command_timeout,
+                    "timeout": self.settings.async_db_command_timeout,
+                    "command_timeout": self.settings.async_db_command_timeout,
                 },
             )
             self._loop_id = current_loop_id
@@ -121,11 +120,12 @@ class AsyncDatabaseConnection:
                 await self._close_asyncpg_pool()
 
             logger.info(f"🚰 Creating asyncpg pool for loop {current_loop_id}")
+
+            # Use the pool kwargs from settings
+            pool_kwargs = self.settings.get_pool_kwargs()
             self._asyncpg_pool = await asyncpg.create_pool(
-                dsn=self.config.asyncpg_dsn,
-                min_size=self.config.async_db_min_pool_size,
-                max_size=self.config.async_db_max_pool_size,
-                timeout=self.config.async_db_command_timeout,
+                dsn=self.settings.asyncpg_dsn,
+                **pool_kwargs
             )
 
             self._loop_id = current_loop_id
@@ -146,9 +146,7 @@ class AsyncDatabaseConnection:
         """Close asyncpg pool with proper cleanup."""
         if self._asyncpg_pool:
             try:
-                # Close all connections gracefully
                 await self._asyncpg_pool.close()
-                # Wait for connections to close
                 await asyncio.sleep(0.1)
                 logger.info("🔒 Closed asyncpg pool")
             except Exception as e:

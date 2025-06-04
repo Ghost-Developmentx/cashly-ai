@@ -8,7 +8,8 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 
 from app.db.async_db.vector_ops import AsyncVectorOperations
-from app.db.async_db import AsyncDatabaseConnection, AsyncDatabaseConfig
+from app.db.async_db.connection import AsyncDatabaseConnection
+from app.core.config import get_settings
 from app.db.singleton_registry import registry
 
 logger = logging.getLogger(__name__)
@@ -21,8 +22,8 @@ async def get_async_db_connection() -> AsyncDatabaseConnection:
     """
 
     async def create_connection():
-        config = AsyncDatabaseConfig.from_env()
-        return AsyncDatabaseConnection(config)
+        settings = get_settings()
+        return AsyncDatabaseConnection(settings)
 
     return await registry.get_or_create("async_db_connection", create_connection)
 

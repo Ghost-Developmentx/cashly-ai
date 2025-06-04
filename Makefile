@@ -13,7 +13,7 @@ run:
 	python run.py
 
 test:
-	pytest tests/ -v
+	pytest tests/
 
 format:
 	black app/ tests/
