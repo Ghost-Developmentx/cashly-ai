@@ -154,9 +154,9 @@ class OpenAIIntegrationService:
 
         return health_results
 
-    def get_analytics(self, user_id: str, recent_queries: List[str]) -> Dict[str, Any]:
+    async def get_analytics(self, user_id: str, recent_queries: List[str]) -> Dict[str, Any]:
         """Get analytics for user queries."""
-        return self.analytics.get_analytics(user_id, recent_queries)
+        return await self.analytics.get_analytics(user_id, recent_queries)
 
     def _get_available_assistants(self) -> int:
         """Get count of available assistants."""

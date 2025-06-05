@@ -53,6 +53,8 @@ class AsyncAnalyticsHandlers:
         days = tool_args.get("days", 30)
         adjustments = tool_args.get("adjustments", {})
 
+        logger.info(f"Forecast: User {user_id}, Days: {days}, Transactions: {len(transactions)}")
+
         try:
             if adjustments:
                 result = await self.forecast_service.forecast_cash_flow_scenario(

@@ -181,7 +181,7 @@ async def get_analytics(
 ) -> AnalyticsResponse:
     """Get analytics for recent queries and assistant usage."""
     try:
-        analytics = service.get_analytics(
+        analytics = await service.get_analytics(
             user_id=request.user_id, recent_queries=request.recent_queries
         )
 

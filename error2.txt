@@ -1,0 +1,67 @@
+2025-06-04 22:52:35,906 - app.core.middleware - INFO - Request 5a016c4c-a00b-4206-8a8c-df23deb924f5 started: POST /api/v1/fin/conversations/query
+📥 Incoming request: POST http://localhost:8000/api/v1/fin/conversations/query
+2025-06-04 22:52:35,956 - app.services.openai_assistants.assistant_manager.base - INFO - Initialized base manager with 8 configured assistants
+2025-06-04 22:52:35,962 - app.services.openai_assistants.assistant_manager.base - INFO - Initialized base manager with 8 configured assistants
+2025-06-04 22:52:35,967 - app.services.openai_assistants.assistant_manager.base - INFO - Initialized base manager with 8 configured assistants
+2025-06-04 22:52:35,967 - app.services.openai_assistants.assistant_manager.manager - INFO - ✅ Async Assistant Manager initialized
+2025-06-04 22:52:35,967 - app.services.openai_assistants.assistant_manager.tool_executor - INFO - Tool executor configured: async
+2025-06-04 22:52:35,967 - app.services.openai_assistants.handlers.query_handler.handler - INFO - Query handler initialized
+2025-06-04 22:52:35,967 - app.services.openai_assistants.integration.service - INFO - ✅ OpenAI Integration Service initialized
+2025-06-04 22:52:35,968 - app.api.v1.endpoints.fin - INFO - 📥 Processing query for user 7: Can you show me a cashflow forecast for 30 days fr...
+2025-06-04 22:52:35,968 - app.services.openai_assistants.handlers.query_handler.classifier - INFO - 🎯 Classifying query for user 7
+2025-06-04 22:52:35,968 - app.services.intent_classification.async_intent_service - INFO - 🚀 Async classify_and_route called for: 'Can you show me a cashflow forecast for 30 days from today'
+2025-06-04 22:52:35,968 - app.services.intent_classification.classification_handler - INFO - 🔍 Attempting vector classification for: 'Can you show me a cashflow forecast for 30 days from today'
+2025-06-04 22:52:35,968 - app.db.singleton_registry - INFO - 🏗️ Creating new singleton: openai_embedding_client
+2025-06-04 22:52:36,093 - app.db.singleton_registry - INFO - 🏗️ Creating new singleton: vector_search_service
+2025-06-04 22:52:36,093 - app.services.search.async_vector_search - INFO - ✅ AsyncVectorSearchService created
+2025-06-04 22:52:36,093 - app.services.intent_determination.intent_resolver - INFO - Starting intent resolution for query: 'Can you show me a cashflow forecast for 30 days from today'
+2025-06-04 22:52:36,093 - app.services.intent_determination.context_aggregator - INFO - Processing fresh context for conversation fin_conv_135 with 1 messages
+2025-06-04 22:52:36,093 - app.services.intent_determination.context_processor - INFO - Including 1 messages in embedding context
+2025-06-04 22:52:36,093 - app.services.intent_determination.intent_resolver - INFO - Generating embedding for text (207 chars)
+2025-06-04 22:52:36,093 - app.services.embeddings.async_embedding_client - INFO - 🔄 Creating OpenAI client for loop 140267175579696
+2025-06-04 22:52:36,859 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/2 200 OK"
+2025-06-04 22:52:36,861 - app.services.search.async_vector_search - INFO - ✅ AsyncVectorSearchService connected to shared DB
+2025-06-04 22:52:36,879 - app.services.intent_determination.intent_determiner - INFO - Boosted intent confidence due to similarity 0.673
+2025-06-04 22:52:36,879 - app.services.intent_determination.intent_resolver - INFO - Resolved intent: forecasting (81.1%) -> forecasting_assistant
+2025-06-04 22:52:36,879 - app.services.intent_classification.classification_handler - INFO - 📊 Vector resolution result:
+2025-06-04 22:52:36,880 - app.services.intent_classification.classification_handler - INFO -    Intent: forecasting
+2025-06-04 22:52:36,880 - app.services.intent_classification.classification_handler - INFO -    Confidence: 0.811
+2025-06-04 22:52:36,880 - app.services.intent_classification.classification_handler - INFO -    Method: async_context_aware_similarity
+2025-06-04 22:52:36,880 - app.services.intent_classification.classification_handler - INFO -    Boosted confidence from 0.811 to 0.950 due to similarity 0.673
+2025-06-04 22:52:36,880 - app.services.intent_classification.async_intent_service - INFO - ✅ Vector classification successful: forecasting (95.0%)
+2025-06-04 22:52:36,880 - app.services.openai_assistants.handlers.query_handler.classifier - INFO - 🎯 Intent: forecasting (confidence: 95.00%)
+2025-06-04 22:52:37,447 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/threads "HTTP/1.1 200 OK"
+2025-06-04 22:52:37,449 - app.services.openai_assistants.assistant_manager.thread_manager - INFO - Created new thread thread_taDsiy08swDM9jsEHxAQF0D7 for user 7
+2025-06-04 22:52:37,918 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/threads/thread_taDsiy08swDM9jsEHxAQF0D7/messages "HTTP/1.1 200 OK"
+2025-06-04 22:52:38,928 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/threads/thread_taDsiy08swDM9jsEHxAQF0D7/runs "HTTP/1.1 200 OK"
+2025-06-04 22:52:39,209 - httpx - INFO - HTTP Request: GET https://api.openai.com/v1/threads/thread_taDsiy08swDM9jsEHxAQF0D7/runs/run_SoRO22AdutO2qYSA0iT0Hbvt "HTTP/1.1 200 OK"
+2025-06-04 22:52:40,102 - httpx - INFO - HTTP Request: GET https://api.openai.com/v1/threads/thread_taDsiy08swDM9jsEHxAQF0D7/runs/run_SoRO22AdutO2qYSA0iT0Hbvt "HTTP/1.1 200 OK"
+2025-06-04 22:52:41,051 - httpx - INFO - HTTP Request: GET https://api.openai.com/v1/threads/thread_taDsiy08swDM9jsEHxAQF0D7/runs/run_SoRO22AdutO2qYSA0iT0Hbvt "HTTP/1.1 200 OK"
+2025-06-04 22:52:41,924 - httpx - INFO - HTTP Request: GET https://api.openai.com/v1/threads/thread_taDsiy08swDM9jsEHxAQF0D7/runs/run_SoRO22AdutO2qYSA0iT0Hbvt "HTTP/1.1 200 OK"
+2025-06-04 22:52:43,102 - httpx - INFO - HTTP Request: GET https://api.openai.com/v1/threads/thread_taDsiy08swDM9jsEHxAQF0D7/runs/run_SoRO22AdutO2qYSA0iT0Hbvt "HTTP/1.1 200 OK"
+2025-06-04 22:52:44,131 - httpx - INFO - HTTP Request: GET https://api.openai.com/v1/threads/thread_taDsiy08swDM9jsEHxAQF0D7/runs/run_SoRO22AdutO2qYSA0iT0Hbvt "HTTP/1.1 200 OK"
+2025-06-04 22:52:44,133 - app.services.openai_assistants.assistant_manager.tool_executor - INFO - Executing tool: forecast_cash_flow
+2025-06-04 22:52:44,133 - app.services.fin.async_tool_executor - INFO - 🔧 Executing tool: forecast_cash_flow
+2025-06-04 22:52:44,133 - app.services.fin.tool_handlers.analytics_handlers - INFO - Forecast: User 7, Days: 30, Transactions: 0
+2025-06-04 22:52:44,133 - app.services.fin.async_tool_executor - INFO - ✅ Tool forecast_cash_flow completed in 0.00s
+2025-06-04 22:52:45,090 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/threads/thread_taDsiy08swDM9jsEHxAQF0D7/runs/run_SoRO22AdutO2qYSA0iT0Hbvt/submit_tool_outputs "HTTP/1.1 200 OK"
+2025-06-04 22:52:46,317 - httpx - INFO - HTTP Request: GET https://api.openai.com/v1/threads/thread_taDsiy08swDM9jsEHxAQF0D7/runs/run_SoRO22AdutO2qYSA0iT0Hbvt "HTTP/1.1 200 OK"
+2025-06-04 22:52:47,466 - httpx - INFO - HTTP Request: GET https://api.openai.com/v1/threads/thread_taDsiy08swDM9jsEHxAQF0D7/runs/run_SoRO22AdutO2qYSA0iT0Hbvt "HTTP/1.1 200 OK"
+2025-06-04 22:52:49,115 - httpx - INFO - HTTP Request: GET https://api.openai.com/v1/threads/thread_taDsiy08swDM9jsEHxAQF0D7/runs/run_SoRO22AdutO2qYSA0iT0Hbvt "HTTP/1.1 200 OK"
+2025-06-04 22:52:50,461 - httpx - INFO - HTTP Request: GET https://api.openai.com/v1/threads/thread_taDsiy08swDM9jsEHxAQF0D7/runs/run_SoRO22AdutO2qYSA0iT0Hbvt "HTTP/1.1 200 OK"
+2025-06-04 22:52:51,904 - httpx - INFO - HTTP Request: GET https://api.openai.com/v1/threads/thread_taDsiy08swDM9jsEHxAQF0D7/runs/run_SoRO22AdutO2qYSA0iT0Hbvt "HTTP/1.1 200 OK"
+2025-06-04 22:52:52,064 - httpx - INFO - HTTP Request: GET https://api.openai.com/v1/threads/thread_taDsiy08swDM9jsEHxAQF0D7/messages?limit=1 "HTTP/1.1 200 OK"
+2025-06-04 22:52:52,065 - app.services.openai_assistants.assistant_manager.manager - INFO - ✅ Success - User: 7, Assistant: forecasting
+2025-06-04 22:52:52,065 - app.services.openai_assistants.core.router - INFO - ✅ Assistant executed functions successfully - no re-routing needed
+2025-06-04 22:52:52,065 - app.services.openai_assistants.processors.function_processor - INFO - 🔧 Processing: forecast_cash_flow
+2025-06-04 22:52:52,065 - app.services.openai_assistants.processors.function_processor - INFO - 🔧 Created action: show_forecast
+2025-06-04 22:52:52,065 - app.services.openai_assistants.processors.function_processor - INFO - 🔧 Total actions: ['show_forecast']
+2025-06-04 22:52:52,065 - app.services.openai_assistants.core.response_builder - INFO - 🔧 Generated 1 tool_results for Rails
+2025-06-04 22:52:52,065 - app.services.openai_assistants.core.response_builder - INFO - 📤 Final response keys: ['message', 'response_text', 'actions', 'tool_results', 'classification', 'routing', 'success', 'metadata']
+2025-06-04 22:52:52,065 - app.services.openai_assistants.core.response_builder - INFO - 📤 Response has message: True
+2025-06-04 22:52:52,065 - app.services.openai_assistants.core.response_builder - INFO - 📤 Tool results count: 1
+2025-06-04 22:52:52,066 - app.services.openai_assistants.core.response_builder - INFO - 📤 Actions count: 1
+2025-06-04 22:52:52,066 - app.api.v1.endpoints.fin - INFO - 📤 Processed query successfully. Intent: forecasting, Actions: 1
+2025-06-04 22:52:52,066 - app.api.v1.endpoints.fin - INFO - Analytics: user=7, intent=forecasting, assistant=forecasting, success=True
+2025-06-04 22:52:52,066 - app.core.middleware - INFO - Request 5a016c4c-a00b-4206-8a8c-df23deb924f5 completed in 16.160s with status 200
+INFO:     127.0.0.1:44024 - "POST /api/v1/fin/conversations/query HTTP/1.1" 200 OK

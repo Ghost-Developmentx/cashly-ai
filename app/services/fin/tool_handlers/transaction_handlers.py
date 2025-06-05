@@ -25,7 +25,7 @@ class AsyncTransactionHandlers:
     """
 
     def __init__(self):
-        pass  # No Rails client needed for these operations
+        pass
 
     async def get_transactions(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Retrieve and filter user transactions."""

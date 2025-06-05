@@ -1,6 +1,9 @@
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Union
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from app.services.openai_assistants.assistant_manager.types import AssistantType
+
 
 class AssistantConfig(BaseSettings):
     """
@@ -45,12 +48,15 @@ class AssistantConfig(BaseSettings):
             "INSIGHTS": self.insights_assistant_id,
         }
 
-    def get_assistant_id(self, assistant_type: str) -> Optional[str]:
-        """Get assistant ID for a given type."""
+    def get_assistant_id(self, assistant_type: Union[str, AssistantType]) -> Optional[str]:
         assistant_ids = self._load_assistant_ids()
-        return assistant_ids.get(assistant_type.upper())
+        if isinstance(assistant_type, AssistantType):
+            key = assistant_type.name
+        else:
+            key = assistant_type
+        return assistant_ids.get(key.upper())
 
-    def is_assistant_configured(self, assistant_type: str) -> bool:
+    def is_assistant_configured(self, assistant_type: Union[str, AssistantType]) -> bool:
         """Check if an assistant is configured."""
         return self.get_assistant_id(assistant_type) is not None
 

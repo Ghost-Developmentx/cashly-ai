@@ -60,7 +60,7 @@ class IntegrationAnalytics:
         if len(self._query_cache[user_id]) > 100:
             self._query_cache[user_id] = self._query_cache[user_id][-100:]
 
-    def get_analytics(self, user_id: str, recent_queries: List[str]) -> Dict[str, Any]:
+    async def get_analytics(self, user_id: str, recent_queries: List[str]) -> Dict[str, Any]:
         """
         Generate analytics for user queries.
 
@@ -73,10 +73,10 @@ class IntegrationAnalytics:
         """
         try:
             # Get intent analytics
-            intent_analytics = self._analyze_intents(recent_queries)
+            intent_analytics = await self._analyze_intents(recent_queries)
 
             # Calculate assistant usage
-            assistant_usage = self._calculate_assistant_usage(recent_queries, user_id)
+            assistant_usage = await self._calculate_assistant_usage(recent_queries, user_id)
 
             # Get performance metrics
             performance_metrics = self._get_performance_metrics(user_id)
@@ -143,7 +143,7 @@ class IntegrationAnalytics:
             try:
                 routing = await self.intent_service.classify_and_route(query)
                 intent = routing["classification"]["intent"]
-                assistant = self.intent_mapper.get_default_assistant(intent)
+                assistant = await self.intent_mapper.get_default_assistant(intent)
                 assistant_usage[assistant.value] += 1
             except Exception as e:
                 logger.warning(f"Failed to route query: {e}")

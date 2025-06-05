@@ -58,7 +58,7 @@ class AsyncToolRegistry:
 
         # Initialize handlers
         self.account_handlers = AsyncAccountHandlers(self.rails_client)
-        self.transaction_handlers = AsyncTransactionHandlers()
+        self.transaction_handlers = AsyncTransactionHandlers(self.rails_client)
         self.invoice_handlers = AsyncInvoiceHandlers(self.rails_client)
         self.stripe_handlers = AsyncStripeHandlers(self.rails_client)
         self.analytics_handlers = AsyncAnalyticsHandlers()

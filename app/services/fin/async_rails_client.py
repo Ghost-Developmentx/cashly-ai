@@ -98,6 +98,37 @@ class AsyncRailsClient:
             logger.error(f"Rails API request failed: {e}")
             return {"error": str(e)}
 
+    async def get(
+            self, endpoint: str, params: Optional[Dict[str, Any]] = None,
+            timeout: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """Make async GET request to Rails API."""
+        url = f"{self.base_url}{endpoint}"
+        session = await self._get_session()
+
+        try:
+            custom_timeout = aiohttp.ClientTimeout(total=timeout) if timeout else None
+            async with session.get(url, params=params, timeout=custom_timeout) as response:
+                response_data = await response.json()
+
+                if response.status == 200:
+                    return response_data
+                else:
+                    logger.error(
+                        f"Rails API error: {response.status} - {response_data}"
+                    )
+                    return {
+                        "error": response_data.get("error", "Request failed"),
+                        "status_code": response.status,
+                    }
+
+        except asyncio.TimeoutError:
+            logger.error(f"Rails API timeout for {endpoint}")
+            return {"error": "Request timeout"}
+        except Exception as e:
+            logger.error(f"Rails API GET failed: {e}")
+            return {"error": str(e)}
+
     async def delete(
         self, endpoint: str, data: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:

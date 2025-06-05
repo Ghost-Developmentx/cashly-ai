@@ -77,15 +77,23 @@ class ContextEnhancer:
             integration_names = [i.get("provider", "Unknown") for i in integrations]
             context_parts.append(f"Active integrations: {', '.join(integration_names)}")
 
-        # Add transaction context
+        # Add transaction context - MODIFIED THIS PART
         transactions = user_context.get("transactions", [])
         if transactions:
-            context_parts.append(f"Available transaction data: {len(transactions)} transactions")
+            context_parts.append(
+                f"Available transaction data: {len(transactions)} transactions "
+                f"(accessible via tools)"  # Added this clarification
+            )
 
-        # Build enhanced query
+        # Build enhanced query - MODIFIED THIS PART
         if context_parts:
             context_info = "User context: " + "; ".join(context_parts)
-            enhanced_query = f"{context_info}\n\nUser query: {query}"
+            # Add explicit instruction to use tools
+            enhanced_query = f"""{context_info}
+
+    IMPORTANT: Use the appropriate tools to access and analyze the available data. Do not assume data is unavailable without using the tools first.
+
+    User query: {query}"""
         else:
             enhanced_query = query
 
@@ -136,12 +144,20 @@ class ContextEnhancer:
                 "For invoice queries, suggest setting up Stripe Connect."
             )
 
-        # Transaction-based instructions
+        # Transaction-based instructions - MODIFIED THIS PART
         transactions = user_context.get("transactions", [])
         if not transactions:
             instructions.append(
                 "Note: No transaction history available. "
                 "Financial insights will be limited."
+            )
+        else:
+            # ADD THIS NEW INSTRUCTION
+            instructions.append(
+                f"IMPORTANT: User has {len(transactions)} transactions available. "
+                f"Always use the appropriate tools (forecast_cash_flow, analyze_trends, etc.) "
+                f"to access and analyze this data. Never say 'no transaction history' without "
+                f"first attempting to use the tools."
             )
 
         return " ".join(instructions)

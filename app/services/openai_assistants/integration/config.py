@@ -4,10 +4,9 @@ Manages service-level settings and initialization.
 """
 
 import logging
-from typing import Dict, Any
-from pydantic import BaseModel
+from typing import Dict, Any, Optional
+from pydantic import BaseModel, Field
 from ..assistant_manager import AssistantConfig
-
 
 logger = logging.getLogger(__name__)
 
@@ -17,11 +16,21 @@ class IntegrationConfig(BaseModel):
     Configuration for integration components, now using Pydantic BaseModel.
     """
 
+    # Define fields for all the components we'll initialize
+    assistant_config: Optional[AssistantConfig] = Field(default=None)
+    assistant_manager: Optional[Any] = Field(default=None)
+    intent_service: Optional[Any] = Field(default=None)
+    router: Optional[Any] = Field(default=None)
+    intent_mapper: Optional[Any] = Field(default=None)
+    function_processor: Optional[Any] = Field(default=None)
+
+    model_config = {
+        "arbitrary_types_allowed": True  # Allow non-Pydantic types
+    }
+
     def __init__(self, **data):
         super().__init__(**data)
-        # Initialize core managers
-        self.assistant_config = AssistantConfig()
-        # Initialize other components...
+        # Initialize components after Pydantic initialization
         self._setup_components()
 
     def _setup_components(self):
@@ -30,11 +39,13 @@ class IntegrationConfig(BaseModel):
             # Import here to avoid circular imports
             from app.services.openai_assistants.assistant_manager import AsyncAssistantManager
             from app.services.intent_classification.async_intent_service import AsyncIntentService
-            from app.services.openai_assistants.routing.assistant_router import AssistantRouter
-            from app.services.openai_assistants.mapping.intent_mapper import IntentMapper
-            from app.services.openai_assistants.execution.function_processor import FunctionProcessor
-            from app.services.openai_assistants.routing.patterns import CROSS_ROUTING_PATTERNS
+            from app.services.openai_assistants.core.router import AssistantRouter
+            from app.services.openai_assistants.core.intent_mapper import IntentMapper
+            from app.services.openai_assistants.processors.function_processor import FunctionProcessor
+            from app.services.openai_assistants.utils.constants import CROSS_ROUTING_PATTERNS
 
+            # Now we can set these since they're defined as fields
+            self.assistant_config = AssistantConfig()
             self.assistant_manager = AsyncAssistantManager(self.assistant_config)
             self.intent_service = AsyncIntentService()
             self.router = AssistantRouter(CROSS_ROUTING_PATTERNS)
@@ -45,7 +56,7 @@ class IntegrationConfig(BaseModel):
 
         except ImportError as e:
             # Handle missing imports gracefully
-            print(f"Warning: Could not initialize some components: {e}")
+            logger.warning(f"Could not initialize some components: {e}")
 
     def _setup_tool_executor_sync(self):
         """Configure tool executor from existing Fin service."""
@@ -72,27 +83,31 @@ class IntegrationConfig(BaseModel):
             self.assistant_manager.set_tool_executor(async_tool_executor)
 
         except Exception as e:
-            print(f"Failed to setup tool executor: {e}")
+            logger.warning(f"Failed to setup tool executor: {e}")
 
     async def validate(self) -> Dict[str, Any]:
         """Validate all components are properly configured."""
         validation_results = {"components": {}, "is_valid": True}
 
         # Check assistant configuration
-        assistant_validation = self.assistant_config.validate()
-        validation_results["components"]["assistants"] = assistant_validation
-        if not assistant_validation["valid"]:
-            validation_results["is_valid"] = False
+        if self.assistant_config:
+            assistant_validation = self.assistant_config.validate()
+            validation_results["components"]["assistants"] = assistant_validation
+            if not assistant_validation["valid"]:
+                validation_results["is_valid"] = False
 
         # Check if the tool executor is set
-        has_tool_executor = hasattr(self, 'assistant_manager') and hasattr(self.assistant_manager, 'tool_executor')
+        has_tool_executor = (
+            self.assistant_manager is not None
+            and hasattr(self.assistant_manager, 'tool_executor')
+        )
         validation_results["components"]["tool_executor"] = {
             "configured": has_tool_executor
         }
 
         # Check intent service
         try:
-            if hasattr(self, 'intent_service'):
+            if self.intent_service:
                 test_result = await self.intent_service.classify_and_route("test")
                 validation_results["components"]["intent_service"] = {
                     "status": "healthy",
