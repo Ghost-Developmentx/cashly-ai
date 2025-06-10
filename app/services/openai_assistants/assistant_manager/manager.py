@@ -39,7 +39,7 @@ class AsyncAssistantManager:
     """
 
     def __init__(self, config: Optional[AssistantConfig] = None):
-        """Initialize with shared configuration."""
+        """Initialize with a shared configuration."""
         self.config = config or AssistantConfig()
 
         # Initialize components

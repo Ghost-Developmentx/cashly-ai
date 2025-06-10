@@ -3,13 +3,12 @@ Account management and Plaid connection endpoints.
 Replaces Flask AccountController.
 """
 
-from typing import Dict, Any, List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+from typing import List, Optional
+from fastapi import APIRouter, HTTPException, Query
 from logging import getLogger
 from datetime import datetime, timedelta
 
-from app.core.dependencies import get_db
-from app.core.exceptions import ValidationError, ResourceNotFoundError
+from app.core.exceptions import ResourceNotFoundError
 from app.api.v1.schemas.accounts import (
     AccountStatusRequest,
     AccountStatusResponse,
@@ -17,19 +16,17 @@ from app.api.v1.schemas.accounts import (
     PlaidConnectionResponse,
     DisconnectAccountRequest,
     DisconnectAccountResponse,
-    AccountDetailsRequest,
     AccountDetailsResponse,
     BankAccount,
     AccountStatus,
 )
-from app.api.v1.schemas.base import SuccessResponse, ErrorResponse
-from app.services.fin.async_tool_registry import AsyncToolRegistry
+from app.core.tools.executor import ToolExecutor
 
 logger = getLogger(__name__)
 router = APIRouter()
 
 # Initialize tool registry for account operations
-tool_registry = AsyncToolRegistry()
+tool_executor = ToolExecutor()
 
 
 @router.post(
@@ -44,7 +41,7 @@ async def get_account_status(request: AccountStatusRequest) -> AccountStatusResp
         logger.info(f"Getting account status for user {request.user_id}")
 
         # Execute get_user_accounts tool
-        result = await tool_registry.execute(
+        result = await tool_executor.execute(
             tool_name="get_user_accounts",
             tool_args={},
             user_id=request.user_id,
@@ -113,7 +110,7 @@ async def initiate_plaid_connection(
         )
 
         # Execute initiate_plaid_connection tool
-        result = await tool_registry.execute(
+        result = await tool_executor.execute(
             tool_name="initiate_plaid_connection",
             tool_args={
                 "institution_preference": (
@@ -166,7 +163,7 @@ async def disconnect_account(
         )
 
         # Execute disconnect_account tool
-        result = await tool_registry.execute(
+        result = await tool_executor.execute(
             tool_name="disconnect_account",
             tool_args={"account_id": request.account_id},
             user_id=request.user_id,
@@ -216,7 +213,7 @@ async def get_account_details(
     """Get detailed account information."""
     try:
         # Execute get_account_details tool
-        result = await tool_registry.execute(
+        result = await tool_executor.execute(
             tool_name="get_account_details",
             tool_args={"account_id": account_id},
             user_id=user_id,
@@ -290,9 +287,9 @@ async def list_accounts(
     """List all user accounts."""
     try:
         # Get user context with accounts
-        user_context = {"accounts": []}  # Would fetch from database
+        user_context = {"accounts": []}  # Would fetch from a database
 
-        result = await tool_registry.execute(
+        result = await tool_executor.execute(
             tool_name="get_user_accounts",
             tool_args={},
             user_id=user_id,

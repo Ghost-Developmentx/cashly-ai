@@ -149,34 +149,17 @@ class BaseAssistantFactory(ABC):
             return {"error": str(e)}
 
     def _get_function_schema(self, function_name: str) -> Dict[str, Any]:
-        """
-        Get the OpenAI function schema for a given function name.
+        from app.core.tools.registry import tool_registry
 
-        Args:
-            function_name: Name of the function
+        tool = tool_registry.get_tool(function_name)
+        if tool:
+            return {
+                "name": tool.name,
+                "description": tool.description,
+                "parameters": tool.schema
+            }
 
-        Returns:
-            OpenAI function schema dictionary
-        """
-        try:
-            # Import tool schemas
-            from app.services.fin.tool_schemas import TOOL_SCHEMAS
-
-            # Find the matching schema
-            for schema in TOOL_SCHEMAS:
-                if schema["name"] == function_name:
-                    return {
-                        "name": schema["name"],
-                        "description": schema["description"],
-                        "parameters": schema["input_schema"],
-                    }
-
-            # Return fallback schema if not found
-            return self._get_fallback_schema(function_name)
-
-        except ImportError:
-            logger.warning("Could not import tool schemas, using fallback")
-            return self._get_fallback_schema(function_name)
+        return self._get_fallback_schema(function_name)
 
     @staticmethod
     def _get_fallback_schema(function_name: str) -> Dict[str, Any]:
@@ -349,26 +332,11 @@ class BaseAssistantFactory(ABC):
             },
         )
 
-    def _build_tools_list(self, function_names: List[str]) -> List[Dict[str, Any]]:
-        """
-        Build a list of OpenAI tools from function names.
+    @staticmethod
+    def _build_tools_list(function_names: List[str]) -> List[Dict[str, Any]]:
+        from app.core.tools.registry import tool_registry
 
-        Args:
-            function_names: List of function names to include
-
-        Returns:
-            List of OpenAI tool configurations
-        """
-        tools = []
-
-        for function_name in function_names:
-            tool_config = {
-                "type": "function",
-                "function": self._get_function_schema(function_name),
-            }
-            tools.append(tool_config)
-
-        return tools
+        return tool_registry.get_openai_tools(function_names)
 
     def validate_configuration(self) -> Dict[str, Any]:
         """

@@ -23,6 +23,7 @@ class IntegrationConfig(BaseModel):
     router: Optional[Any] = Field(default=None)
     intent_mapper: Optional[Any] = Field(default=None)
     function_processor: Optional[Any] = Field(default=None)
+    tool_executor: Optional[Any] = Field(default=None)
 
     model_config = {
         "arbitrary_types_allowed": True  # Allow non-Pydantic types
@@ -52,38 +53,59 @@ class IntegrationConfig(BaseModel):
             self.intent_mapper = IntentMapper()
             self.function_processor = FunctionProcessor()
 
-            self._setup_tool_executor_sync()
+            # Setup unified tool executor
+            self._setup_tool_executor()
 
         except ImportError as e:
             # Handle missing imports gracefully
             logger.warning(f"Could not initialize some components: {e}")
 
-    def _setup_tool_executor_sync(self):
-        """Configure tool executor from existing Fin service."""
+    def _setup_tool_executor(self):
+        """Configure unified tool executor."""
         try:
-            from app.services.fin.async_tool_registry import AsyncToolRegistry
+            # Import the new unified tool system
+            from app.core.tools import ToolExecutor
 
-            tool_registry = AsyncToolRegistry()
+            # Import handlers to ensure they're registered
+            import app.core.tools.handlers.transactions
+            import app.core.tools.handlers.accounts
+            import app.core.tools.handlers.invoices
+            import app.core.tools.handlers.stripe
+            import app.core.tools.handlers.analytics
 
-            async def async_tool_executor(
-                    tool_name: str, tool_args: Dict[str, Any], **kwargs
+            # Initialize Rails client if available
+            rails_client = None
+            try:
+                from app.services.fin.async_rails_client import AsyncRailsClient
+                rails_client = AsyncRailsClient()
+            except ImportError:
+                logger.warning("Rails client not available")
+
+            # Create tool executor with Rails client
+            self.tool_executor = ToolExecutor(rails_client=rails_client)
+
+            # Set the tool executor on the assistant manager
+            # The assistant manager expects a function that takes (tool_name, tool_args, **kwargs)
+            async def tool_executor_wrapper(
+                    tool_name: str,
+                    tool_args: Dict[str, Any],
+                    **kwargs
             ) -> Dict[str, Any]:
-                """Async wrapper for tool registry execution."""
-                try:
-                    return await tool_registry.execute(
-                        tool_name=tool_name,
-                        tool_args=tool_args,
-                        user_id=kwargs.get("user_id", "unknown"),
-                        transactions=kwargs.get("transactions", []),
-                        user_context=kwargs.get("user_context", {}),
-                    )
-                except Exception as e:
-                    return {"error": f"Tool execution failed: {str(e)}"}
+                """Wrapper to match expected signature."""
+                return await self.tool_executor.execute(
+                    tool_name=tool_name,
+                    tool_args=tool_args,
+                    user_id=kwargs.get("user_id", "unknown"),
+                    transactions=kwargs.get("transactions", []),
+                    user_context=kwargs.get("user_context", {})
+                )
 
-            self.assistant_manager.set_tool_executor(async_tool_executor)
+            self.assistant_manager.set_tool_executor(tool_executor_wrapper)
+
+            logger.info("✅ Unified tool executor configured successfully")
 
         except Exception as e:
-            logger.warning(f"Failed to setup tool executor: {e}")
+            logger.warning(f"Failed to setup unified tool executor: {e}")
 
     async def validate(self) -> Dict[str, Any]:
         """Validate all components are properly configured."""
@@ -102,7 +124,8 @@ class IntegrationConfig(BaseModel):
             and hasattr(self.assistant_manager, 'tool_executor')
         )
         validation_results["components"]["tool_executor"] = {
-            "configured": has_tool_executor
+            "configured": has_tool_executor,
+            "using_unified_system": self.tool_executor is not None
         }
 
         # Check intent service
@@ -119,5 +142,20 @@ class IntegrationConfig(BaseModel):
                 "error": str(e),
             }
             validation_results["is_valid"] = False
+
+        # Validate tool registry
+        try:
+            from app.core.tools.registry import tool_registry
+            registered_tools = tool_registry.list_tools()
+            validation_results["components"]["tool_registry"] = {
+                "status": "healthy",
+                "registered_tools_count": len(registered_tools),
+                "tools": registered_tools[:10]  # Show first 10
+            }
+        except Exception as e:
+            validation_results["components"]["tool_registry"] = {
+                "status": "error",
+                "error": str(e)
+            }
 
         return validation_results
