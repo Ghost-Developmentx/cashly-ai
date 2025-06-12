@@ -12,6 +12,9 @@ from openai import AsyncOpenAI
 from ...schemas.assistant import AssistantConfig, AssistantResponse, AssistantType
 from .helpers.assistant_helpers import enhance_query_with_context
 from app.core.tools import tool_registry
+from app.core.config import get_settings
+
+settings = get_settings()
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +33,10 @@ class UnifiedAssistantManager:
             config_path: Path to assistants.yaml (defaults to app/config/assistants.yaml)
         """
         self.config_path = config_path or Path(__file__).parent.parent.parent / "config" / "assistants.yaml"
-        self.client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        self.client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+        logger.info(
+            f"Initialized UnifiedAssistantManager with API key {settings.OPENAI_API_KEY[:4]}...{settings.OPENAI_API_KEY[-4:]}"
+        )
 
         # Load configuration
         self.assistant_configs: Dict[AssistantType, AssistantConfig] = {}

@@ -77,7 +77,7 @@ def get_anomaly_service() -> AsyncAnomalyService:
 
 def get_openai_service() -> OpenAIIntegrationService:
     """Get OpenAI integration service (mocked in tests)."""
-    if settings.testing or os.getenv("TESTING", "false").lower() == "true":
+    if settings.TESTING or os.getenv("TESTING", "false").lower() == "true":
         # Return mock for tests
         mock = AsyncMock()
         mock.health_check = AsyncMock(return_value={

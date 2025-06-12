@@ -161,28 +161,3 @@ def create_assistant_manager(config: Optional[Any] = None) -> AsyncAssistantMana
 def create_factory_manager(api_key: Optional[str] = None) -> AssistantFactoryManager:
     """Create factory manager with migration adapter."""
     return AssistantFactoryManager(api_key)
-
-
-# Update imports to point to new location
-def update_imports():
-    """
-    Update import statements during migration.
-    This would be run as a script to update the codebase.
-    """
-    replacements = [
-        # Old import -> New import
-        (
-            "from app.services.openai_assistants.assistant_manager import AsyncAssistantManager",
-            "from app.core.assistants.migration import AsyncAssistantManager"
-        ),
-        (
-            "from app.services.openai_assistants.factories import AssistantFactoryManager",
-            "from app.core.assistants.migration import AssistantFactoryManager"
-        ),
-        (
-            "from app.services.openai_assistants.assistant_manager import AssistantType",
-            "from app.core.assistants.manager import AssistantType"
-        ),
-    ]
-
-    return replacements

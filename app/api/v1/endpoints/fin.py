@@ -101,7 +101,7 @@ async def process_query(
             conversation_id=user_context.get("conversation_id"),
         )
 
-        # Log analytics in background
+        # Log analytics in the background
         if response.success:
             background_tasks.add_task(
                 _log_query_analytics,

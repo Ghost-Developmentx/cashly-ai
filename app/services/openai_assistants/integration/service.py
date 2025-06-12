@@ -46,7 +46,7 @@ class OpenAIIntegrationService:
             self.config.intent_service, self.config.intent_mapper
         )
 
-        # Initialize query handler with dependencies
+        # Initialize a query handler with dependencies
         self.query_handler = QueryPipeline(
             assistant_manager=self.config.assistant_manager,
         )
