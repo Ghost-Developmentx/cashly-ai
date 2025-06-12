@@ -3,122 +3,124 @@
 Centralized configuration using Pydantic Settings.
 Replaces: config/database.py, config/openai.py
 """
-
+from fastapi import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field, field_validator
-from typing import Optional
+from typing import Optional, List
 from functools import lru_cache
 
 
 class Settings(BaseSettings):
     """Application settings with validation."""
 
-    # API Configuration
-    api_v1_prefix: str = "/api/v1"
-    project_name: str = "Cashly AI Service"
-    version: str = "2.0.0"
-    debug: bool = False
+    # ------------------------------------------------------------------
+    # Meta / runtime environment
+    # ------------------------------------------------------------------
+    ENVIRONMENT: str = Field("development", validation_alias="ENVIRONMENT")
+    APP_NAME: str = Field("Cashly AI Service", validation_alias="APP_NAME")
+    VERSION: str = Field("0.1.0", validation_alias="VERSION")
+    TESTING: bool = Field(False, validation_alias="TESTING")
+    DOCKER_ENV: bool = Field(False, validation_alias="DOCKER_ENV")
 
-    # Server Configuration
-    host: str = "0.0.0.0"
-    port: int = 8000
-    workers: int = 1
+    # FastAPI / Uvicorn
+    API_V1_PREFIX: str = Field("/api/v1", validation_alias="API_V1_PREFIX")
+    HOST: str = Field("0.0.0.0", validation_alias="HOST")
+    PORT: int = Field(8000, validation_alias="PORT")
+    WORKERS: int = Field(1, validation_alias="WORKERS")
+    ALLOWED_ORIGINS: List[str] = Field(default_factory=list, validation_alias="ALLOWED_ORIGINS")
 
-    # CORS
-    backend_cors_origins: list[str] = ["*"]
 
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_prefix="",
-    )
+    # ------------------------------------------------------------------
+    # OpenAI Core
+    # ------------------------------------------------------------------
+    OPENAI_API_KEY: str = Field(..., validation_alias="OPENAI_API_KEY")
+    OPENAI_MODEL: str = Field("gpt-4o", validation_alias="OPENAI_MODEL")
+    OPENAI_EMBEDDING_MODEL: str = Field("text-embedding-3-small", validation_alias="OPENAI_EMBEDDING_MODEL")
+    OPENAI_EMBEDDING_DIMENSIONS: int = Field(1536, validation_alias="OPENAI_EMBEDDING_DIMENSIONS")
+    OPENAI_MAX_TOKENS: int = Field(8191, validation_alias="OPENAI_MAX_TOKENS")
+    OPENAI_REQUEST_TIMEOUT: int = Field(30, validation_alias="OPENAI_REQUEST_TIMEOUT")
+    OPENAI_MAX_RETRIES: int = Field(3, validation_alias="OPENAI_MAX_RETRIES")
+    OPENAI_ORGANIZATION: Optional[str] = Field(None, validation_alias="OPENAI_ORGANIZATION")
 
-    # ML Model Configuration
-    model_dir: str = Field(
-        default="data/trained_models",
-        validation_alias="MODEL_DIR"
-    )
-    training_data_dir: str = Field(
-        default="data/training_data",
-        validation_alias="TRAINING_DATA_DIR"
-    )
-    use_advanced_features: bool = Field(
-        default=False,
-        validation_alias="USE_ADVANCED_FEATURES"
-    )
-    model_cache_ttl: int = Field(
-        default=3600,
-        validation_alias="MODEL_CACHE_TTL"
-    )
-    enable_ml_forecasting: bool = Field(
-        default=True,
-        validation_alias="ENABLE_ML_FORECASTING"
-    )
-    ml_min_training_samples: int = Field(
-        default=30,
-        validation_alias="ML_MIN_TRAINING_SAMPLES"
-    )
-
-    # OpenAI Configuration
-    openai_api_key: str = Field(default="sk-test", validation_alias="OPENAI_API_KEY")
-    openai_model: str = "gpt-4-turbo-preview"
-    openai_embedding_model: str = "text-embedding-3-small"
-    openai_embedding_dimensions: int = 1536
-    openai_max_tokens: int = 8191
-    openai_request_timeout: int = 60
-    openai_max_retries: int = 3
-    openai_organization: str = Field(default="", validation_alias="OPENAI_ORGANIZATION")
-    assistant_timeout: int = Field(
-        default=30, validation_alias="ASSISTANT_TIMEOUT", ge=1
-    )
-    max_retries: int = Field(default=3, validation_alias="MAX_RETRIES", ge=0)
-    insights_assistant_id: Optional[str] = Field(
-        default=None, validation_alias="INSIGHTS_ASSISTANT_ID"
-    )
-    bank_connection_assistant_id: Optional[str] = Field(
-        default=None, validation_alias="BANK_CONNECTION_ASSISTANT_ID"
-    )
-    payment_processing_assistant_id: Optional[str] = Field(
-        default=None, validation_alias="PAYMENT_PROCESSING_ASSISTANT_ID"
-    )
-
-    # Database Configuration
-    postgres_host: str = Field(default="localhost", validation_alias="POSTGRES_HOST")
-    postgres_port: int = Field(default=5432, validation_alias="POSTGRES_PORT")
-    postgres_db: str = Field(default="cashly_ai_vectors", validation_alias="POSTGRES_DB")
-    postgres_user: str = Field(default="cashly_ai", validation_alias="POSTGRES_USER")
-    postgres_password: str = Field(default="password", validation_alias="POSTGRES_PASSWORD")
-
-    # Connection Pool Settings
-    db_pool_size: int = 20
-    db_max_overflow: int = 10
-    db_pool_pre_ping: bool = True
-
-    # Async Database Settings - Just simple fields, no circular properties!
-    async_db_min_pool_size: int = Field(default=10, validation_alias="ASYNC_DB_MIN_POOL_SIZE")
-    async_db_max_pool_size: int = Field(default=20, validation_alias="ASYNC_DB_MAX_POOL_SIZE")
-    async_db_command_timeout: float = Field(default=10.0, validation_alias="ASYNC_DB_COMMAND_TIMEOUT")
-    async_db_max_queries: int = Field(default=50000, validation_alias="ASYNC_DB_MAX_QUERIES")
-    async_db_max_inactive_lifetime: float = Field(default=300.0, validation_alias="ASYNC_DB_MAX_INACTIVE_LIFETIME")
-    async_db_statement_cache_size: int = Field(default=1024, validation_alias="ASYNC_DB_STATEMENT_CACHE_SIZE")
-
-    # Testing flag
-    testing: bool = Field(default=False, validation_alias="TESTING")
-
-    # Redis Configuration (Future)
-    redis_url: Optional[str] = None
-
-    # Rails API Configuration
-    rails_api_url: Optional[str] = Field(default=None, validation_alias="RAILS_API_URL")
-    internal_api_key: str = "your-secure-internal-api-key"
+    # Assistant runtime tuning
+    ASSISTANT_TIMEOUT: int = Field(30, validation_alias="ASSISTANT_TIMEOUT")
+    MAX_RETRIES: int = Field(3, validation_alias="MAX_RETRIES")
 
     # Assistant IDs
-    transaction_assistant_id: Optional[str] = None
-    account_assistant_id: Optional[str] = None
-    invoice_assistant_id: Optional[str] = None
-    forecasting_assistant_id: Optional[str] = None
-    budget_assistant_id: Optional[str] = None
+    TRANSACTION_ASSISTANT_ID: Optional[str] = Field(None, validation_alias="TRANSACTION_ASSISTANT_ID")
+    ACCOUNT_ASSISTANT_ID: Optional[str] = Field(None, validation_alias="ACCOUNT_ASSISTANT_ID")
+    INVOICE_ASSISTANT_ID: Optional[str] = Field(None, validation_alias="INVOICE_ASSISTANT_ID")
+    FORECASTING_ASSISTANT_ID: Optional[str] = Field(None, validation_alias="FORECASTING_ASSISTANT_ID")
+    BUDGET_ASSISTANT_ID: Optional[str] = Field(None, validation_alias="BUDGET_ASSISTANT_ID")
+    INSIGHTS_ASSISTANT_ID: Optional[str] = Field(None, validation_alias="INSIGHTS_ASSISTANT_ID")
+    BANK_CONNECTION_ASSISTANT_ID: Optional[str] = Field(None, validation_alias="BANK_CONNECTION_ASSISTANT_ID")
+    PAYMENT_PROCESSING_ASSISTANT_ID: Optional[str] = Field(None, validation_alias="PAYMENT_PROCESSING_ASSISTANT_ID")
 
-    @field_validator("backend_cors_origins", mode="before")
+    # ------------------------------------------------------------------
+    # External service endpoints
+    # ------------------------------------------------------------------
+    RAILS_API_URL: str = Field("http://localhost:3000", validation_alias="RAILS_API_URL")
+    INTERNAL_API_KEY: str = Field(..., validation_alias="INTERNAL_API_KEY")
+
+    # Clerk / Auth
+    CLERK_JWKS_URL: str = Field(..., validation_alias="CLERK_JWKS_URL")
+    CLERK_ISSUER: str = Field(..., validation_alias="CLERK_ISSUER")
+
+    # ------------------------------------------------------------------
+    # Vector PostgreSQL (Application embeddings)
+    # ------------------------------------------------------------------
+    POSTGRES_HOST: str = Field("localhost", validation_alias="POSTGRES_HOST")
+    POSTGRES_PORT: int = Field(5433, validation_alias="POSTGRES_PORT")
+    POSTGRES_DB: str = Field("cashly_ai_vectors", validation_alias="POSTGRES_DB")
+    POSTGRES_USER: str = Field("cashly_ai", validation_alias="POSTGRES_USER")
+    POSTGRES_PASSWORD: str = Field(..., validation_alias="POSTGRES_PASSWORD")
+
+    DB_MAX_OVERFLOW: int = Field(10, validation_alias="DB_MAX_OVERFLOW")
+    DB_POOL_SIZE: int = Field(20, validation_alias="DB_POOL_SIZE")
+    DB_POOL_PRE_PING: bool = Field(True, validation_alias="DB_POOL_PRE_PING")
+
+    # AsyncPG‑specific pool tuning
+    ASYNC_DB_MIN_POOL_SIZE: int = Field(10, validation_alias="ASYNC_DB_MIN_POOL_SIZE")
+    ASYNC_DB_MAX_POOL_SIZE: int = Field(20, validation_alias="ASYNC_DB_MAX_POOL_SIZE")
+    ASYNC_DB_COMMAND_TIMEOUT: float = Field(10.0, validation_alias="ASYNC_DB_COMMAND_TIMEOUT")
+    ASYNC_DB_MAX_QUERIES: int = Field(50000, validation_alias="ASYNC_DB_MAX_QUERIES")
+    ASYNC_DB_MAX_INACTIVE_LIFETIME: float = Field(300.0, validation_alias="ASYNC_DB_MAX_INACTIVE_LIFETIME")
+    ASYNC_DB_STATEMENT_CACHE_SIZE: int = Field(1024, validation_alias="ASYNC_DB_STATEMENT_CACHE_SIZE")
+
+    # ------------------------------------------------------------------
+    # MLflow & model registry
+    # ------------------------------------------------------------------
+    # Backing PostgreSQL
+    MLFLOW_POSTGRES_HOST: str = Field("postgres-mlflow", validation_alias="MLFLOW_POSTGRES_HOST")
+    MLFLOW_POSTGRES_PORT: int = Field(5432, validation_alias="MLFLOW_POSTGRES_PORT")
+    MLFLOW_POSTGRES_DB: str = Field("mlflow_tracking", validation_alias="MLFLOW_POSTGRES_DB")
+    MLFLOW_POSTGRES_USER: str = Field("cashly_ml", validation_alias="MLFLOW_POSTGRES_USER")
+    MLFLOW_POSTGRES_PASSWORD: str = Field(..., validation_alias="MLFLOW_POSTGRES_PASSWORD")
+
+    # MLflow runtime
+    MLFLOW_HOST: str = Field("localhost", validation_alias="MLFLOW_HOST")
+    MLFLOW_TRACKING_URI: str = Field("http://localhost:5000", validation_alias="MLFLOW_TRACKING_URI")
+    MLFLOW_EXPERIMENT_NAME: str = Field("cashly-ai-models", validation_alias="MLFLOW_EXPERIMENT_NAME")
+    MLFLOW_S3_BUCKET: str = Field("cashly-ai-models", validation_alias="MLFLOW_S3_BUCKET")
+
+    # ------------------------------------------------------------------
+    # AWS
+    # ------------------------------------------------------------------
+    AWS_ACCESS_KEY_ID: Optional[str] = Field(None, validation_alias="AWS_ACCESS_KEY_ID")
+    AWS_SECRET_ACCESS_KEY: Optional[str] = Field(None, validation_alias="AWS_SECRET_ACCESS_KEY")
+    AWS_DEFAULT_REGION: str = Field("us-east-1", validation_alias="AWS_DEFAULT_REGION")
+    MLFLOW_S3_PREFIX: str = Field("mflow", validation_alias="MLFLOW_S3_PREFIX")
+
+    # ------------------------------------------------------------------
+    # Validators & helpers
+    # ------------------------------------------------------------------
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    @field_validator("ALLOWED_ORIGINS", mode="before")
     def assemble_cors_origins(cls, v: str | list[str]) -> list[str]:
         if isinstance(v, str) and not v.startswith("["):
             return [i.strip() for i in v.split(",")]
@@ -130,24 +132,24 @@ class Settings(BaseSettings):
     def database_url(self) -> str:
         """Construct database URL."""
         return (
-            f"postgresql://{self.postgres_user}:{self.postgres_password}@"
-            f"{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
+            f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@"
+            f"{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
         )
 
     @property
     def async_database_url(self) -> str:
         """Construct async database URL."""
         return (
-            f"postgresql+asyncpg://{self.postgres_user}:{self.postgres_password}@"
-            f"{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
+            f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@"
+            f"{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
         )
 
     @property
     def asyncpg_dsn(self) -> str:
         """DSN for asyncpg, without an SQLAlchemy-specific scheme."""
         return (
-            f"postgresql://{self.postgres_user}:{self.postgres_password}@"
-            f"{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
+            f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@"
+            f"{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
         )
 
     @property
@@ -158,17 +160,17 @@ class Settings(BaseSettings):
     def get_pool_kwargs(self) -> dict:
         """Get asyncpg pool configuration."""
         return {
-            "min_size": self.async_db_min_pool_size,
-            "max_size": self.async_db_max_pool_size,
-            "max_queries": self.async_db_max_queries,
-            "max_inactive_connection_lifetime": self.async_db_max_inactive_lifetime,
-            "command_timeout": self.async_db_command_timeout,
+            "min_size": self.ASYNC_DB_MIN_POOL_SIZE,
+            "max_size": self.ASYNC_DB_MAX_POOL_SIZE,
+            "max_queries": self.ASYNC_DB_MAX_QUERIES,
+            "max_inactive_connection_lifetime": self.ASYNC_DB_MAX_INACTIVE_LIFETIME,
+            "command_timeout": self.ASYNC_DB_COMMAND_TIMEOUT,
         }
 
 
-@lru_cache()
-def get_settings() -> Settings:
-    """Get cached settings instance."""
+@lru_cache(maxsize=None)
+def get_settings() -> Settings:  # pragma: no cover – trivial helper
+    """Return a cached :class:`Settings` instance."""
     return Settings()
 
 

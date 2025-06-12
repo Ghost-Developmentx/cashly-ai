@@ -7,7 +7,7 @@ from typing import Dict, List, Any
 from datetime import datetime
 from collections import defaultdict
 
-from app.api.v1.schemas.insights import TrendDirection
+from app.schemas.insights import TrendDirection
 
 logger = logging.getLogger(__name__)
 

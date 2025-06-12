@@ -10,7 +10,7 @@ from datetime import datetime
 
 from .config import IntegrationConfig
 from .analytics import IntegrationAnalytics
-from ..handlers.query_handler import QueryHandler
+from app.core.pipeline import QueryPipeline
 
 logger = logging.getLogger(__name__)
 
@@ -47,12 +47,8 @@ class OpenAIIntegrationService:
         )
 
         # Initialize query handler with dependencies
-        self.query_handler = QueryHandler(
+        self.query_handler = QueryPipeline(
             assistant_manager=self.config.assistant_manager,
-            intent_service=self.config.intent_service,
-            router=self.config.router,
-            intent_mapper=self.config.intent_mapper,
-            function_processor=self.config.function_processor,
         )
 
         logger.info("✅ OpenAI Integration Service initialized")

@@ -9,7 +9,7 @@ from logging import getLogger
 from datetime import datetime, timedelta
 
 from app.core.exceptions import ResourceNotFoundError
-from app.api.v1.schemas.accounts import (
+from app.schemas.accounts import (
     AccountStatusRequest,
     AccountStatusResponse,
     PlaidConnectionRequest,

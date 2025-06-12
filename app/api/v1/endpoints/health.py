@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_db, get_openai_service
 from app.core.config import settings
-from app.api.v1.schemas.health import (
+from app.schemas.health import (
     HealthResponse,
     DetailedHealthResponse,
     ComponentHealth,

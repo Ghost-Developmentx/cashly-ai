@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from logging import getLogger
 
 from app.core.dependencies import get_categorization_service
-from app.api.v1.schemas.categorization import (
+from app.schemas.categorization import (
     TransactionInput,
     BatchTransactionInput,
     CategoryResponse,
@@ -17,7 +17,7 @@ from app.api.v1.schemas.categorization import (
     CategoryFeedback,
     CategoryStatistics,
 )
-from app.api.v1.schemas.base import SuccessResponse
+from app.schemas.base import SuccessResponse
 from app.services.categorize import AsyncCategorizationService
 
 logger = getLogger(__name__)

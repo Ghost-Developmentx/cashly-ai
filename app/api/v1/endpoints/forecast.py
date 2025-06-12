@@ -6,18 +6,16 @@ Replaces Flask ForecastController.
 from typing import Dict, Any, List
 from fastapi import APIRouter, Depends, HTTPException, Query
 from logging import getLogger
-from datetime import datetime, timedelta
 
 from app.core.dependencies import get_forecast_service
 from app.core.exceptions import ValidationError
-from app.api.v1.schemas.forecast import (
+from app.schemas.forecast import (
     ForecastRequest,
     ScenarioForecastRequest,
     ForecastResponse,
     DailyForecast,
     ForecastAccuracy,
 )
-from app.api.v1.schemas.base import SuccessResponse, ErrorResponse
 from app.services.forecast import AsyncForecastService
 
 logger = getLogger(__name__)

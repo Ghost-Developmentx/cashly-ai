@@ -9,7 +9,7 @@ from logging import getLogger
 
 from app.core.dependencies import get_insight_service
 from app.core.exceptions import ValidationError
-from app.api.v1.schemas.insights import (
+from app.schemas.insights import (
     TrendAnalysisRequest,
     TrendAnalysisResponse,
     FinancialSummaryRequest,

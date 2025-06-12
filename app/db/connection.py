@@ -35,8 +35,8 @@ class DatabaseConnection:
             self._engine = create_engine(
                 self.config.connection_string,
                 poolclass=QueuePool,
-                pool_size=self.config.db_pool_size,
-                max_overflow=self.config.db_max_overflow,
+                pool_size=self.config.DB_POOL_SIZE,
+                max_overflow=self.config.DB_MAX_OVERFLOW,
                 pool_pre_ping=True,
                 echo=False,
             )

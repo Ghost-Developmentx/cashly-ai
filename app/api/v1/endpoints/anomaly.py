@@ -3,14 +3,14 @@ Anomaly detection endpoints for unusual transaction patterns.
 Replaces Flask AnomalyController.
 """
 
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from logging import getLogger
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from app.core.dependencies import get_anomaly_service
 from app.core.exceptions import ValidationError
-from app.api.v1.schemas.anomaly import (
+from app.schemas.anomaly import (
     AnomalyDetectionRequest,
     AnomalyDetectionResponse,
     DetectedAnomaly,
@@ -21,7 +21,7 @@ AnomalyPattern,
     AnomalyType,
     AnomalySeverity,
 )
-from app.api.v1.schemas.base import SuccessResponse
+from app.schemas.base import SuccessResponse
 from app.services.anomaly import AsyncAnomalyService
 
 logger = getLogger(__name__)

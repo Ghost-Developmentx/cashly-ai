@@ -6,9 +6,9 @@ Provides core client initialization and common methods.
 import logging
 from typing import Optional
 from openai import AsyncOpenAI
-from .config import AssistantConfig
-from .types import AssistantType
 import dotenv
+
+from app.core.assistants import UnifiedAssistantManager, AssistantFactory
 
 dotenv.load_dotenv()
 
@@ -33,14 +33,14 @@ class BaseManager:
         Asynchronous client for interacting with the OpenAI API.
     """
 
-    def __init__(self, config: Optional[AssistantConfig] = None):
+    def __init__(self, config: Optional[UnifiedAssistantManager] = None):
         """
         Initialize base manager.
 
         Args:
             config: Optional configuration object
         """
-        self.config = config or AssistantConfig()
+        self.config = config or UnifiedAssistantManager()
 
         # Validate configuration
         validation = self.config.validate()

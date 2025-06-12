@@ -10,14 +10,14 @@ from logging import getLogger
 
 from app.core.dependencies import get_budget_service
 from app.core.exceptions import ValidationError
-from app.api.v1.schemas.budget import (
+from app.schemas.budget import (
     BudgetRequest,
     BudgetResponse,
     BudgetSummary,
     CategoryBudget,
     SavingsPotential,
 )
-from app.api.v1.schemas.base import SuccessResponse, ErrorResponse
+from app.schemas.base import SuccessResponse
 from app.services.budget import AsyncBudgetService
 
 logger = getLogger(__name__)

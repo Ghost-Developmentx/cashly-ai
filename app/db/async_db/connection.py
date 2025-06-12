@@ -72,13 +72,13 @@ class AsyncDatabaseConnection:
                 self.settings.async_database_url,
                 echo=False,
                 pool_pre_ping=True,
-                pool_size=self.settings.async_db_min_pool_size,
-                max_overflow=self.settings.async_db_max_pool_size - self.settings.async_db_min_pool_size,
+                pool_size=self.settings.ASYNC_DB_MIN_POOL_SIZE,
+                max_overflow=self.settings.ASYNC_DB_MAX_POOL_SIZE - self.settings.ASYNC_DB_MIN_POOL_SIZE,
                 pool_recycle=3600,
                 connect_args={
                     "server_settings": {"jit": "off"},
-                    "timeout": self.settings.async_db_command_timeout,
-                    "command_timeout": self.settings.async_db_command_timeout,
+                    "timeout": self.settings.ASYNC_DB_COMMAND_TIMEOUT,
+                    "command_timeout": self.settings.ASYNC_DB_COMMAND_TIMEOUT,
                 },
             )
             self._loop_id = current_loop_id

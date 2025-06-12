@@ -11,7 +11,7 @@ from datetime import datetime
 
 from app.core.dependencies import get_openai_service
 from app.core.exceptions import ValidationError, ExternalServiceError
-from app.api.v1.schemas.fin import (
+from app.schemas.fin import (
     QueryRequest,
     QueryResponse,
     ConversationMessage,
@@ -23,9 +23,8 @@ from app.api.v1.schemas.fin import (
     ToolResult,
     Classification,
 )
-from app.api.v1.schemas.base import SuccessResponse
+from app.schemas.base import SuccessResponse
 from app.services.openai_assistants import OpenAIIntegrationService
-from app.services.openai_assistants.integration.config import IntegrationConfig
 
 logger = getLogger(__name__)
 router = APIRouter()

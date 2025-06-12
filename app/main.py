@@ -66,9 +66,9 @@ async def lifespan(app: FastAPI):
 
 # Create FastAPI app
 app = FastAPI(
-    title=settings.project_name,
-    version=settings.version,
-    openapi_url=f"{settings.api_v1_prefix}/openapi.json",
+    title=settings.APP_NAME,
+    version=settings.VERSION,
+    openapi_url=f"{settings.API_V1_PREFIX}/openapi.json",
     docs_url="/docs",
     redoc_url="/redoc",
     lifespan=lifespan,
@@ -87,14 +87,14 @@ app.add_middleware(ErrorHandlingMiddleware)
 app.add_middleware(TimingMiddleware)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.backend_cors_origins,
+    allow_origins=settings.ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # Include API router
-app.include_router(api_router, prefix=settings.api_v1_prefix)
+app.include_router(api_router, prefix=settings.API_V1_PREFIX)
 
 
 # Root endpoint
@@ -102,10 +102,10 @@ app.include_router(api_router, prefix=settings.api_v1_prefix)
 async def root() -> Dict[str, Any]:
     """Root endpoint with API information."""
     return {
-        "name": settings.project_name,
-        "version": settings.version,
+        "name": settings.APP_NAME,
+        "version": settings.VERSION,
         "docs": "/docs",
-        "health": f"{settings.api_v1_prefix}/health",
+        "health": f"{settings.API_V1_PREFIX}/health",
     }
 
 
