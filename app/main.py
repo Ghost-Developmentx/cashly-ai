@@ -49,6 +49,41 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"⚠️ MLflow initialization failed (non-critical): {e}")
 
+    # Initialize OpenAI Assistants and Tools
+    try:
+        logger.info("🤖 Initializing OpenAI Assistants...")
+
+        # Import assistant factory
+        from app.core.assistants import AssistantFactory
+
+        # Import tool handlers to ensure they're registered
+        import app.core.tools.handlers.transactions
+        import app.core.tools.handlers.accounts
+        import app.core.tools.handlers.invoices
+        import app.core.tools.handlers.stripe
+        import app.core.tools.handlers.analytics
+
+        # Create assistant factory
+        factory = AssistantFactory()
+
+        # Create or update all assistants
+        assistant_ids = await factory.create_all_assistants()
+        logger.info(f"✅ Assistants initialized: {assistant_ids}")
+
+        # Validate assistants
+        validation_results = await factory.validate_assistants()
+        logger.info(f"✅ Assistant validation complete: {validation_results}")
+
+        # Initialize the global integration config with tool executor
+        from app.services.openai_assistants.integration.config import IntegrationConfig
+        app.state.integration_config = IntegrationConfig()
+        logger.info("✅ Integration config initialized with tool executor")
+
+    except Exception as e:
+        logger.error(f"❌ Assistant initialization failed: {e}")
+        # Don't raise - allow service to start but log the error
+        logger.warning("⚠️ Service starting without assistants - some features may not work")
+
     # Startup complete
     logger.info("✅ Cashly AI Service started successfully")
 
@@ -77,7 +112,7 @@ app = FastAPI(
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
-    print(f"📥 Incoming request: {request.method} {request.url}")
+    logger.debug(f"📥 Incoming request: {request.method} {request.url}")
     response = await call_next(request)
     return response
 
@@ -118,3 +153,5 @@ async def cashly_exception_handler(
     return JSONResponse(
         status_code=exc.status_code, content={"detail": exc.detail}, headers=exc.headers
     )
+
+
