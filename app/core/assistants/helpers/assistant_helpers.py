@@ -1,12 +1,13 @@
 import logging
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
 logger = logging.getLogger(__name__)
 
 
-def enhance_query_with_context(
+async def enhance_query_with_context(
         query: str,
-        user_context: Optional[Dict[str, Any]]
+        user_context: Optional[Dict[str, Any]],
+        conversation_history: Optional[List[Dict[str, Any]]]
 ) -> str:
     """Add relevant context to the query."""
     if not user_context:

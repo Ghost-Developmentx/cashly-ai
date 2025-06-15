@@ -17,7 +17,9 @@ from app.core.exceptions import CashlyException
 from app.api.v1.api import api_router
 from app.db.init import AsyncDatabaseInitializer
 from app.db.singleton_registry import registry
+from dotenv import load_dotenv
 
+load_dotenv()
 # Configure logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"

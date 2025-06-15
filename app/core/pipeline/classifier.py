@@ -1,6 +1,7 @@
+# app/core/pipeline/classifier.py
 """
-Query classifier - determines intent and suggests appropriate assistant.
-Single responsibility: classification only.
+Query classifier - integrates with existing ML classification system.
+Uses AsyncIntentService for embeddings-based classification.
 """
 
 import logging
@@ -13,72 +14,189 @@ logger = logging.getLogger(__name__)
 
 class QueryClassifier:
     """
-    Classifies user queries to determine intent.
-    This is a simplified version - in production, you'd use ML models.
+    Classifies user queries using the existing ML-based intent service.
+    Falls back to keyword matching only when ML service is unavailable.
     """
 
     def __init__(self):
-        """Initialize with intent patterns."""
-        self.intent_patterns = self._build_intent_patterns()
+        """Initialize with intent service."""
+        self.intent_service = None
+        self._initialize_intent_service()
+
+        # Fallback patterns if ML service unavailable
+        self.fallback_patterns = self._build_fallback_patterns()
         self.assistant_mapping = self._build_assistant_mapping()
 
+    def _initialize_intent_service(self):
+        """Initialize the ML intent service."""
+        try:
+            from app.services.intent_classification.async_intent_service import AsyncIntentService
+            self.intent_service = AsyncIntentService()
+            logger.info("✅ ML Intent Service initialized for classification")
+        except ImportError as e:
+            logger.error(f"Failed to import AsyncIntentService: {e}")
+            self.intent_service = None
+
     @staticmethod
-    def _build_intent_patterns() -> Dict[Intent, List[str]]:
-        """Build keyword patterns for each intent."""
+    def _build_fallback_patterns() -> Dict[Intent, List[str]]:
+        """Build fallback keyword patterns if ML fails."""
         return {
-            Intent.TRANSACTION_QUERY: [
-                "transaction", "spent", "purchase", "expense", "payment",
-                "bought", "paid", "charge", "debit", "credit"
-            ],
-            Intent.TRANSACTION_CREATE: [
-                "add transaction", "create transaction", "record payment",
-                "log expense", "track purchase", "add expense"
-            ],
-            Intent.TRANSACTION_UPDATE: [
-                "update transaction", "change transaction", "edit transaction",
-                "modify payment", "fix transaction"
-            ],
-            Intent.TRANSACTION_DELETE: [
-                "delete transaction", "remove transaction", "cancel payment"
-            ],
-            Intent.ACCOUNT_BALANCE: [
-                "balance", "account", "how much", "total", "funds",
-                "money left", "checking", "savings"
-            ],
-            Intent.ACCOUNT_CONNECT: [
-                "connect bank", "link account", "add bank", "plaid",
-                "sync account", "bank connection"
-            ],
-            Intent.INVOICE_CREATE: [
-                "create invoice", "send invoice", "bill client",
-                "invoice for", "generate invoice"
-            ],
-            Intent.INVOICE_MANAGE: [
-                "invoice status", "unpaid invoices", "invoice list",
-                "payment reminder", "mark paid"
-            ],
-            Intent.PAYMENT_SETUP: [
-                "stripe connect", "accept payments", "payment processing",
-                "setup payments", "merchant account"
-            ],
-            Intent.FORECAST: [
-                "forecast", "predict", "projection", "future balance",
-                "cash flow", "will I have", "next month"
-            ],
-            Intent.BUDGET: [
-                "budget", "spending limit", "save money", "spending plan",
-                "allocate", "50/30/20"
-            ],
-            Intent.INSIGHTS: [
-                "insights", "analysis", "patterns", "anomaly", "unusual",
-                "trending", "spending habits"
-            ]
+            Intent.TRANSACTION_QUERY: ["transaction", "spent", "expense", "purchase", "payment"],
+            Intent.TRANSACTION_CREATE: ["add transaction", "new transaction", "record"],
+            Intent.ACCOUNT_BALANCE: ["balance", "account", "how much", "accounts"],
+            Intent.GET_ACCOUNTS: ["my accounts", "how many accounts", "accounts", "show me all my accounts"],
+            Intent.ACCOUNT_CONNECT: ["connect", "link", "plaid", "bank"],
+            Intent.INVOICE_CREATE: ["invoice", "bill", "send invoice"],
+            Intent.PAYMENT_SETUP: ["stripe", "payment", "accept payment"],
+            Intent.FORECAST: ["forecast", "predict", "future", "cash flow"],
+            Intent.BUDGET: ["budget", "spending plan", "allocation"],
+            Intent.INSIGHTS: ["insights", "analyze", "trends", "patterns"],
+            Intent.GENERAL: ["help", "what can you do"],
         }
 
     @staticmethod
-    def _build_assistant_mapping() -> Dict[Intent, AssistantType]:
-        """Map intents to appropriate assistants."""
+    def _build_assistant_mapping() -> Dict[str, AssistantType]:
+        """Map intent strings to assistant types."""
         return {
+            "transactions": AssistantType.TRANSACTION,
+            "transaction": AssistantType.TRANSACTION,
+            "accounts": AssistantType.ACCOUNT,
+            "account": AssistantType.ACCOUNT,
+            "invoices": AssistantType.INVOICE,
+            "invoice": AssistantType.INVOICE,
+            "bank_connection": AssistantType.BANK_CONNECTION,
+            "payment_processing": AssistantType.PAYMENT_PROCESSING,
+            "forecasting": AssistantType.FORECASTING,
+            "forecast": AssistantType.FORECASTING,
+            "budgets": AssistantType.BUDGET,
+            "budget": AssistantType.BUDGET,
+            "insights": AssistantType.INSIGHTS,
+            "general": AssistantType.TRANSACTION,  # Default
+        }
+
+    async def classify(
+            self,
+            query: str,
+            conversation_history: Optional[List[Dict[str, Any]]] = None
+    ) -> ClassificationResult:
+        """
+        Classify using ML service first, fallback to keywords if needed.
+
+        Args:
+            query: User's query
+            conversation_history: Optional conversation history
+
+        Returns:
+            ClassificationResult with intent and confidence
+        """
+        # Try ML classification first if available
+        if self.intent_service:
+            try:
+                return await self._classify_with_ml(query, conversation_history)
+            except Exception as e:
+                logger.error(f"ML classification failed: {e}", exc_info=True)
+                logger.info("Falling back to keyword classification")
+
+        # Fallback to keyword classification
+        return await self._classify_with_keywords(query)
+
+    async def _classify_with_ml(
+            self,
+            query: str,
+            conversation_history: Optional[List[Dict[str, Any]]]
+    ) -> ClassificationResult:
+        """Use ML-based classification with embeddings."""
+        # Call the intent service
+        result = await self.intent_service.classify_and_route(
+            query=query,
+            user_context=None,  # Will be added by pipeline if needed
+            conversation_history=conversation_history
+        )
+
+        # Extract classification info
+        classification = result.get("classification", {})
+        intent_str = classification.get("intent", "general")
+        confidence = classification.get("confidence", 0.0)
+        method = classification.get("method", "vector_search")
+
+        # Map string intent to enum
+        intent_enum = self._map_intent_to_enum(intent_str)
+
+        # Map to assistant type
+        assistant_type = self.assistant_mapping.get(intent_str, AssistantType.TRANSACTION)
+
+        logger.info(
+            f"ML Classification: {intent_str} -> {intent_enum.value} "
+            f"(confidence: {confidence:.2f}, method: {method})"
+        )
+
+        return ClassificationResult(
+            intent=intent_enum,
+            confidence=confidence,
+            suggested_assistant=assistant_type,
+            method=method,
+            keywords_found=[]
+        )
+
+    async def _classify_with_keywords(self, query: str) -> ClassificationResult:
+        """Fallback keyword-based classification."""
+        query_lower = query.lower()
+        best_intent = Intent.GENERAL
+        best_score = 0.0
+
+        # Score each intent based on keyword matches
+        for intent, keywords in self.fallback_patterns.items():
+            score = sum(1 for keyword in keywords if keyword in query_lower)
+            if score > best_score:
+                best_score = score
+                best_intent = intent
+
+        # Calculate confidence based on matches
+        confidence = min(best_score * 0.25, 0.9) if best_score > 0 else 0.3
+
+        # Map to assistant
+        assistant_type = self._intent_to_assistant(best_intent)
+
+        logger.info(
+            f"Keyword Classification: {best_intent.value} "
+            f"(confidence: {confidence:.2f})"
+        )
+
+        return ClassificationResult(
+            intent=best_intent,
+            confidence=confidence,
+            suggested_assistant=assistant_type,
+            method="keyword",
+            keywords_found=self.fallback_patterns[best_intent]
+        )
+
+    @staticmethod
+    def _map_intent_to_enum(intent_str: str) -> Intent:
+        """Map string intent to Intent enum."""
+        # Handle direct mappings
+        intent_mapping = {
+            "transactions": Intent.TRANSACTION_QUERY,
+            "transaction": Intent.TRANSACTION_QUERY,
+            "accounts": Intent.ACCOUNT_BALANCE,
+            "account": Intent.ACCOUNT_BALANCE,
+            "invoices": Intent.INVOICE_MANAGE,
+            "invoice": Intent.INVOICE_CREATE,
+            "bank_connection": Intent.ACCOUNT_CONNECT,
+            "payment_processing": Intent.PAYMENT_SETUP,
+            "forecasting": Intent.FORECAST,
+            "forecast": Intent.FORECAST,
+            "budgets": Intent.BUDGET,
+            "budget": Intent.BUDGET,
+            "insights": Intent.INSIGHTS,
+            "general": Intent.GENERAL,
+        }
+
+        return intent_mapping.get(intent_str, Intent.GENERAL)
+
+    @staticmethod
+    def _intent_to_assistant(intent: Intent) -> AssistantType:
+        """Map Intent enum to AssistantType."""
+        mapping = {
             Intent.TRANSACTION_QUERY: AssistantType.TRANSACTION,
             Intent.TRANSACTION_CREATE: AssistantType.TRANSACTION,
             Intent.TRANSACTION_UPDATE: AssistantType.TRANSACTION,
@@ -91,74 +209,10 @@ class QueryClassifier:
             Intent.FORECAST: AssistantType.FORECASTING,
             Intent.BUDGET: AssistantType.BUDGET,
             Intent.INSIGHTS: AssistantType.INSIGHTS,
-            Intent.GENERAL: AssistantType.TRANSACTION  # Default
+            Intent.GENERAL: AssistantType.TRANSACTION,
         }
 
-    async def classify(
-            self,
-            query: str,
-            conversation_history: Optional[List[Dict[str, Any]]] = None
-    ) -> ClassificationResult:
-        """
-        Classify a query to determine intent.
-
-        Args:
-            query: User's query
-            conversation_history: Optional previous messages
-
-        Returns:
-            ClassificationResult with intent and confidence
-        """
-        query_lower = query.lower()
-
-        # Check each intent pattern
-        best_match = None
-        best_score = 0.0
-        best_keywords = []
-
-        for intent, keywords in self.intent_patterns.items():
-            found_keywords = []
-            score = 0.0
-
-            for keyword in keywords:
-                if keyword in query_lower:
-                    found_keywords.append(keyword)
-                    # Longer keywords get higher weight
-                    score += len(keyword.split())
-
-            if score > best_score:
-                best_score = score
-                best_match = intent
-                best_keywords = found_keywords
-
-        # If no match, use general intent
-        if not best_match:
-            best_match = Intent.GENERAL
-            confidence = 0.3
-        else:
-            # Calculate confidence based on keyword matches
-            max_possible_score = sum(len(k.split()) for k in self.intent_patterns[best_match][:3])
-            confidence = min(best_score / max_possible_score, 0.95) if max_possible_score > 0 else 0.5
-
-        # Get suggested assistant
-        suggested_assistant = self.assistant_mapping[best_match]
-
-        # Consider conversation history for context
-        if conversation_history and confidence < 0.7:
-            # Boost confidence if recent messages are about same topic
-            confidence = min(confidence + 0.1, 0.8)
-
-        result = ClassificationResult(
-            intent=best_match,
-            confidence=confidence,
-            suggested_assistant=suggested_assistant,
-            keywords_found=best_keywords,
-            method="keyword"
-        )
-
-        logger.info(f"Classified query: {best_match.value} (confidence: {confidence:.2f})")
-
-        return result
+        return mapping.get(intent, AssistantType.TRANSACTION)
 
     async def classify_with_ml(
             self,
@@ -166,24 +220,10 @@ class QueryClassifier:
             conversation_history: Optional[List[Dict[str, Any]]] = None
     ) -> ClassificationResult:
         """
-        Classify using ML model (placeholder for actual ML integration).
-
-        In production, this would:
-        1. Use your existing intent classification service
-        2. Combine with keyword-based classification
-        3. Return hybrid results
+        Force ML classification (called when pipeline has ML enabled).
         """
-        # For now, just use keyword classification
-        keyword_result = await self.classify(query, conversation_history)
+        if not self.intent_service:
+            logger.warning("ML classification requested but service not available")
+            return await self._classify_with_keywords(query)
 
-        # In production, you'd call your ML service here:
-        # try:
-        #     from app.services.intent_classification import AsyncIntentService
-        #     intent_service = AsyncIntentService()
-        #     ml_result = await intent_service.classify_and_route(query)
-        #     # Merge results...
-        # except Exception as e:
-        #     logger.warning(f"ML classification failed, using keyword: {e}")
-
-        keyword_result.method = "hybrid"
-        return keyword_result
+        return await self._classify_with_ml(query, conversation_history)

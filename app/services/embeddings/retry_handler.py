@@ -38,7 +38,7 @@ class AsyncRetryHandler:
     """
 
     def __init__(self, config: Settings):
-        self.max_retries = config.max_retries
+        self.max_retries = config.MAX_RETRIES
         self.base_delay = 1.0
         self.max_delay = 60.0
         self.exponential_base = 2

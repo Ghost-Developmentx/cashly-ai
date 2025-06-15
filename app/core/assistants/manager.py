@@ -6,6 +6,8 @@ Replaces the complex factory pattern with configuration-driven approach.
 import logging
 import yaml
 import os
+import asyncio
+import json
 from typing import Dict, Any, Optional, List
 from pathlib import Path
 from openai import AsyncOpenAI
@@ -13,9 +15,11 @@ from ...schemas.assistant import AssistantConfig, AssistantResponse, AssistantTy
 from .helpers.assistant_helpers import enhance_query_with_context
 from app.core.tools import tool_registry
 from app.core.config import get_settings
+from dotenv import load_dotenv
+
+load_dotenv()
 
 settings = get_settings()
-
 logger = logging.getLogger(__name__)
 
 
@@ -26,17 +30,9 @@ class UnifiedAssistantManager:
     """
 
     def __init__(self, config_path: Optional[str] = None):
-        """
-        Initialize with configuration file.
-
-        Args:
-            config_path: Path to assistants.yaml (defaults to app/config/assistants.yaml)
-        """
+        """Initialize with a configuration file."""
         self.config_path = config_path or Path(__file__).parent.parent.parent / "config" / "assistants.yaml"
         self.client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
-        logger.info(
-            f"Initialized UnifiedAssistantManager with API key {settings.OPENAI_API_KEY[:4]}...{settings.OPENAI_API_KEY[-4:]}"
-        )
 
         # Load configuration
         self.assistant_configs: Dict[AssistantType, AssistantConfig] = {}
@@ -57,7 +53,7 @@ class UnifiedAssistantManager:
             with open(self.config_path, 'r') as f:
                 config = yaml.safe_load(f)
 
-            # Process environment variables in the config
+            # Process environment variables
             config_str = yaml.dump(config)
             config_str = os.path.expandvars(config_str)
             config = yaml.safe_load(config_str)
@@ -66,8 +62,6 @@ class UnifiedAssistantManager:
             for assistant_key, assistant_config in config.get('assistants', {}).items():
                 try:
                     assistant_type = AssistantType(assistant_key)
-
-                    # Get assistant ID from the environment
                     env_key = f"{assistant_key.upper()}_ASSISTANT_ID"
                     assistant_id = os.getenv(env_key)
 
@@ -78,7 +72,6 @@ class UnifiedAssistantManager:
                         instructions=assistant_config['instructions'],
                         assistant_id=assistant_id
                     )
-
                 except ValueError:
                     logger.warning(f"Unknown assistant type: {assistant_key}")
 
@@ -105,111 +98,160 @@ class UnifiedAssistantManager:
             user_context: Optional[Dict[str, Any]] = None,
             conversation_history: Optional[List[Dict[str, Any]]] = None
     ) -> AssistantResponse:
-        """
-        Query an assistant with user input.
+        """Query an assistant with user input."""
+        config = self.assistant_configs.get(assistant_type)
+        if not config or not config.assistant_id:
+            raise ValueError(f"Assistant {assistant_type} not configured")
 
-        Args:
-            assistant_type: Which assistant to query
-            query: User's query
-            user_id: User identifier
-            user_context: Optional context (accounts, transactions, etc.)
-            conversation_history: Optional previous messages
+        # Get or create thread
+        thread_id = await self._get_or_create_thread(user_id)
 
-        Returns:
-            AssistantResponse with results
-        """
-        # Get assistant configuration
+        # Enhance query with context
+        enhanced_query = await enhance_query_with_context(
+            query, user_context, conversation_history
+        )
+
+        # Create message
+        await self.client.beta.threads.messages.create(
+            thread_id=thread_id,
+            role="user",
+            content=enhanced_query
+        )
+
+        # Create and poll run
+        run = await self.client.beta.threads.runs.create(
+            thread_id=thread_id,
+            assistant_id=config.assistant_id
+        )
+
+        # Wait for completion and handle tool calls
+        result = await self._wait_for_run_completion(
+            thread_id, run.id, user_id, user_context
+        )
+
+        return AssistantResponse(
+            content=result['content'],
+            assistant_type=assistant_type,
+            function_calls=result['function_calls'],
+            metadata={
+                'thread_id': thread_id,
+                'run_id': run.id,
+                'model': config.model
+            },
+            success=True,
+            thread_id=thread_id
+        )
+
+    async def create_or_update_assistant(
+            self,
+            assistant_type: AssistantType,
+            force_update: bool = False
+    ) -> str:
+        """Create or update an assistant based on configuration."""
         config = self.assistant_configs.get(assistant_type)
         if not config:
-            return AssistantResponse(
-                content="Assistant type not found",
-                assistant_type=assistant_type,
-                function_calls=[],
-                metadata={"error": "not_configured"},
-                success=False,
-                error=f"Assistant {assistant_type.value} not configured"
-            )
+            raise ValueError(f"No configuration for assistant type: {assistant_type}")
 
-        if not config.assistant_id:
-            return AssistantResponse(
-                content=f"The {assistant_type.value} assistant is not available",
-                assistant_type=assistant_type,
-                function_calls=[],
-                metadata={"error": "no_assistant_id"},
-                success=False,
-                error=f"No assistant ID configured for {assistant_type.value}"
-            )
+        # Get OpenAI-formatted tools from registry
+        tools = tool_registry.get_openai_tools(config.tools)
 
-        try:
-            # Get or create thread for user
-            thread_id = await self._get_or_create_thread(user_id)
+        assistant_config = {
+            "name": config.name,
+            "instructions": config.instructions,
+            "model": config.model,
+            "tools": tools  # Use properly formatted tools from registry
+        }
 
-            # Add context to query if provided
-            enhanced_query = enhance_query_with_context(query, user_context)
+        if config.assistant_id and not force_update:
+            # Update existing assistant
+            try:
+                await self.client.beta.assistants.update(
+                    config.assistant_id,
+                    **assistant_config
+                )
+                logger.info(f"Updated assistant {assistant_type.value}: {config.assistant_id}")
+                return config.assistant_id
+            except Exception as e:
+                logger.error(f"Failed to update assistant: {e}")
+                # Fall through to create new one
 
-            # Add message to thread
-            await self.client.beta.threads.messages.create(
-                thread_id=thread_id,
-                role="user",
-                content=enhanced_query
-            )
+        # Create a new assistant
+        assistant = await self.client.beta.assistants.create(**assistant_config)
 
-            # Run assistant
-            run = await self.client.beta.threads.runs.create(
-                thread_id=thread_id,
-                assistant_id=config.assistant_id
-            )
+        # Update config with new ID
+        config.assistant_id = assistant.id
 
-            # Wait for completion and handle tool calls
-            result = await self._wait_for_completion(
-                thread_id,
-                run.id,
-                user_id,
-                user_context
-            )
+        # Save to environment variable
+        env_key = f"{assistant_type.value.upper()}_ASSISTANT_ID"
+        os.environ[env_key] = assistant.id
 
-            return AssistantResponse(
-                content=result['content'],
-                assistant_type=assistant_type,
-                function_calls=result.get('function_calls', []),
-                metadata={
-                    'thread_id': thread_id,
-                    'run_id': run.id,
-                    'tools_used': len(result.get('function_calls', []))
-                },
-                success=True,
-                thread_id=thread_id
-            )
+        logger.info(f"Created assistant {assistant_type.value}: {assistant.id}")
+        logger.info(f"Set environment variable {env_key}={assistant.id}")
+        logger.info(f"Registered tools: {[tool['function']['name'] for tool in tools]}")
 
-        except Exception as e:
-            logger.error(f"Error querying assistant {assistant_type}: {e}")
-            return AssistantResponse(
-                content="I encountered an error processing your request",
-                assistant_type=assistant_type,
-                function_calls=[],
-                metadata={"error": str(e)},
-                success=False,
-                error=str(e)
-            )
+        return assistant.id
+
+    async def validate_all_assistants(self) -> Dict[str, Any]:
+        """Validate all assistant configurations."""
+        results = {
+            "valid": True,
+            "assistants": {},
+            "summary": {
+                "total": len(self.assistant_configs),
+                "configured": 0,
+                "missing": 0,
+                "tool_issues": 0
+            }
+        }
+
+        for assistant_type, config in self.assistant_configs.items():
+            assistant_result = {
+                "has_id": bool(config.assistant_id),
+                "tools_requested": config.tools,
+                "tools_found": [],
+                "tools_missing": [],
+                "tools_valid": True
+            }
+
+            # Check tools
+            for tool_name in config.tools:
+                if tool_registry.get_tool(tool_name):
+                    assistant_result["tools_found"].append(tool_name)
+                else:
+                    assistant_result["tools_missing"].append(tool_name)
+                    assistant_result["tools_valid"] = False
+
+            # Update summary
+            if config.assistant_id:
+                results["summary"]["configured"] += 1
+            else:
+                results["summary"]["missing"] += 1
+
+            if not assistant_result["tools_valid"]:
+                results["summary"]["tool_issues"] += 1
+                results["valid"] = False
+
+            results["assistants"][assistant_type.value] = assistant_result
+
+        return results
 
     async def _get_or_create_thread(self, user_id: str) -> str:
         """Get existing thread or create new one for user."""
-        if user_id not in self._user_threads:
-            thread = await self.client.beta.threads.create()
-            self._user_threads[user_id] = thread.id
-        return self._user_threads[user_id]
+        if user_id in self._user_threads:
+            return self._user_threads[user_id]
 
-    async def _wait_for_completion(
+        thread = await self.client.beta.threads.create()
+        self._user_threads[user_id] = thread.id
+        return thread.id
+
+    async def _wait_for_run_completion(
             self,
             thread_id: str,
             run_id: str,
             user_id: str,
             user_context: Optional[Dict[str, Any]]
     ) -> Dict[str, Any]:
-        """Wait for assistant run to complete and handle tool calls."""
-        import asyncio
-        import json
-
+        """Wait for run completion and handle tool calls."""
         function_calls = []
 
         while True:
@@ -222,10 +264,11 @@ class UnifiedAssistantManager:
                 break
             elif run.status == 'requires_action':
                 # Handle tool calls
-                if self._tool_executor:
+                if self._tool_executor and run.required_action:
                     tool_outputs = []
+                    tool_calls = run.required_action.submit_tool_outputs.tool_calls
 
-                    for tool_call in run.required_action.submit_tool_outputs.tool_calls:
+                    for tool_call in tool_calls:
                         # Execute tool
                         tool_name = tool_call.function.name
                         tool_args = json.loads(tool_call.function.arguments)
@@ -256,7 +299,7 @@ class UnifiedAssistantManager:
                         tool_outputs=tool_outputs
                     )
                 else:
-                    logger.error("Tool executor not configured")
+                    logger.error("Tool executor not configured or no action required")
                     break
             elif run.status in ['failed', 'cancelled', 'expired']:
                 raise Exception(f"Run failed with status: {run.status}")
@@ -280,159 +323,6 @@ class UnifiedAssistantManager:
             'function_calls': function_calls
         }
 
-    async def create_or_update_assistant(
-            self,
-            assistant_type: AssistantType,
-            force_update: bool = False
-    ) -> str:
-        """
-        Create or update an assistant based on configuration.
-
-        Args:
-            assistant_type: Type of assistant to create/update
-            force_update: Force update even if assistant exists
-
-        Returns:
-            Assistant ID
-        """
-        config = self.assistant_configs.get(assistant_type)
-        if not config:
-            raise ValueError(f"No configuration for assistant type: {assistant_type}")
-
-        # Get tool configurations from registry
-        tools = []
-        for tool_name in config.tools:
-            tool = tool_registry.get_tool(tool_name)
-            if tool:
-                tools.append({
-                    "type": "function",
-                    "function": {
-                        "name": tool.name,
-                        "description": tool.description,
-                        "parameters": tool.schema
-                    }
-                })
-            else:
-                logger.warning(f"Tool {tool_name} not found in registry")
-
-        assistant_config = {
-            "name": config.name,
-            "instructions": config.instructions,
-            "model": config.model,
-            "tools": tools
-        }
-
-        if config.assistant_id and not force_update:
-            # Update existing assistant
-            try:
-                await self.client.beta.assistants.update(
-                    config.assistant_id,
-                    **assistant_config
-                )
-                logger.info(f"Updated assistant {assistant_type.value}: {config.assistant_id}")
-                return config.assistant_id
-            except Exception as e:
-                logger.error(f"Failed to update assistant: {e}")
-                # Fall through to create new one
-
-        # Create new assistant
-        assistant = await self.client.beta.assistants.create(**assistant_config)
-
-        # Update config with new ID
-        config.assistant_id = assistant.id
-
-        # Save to environment variable
-        env_key = f"{assistant_type.value.upper()}_ASSISTANT_ID"
-        os.environ[env_key] = assistant.id
-
-        logger.info(f"Created assistant {assistant_type.value}: {assistant.id}")
-        logger.info(f"Set environment variable {env_key}={assistant.id}")
-
-        return assistant.id
-
-    async def validate_all_assistants(self) -> Dict[str, Any]:
-        """Validate all assistant configurations."""
-        results = {
-            "valid": True,
-            "assistants": {},
-            "errors": []
-        }
-
-        for assistant_type, config in self.assistant_configs.items():
-            assistant_result = {
-                "configured": True,
-                "has_id": bool(config.assistant_id),
-                "tools_valid": True,
-                "tools": []
-            }
-
-            # Check tools
-            for tool_name in config.tools:
-                tool = tool_registry.get_tool(tool_name)
-                if tool:
-                    assistant_result["tools"].append({
-                        "name": tool_name,
-                        "found": True
-                    })
-                else:
-                    assistant_result["tools"].append({
-                        "name": tool_name,
-                        "found": False
-                    })
-                    assistant_result["tools_valid"] = False
-                    results["valid"] = False
-                    results["errors"].append(f"Tool {tool_name} not found for {assistant_type.value}")
-
-            # Check if assistant exists
-            if config.assistant_id:
-                try:
-                    assistant = await self.client.beta.assistants.retrieve(config.assistant_id)
-                    assistant_result["exists"] = True
-                    assistant_result["name"] = assistant.name
-                except Exception:
-                    assistant_result["exists"] = False
-                    results["errors"].append(f"Assistant {config.assistant_id} not found for {assistant_type.value}")
-
-            results["assistants"][assistant_type.value] = assistant_result
-
-        return results
-
-    async def health_check(self) -> Dict[str, Any]:
-        """Perform health check on all assistants."""
-        health = {
-            "status": "healthy",
-            "assistants": {},
-            "summary": {
-                "total": len(self.assistant_configs),
-                "configured": 0,
-                "healthy": 0
-            }
-        }
-
-        for assistant_type, config in self.assistant_configs.items():
-            assistant_health = {
-                "configured": bool(config.assistant_id),
-                "status": "not_configured"
-            }
-
-            if config.assistant_id:
-                health["summary"]["configured"] += 1
-                try:
-                    # Try to retrieve assistant
-                    assistant = await self.client.beta.assistants.retrieve(config.assistant_id)
-                    assistant_health["status"] = "healthy"
-                    assistant_health["name"] = assistant.name
-                    assistant_health["model"] = assistant.model
-                    health["summary"]["healthy"] += 1
-                except Exception as e:
-                    assistant_health["status"] = "error"
-                    assistant_health["error"] = str(e)
-                    health["status"] = "degraded"
-
-            health["assistants"][assistant_type.value] = assistant_health
-
-        return health
-
     def clear_user_thread(self, user_id: str) -> bool:
         """Clear thread for a user."""
         if user_id in self._user_threads:
@@ -440,17 +330,31 @@ class UnifiedAssistantManager:
             return True
         return False
 
+    async def health_check(self) -> Dict[str, Any]:
+        """Perform health check on all assistants."""
+        validation = await self.validate_all_assistants()
+
+        return {
+            "status": "healthy" if validation["valid"] else "degraded",
+            "assistants": validation["assistants"],
+            "summary": validation["summary"],
+            "tool_registry": {
+                "total_tools": len(tool_registry.list_tools()),
+                "tools": tool_registry.list_tools()
+            }
+        }
+
     def get_assistant_info(self, assistant_type: AssistantType) -> Dict[str, Any]:
-        """Get information about an assistant."""
+        """Get information about a specific assistant."""
         config = self.assistant_configs.get(assistant_type)
         if not config:
-            return {"error": f"Assistant {assistant_type.value} not configured"}
+            return {"error": f"No configuration for {assistant_type}"}
 
         return {
             "type": assistant_type.value,
             "name": config.name,
             "model": config.model,
             "tools": config.tools,
-            "has_id": bool(config.assistant_id),
-            "assistant_id": config.assistant_id
+            "has_assistant_id": bool(config.assistant_id),
+            "configured": bool(config.assistant_id)
         }

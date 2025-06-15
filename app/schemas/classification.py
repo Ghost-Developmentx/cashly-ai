@@ -12,6 +12,7 @@ class Intent(str, Enum):
     TRANSACTION_UPDATE = "transaction_update"
     TRANSACTION_DELETE = "transaction_delete"
     ACCOUNT_BALANCE = "account_balance"
+    GET_ACCOUNTS = "get_accounts"
     ACCOUNT_CONNECT = "account_connect"
     INVOICE_CREATE = "invoice_create"
     INVOICE_MANAGE = "invoice_manage"

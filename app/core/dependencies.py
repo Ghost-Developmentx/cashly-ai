@@ -20,7 +20,6 @@ from app.services.budget import AsyncBudgetService
 from app.services.insights import AsyncInsightService
 from app.services.anomaly import AsyncAnomalyService
 from app.services.openai_assistants import OpenAIIntegrationService
-from app.services.openai_assistants.integration.config import IntegrationConfig
 
 
 # Database Dependencies
